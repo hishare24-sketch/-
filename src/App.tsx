@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 // ═══════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════
-type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings';
+type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 type RequestStatus = 'pending' | 'approved' | 'rejected';
@@ -1881,10 +1881,36 @@ function Notifications({ notifs, onMarkRead, onMarkAll }: { notifs: Notif[]; onM
 // ═══════════════════════════════════════════
 //  SETTINGS
 // ═══════════════════════════════════════════
-function Settings() {
+function Settings({ theme, onToggleTheme, onNav, onLogout }: { theme: 'light' | 'dark'; onToggleTheme: () => void; onNav: (p: Page) => void; onLogout: () => void }) {
   return (
     <div style={{ padding: 24, maxWidth: 700 }}>
       <PageHeader title="الإعدادات" />
+
+      {/* Appearance */}
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>المظهر</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' }}>
+          <div>
+            <div style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>الوضع الليلي</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>تبديل بين المظهر الفاتح والداكن</div>
+          </div>
+          <button onClick={onToggleTheme} style={{ width: 52, height: 28, borderRadius: 99, border: 'none', background: theme === 'dark' ? '#2563eb' : '#cbd5e1', position: 'relative', cursor: 'pointer' }}>
+            <span style={{ position: 'absolute', top: 3, [theme === 'dark' ? 'left' : 'right']: 3, width: 22, height: 22, borderRadius: 99, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 } as React.CSSProperties}>{theme === 'dark' ? '🌙' : '☀️'}</span>
+          </button>
+        </div>
+      </Card>
+
+      {/* Subscription shortcut */}
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>💎 الاشتراك والباقات</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>أنت على الباقة المجانية حالياً</div>
+          </div>
+          <Btn size="sm" onClick={() => onNav('subscription')}>عرض الباقات</Btn>
+        </div>
+      </Card>
+
       {[
         { title: 'الملف الشخصي', items: [{ label: 'الاسم الكامل', val: 'محمد العمري' }, { label: 'البريد الإلكتروني', val: 'mohammed@example.com' }, { label: 'رقم الجوال', val: '+966 50 123 4567' }] },
         { title: 'إعدادات الإشعارات', items: [{ label: 'إشعارات البريد الإلكتروني', val: 'مفعّل' }, { label: 'إشعارات واتساب', val: 'مفعّل' }, { label: 'إشعارات انتهاء الضمان', val: 'قبل 30 يوم' }] },
@@ -1918,10 +1944,140 @@ function Settings() {
           }}>🗑️ تصفير</Btn>
         </div>
       </Card>
+
+      <Card>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>تسجيل الخروج</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>الخروج من حسابك الحالي</div>
+          </div>
+          <Btn variant="outline" size="sm" onClick={onLogout}>↩ خروج</Btn>
+        </div>
+      </Card>
     </div>
   );
 }
 // ═══════════════════════════════════════════
+//  SUBSCRIPTION (free + 3 paid plans)
+// ═══════════════════════════════════════════
+const PLANS = [
+  { id: 'free', name: 'المجانية', price: 0, tag: 'للتجربة', color: '#6b7280', features: ['حتى 3 مشاريع', 'ذكاء اصطناعي أساسي', 'متابعات محدودة', 'تقارير أساسية'] },
+  { id: 'pro', name: 'الاحترافية', price: 49, tag: 'الأكثر شيوعاً', color: '#2563eb', features: ['مشاريع غير محدودة', 'متابعات وضمانات كاملة', 'ذكاء اصطناعي موسّع', 'تقارير متقدمة', 'دعم ذو أولوية'] },
+  { id: 'business', name: 'الأعمال', price: 99, tag: 'للفرق', color: '#7c3aed', features: ['كل مزايا الاحترافية', 'صلاحيات متقدمة', 'موافقات متعددة', 'إدارة أعضاء كاملة', 'تكاملات خارجية'] },
+  { id: 'enterprise', name: 'المؤسسات', price: 249, tag: 'للمنشآت الكبيرة', color: '#059669', features: ['كل مزايا الأعمال', 'تكامل ERP / CRM', 'تتبّع GPS للأصول', 'ذكاء اصطناعي متقدم', 'دعم مؤسسي مخصص'] },
+];
+
+function Subscription({ current, onChoose }: { current: string; onChoose: (id: string) => void }) {
+  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
+  return (
+    <div style={{ padding: 24, maxWidth: 1100 }}>
+      <PageHeader title="الاشتراك والباقات" subtitle="اختر الباقة المناسبة لاحتياجك" />
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+        <div style={{ display: 'flex', gap: 4, background: 'var(--surface-3)', padding: 4, borderRadius: 12 }}>
+          {[['monthly', 'شهري'], ['yearly', 'سنوي (وفّر 20%)']].map(([v, l]) => (
+            <button key={v} onClick={() => setBilling(v as any)} style={{
+              padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500,
+              background: billing === v ? 'var(--surface)' : 'transparent', color: billing === v ? 'var(--text)' : 'var(--text-3)',
+            }}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 16 }}>
+        {PLANS.map(p => {
+          const isCurrent = current === p.id;
+          const price = billing === 'yearly' ? Math.round(p.price * 12 * 0.8) : p.price;
+          return (
+            <div key={p.id} style={{
+              background: 'var(--surface)', borderRadius: 16, padding: 22,
+              border: `2px solid ${isCurrent ? p.color : 'var(--border)'}`, position: 'relative',
+              display: 'flex', flexDirection: 'column',
+            }}>
+              {p.tag && <span style={{ position: 'absolute', top: -11, right: 18, background: p.color, color: '#fff', fontSize: 11, fontWeight: 600, padding: '3px 12px', borderRadius: 99 }}>{p.tag}</span>}
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{p.name}</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 16 }}>
+                <span style={{ fontSize: 28, fontWeight: 800, color: p.color }}>{price === 0 ? 'مجاني' : price}</span>
+                {price > 0 && <span style={{ fontSize: 12, color: 'var(--text-3)' }}>ر.س / {billing === 'yearly' ? 'سنة' : 'شهر'}</span>}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18, flex: 1 }}>
+                {p.features.map(f => (
+                  <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' }}>
+                    <span style={{ color: p.color }}>✓</span> {f}
+                  </div>
+                ))}
+              </div>
+              <Btn variant={isCurrent ? 'outline' : 'primary'} disabled={isCurrent} style={{ width: '100%', justifyContent: 'center', ...(isCurrent ? {} : { background: p.color }) }} onClick={() => onChoose(p.id)}>
+                {isCurrent ? '✓ باقتك الحالية' : p.price === 0 ? 'التحويل للمجانية' : 'اشترك الآن'}
+              </Btn>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: 'var(--text-3)' }}>
+        جميع الأسعار شاملة الضريبة · يمكنك الترقية أو الإلغاء في أي وقت
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+//  LOGIN / SIGNUP
+// ═══════════════════════════════════════════
+function Login({ onAuth }: { onAuth: () => void }) {
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const valid = email.trim().length > 3 && password.length >= 4 && (mode === 'login' || name.trim().length > 0);
+
+  return (
+    <div className="mz-light" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#0b1120 0%,#1e293b 100%)', direction: 'rtl', fontFamily: "'IBM Plex Sans Arabic', sans-serif", padding: 20 }}>
+      <div style={{ width: '100%', maxWidth: 400, background: '#fff', borderRadius: 20, padding: 32, boxShadow: '0 20px 60px rgba(0,0,0,.3)' }}>
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+            <span style={{ color: '#fff', fontWeight: 900, fontSize: 28, fontFamily: 'serif' }}>م</span>
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#0b1120' }}>موازين</div>
+          <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>المنصة المالية والإدارية الذكية</div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', padding: 4, borderRadius: 12, marginBottom: 20 }}>
+          {[['login', 'تسجيل الدخول'], ['signup', 'حساب جديد']].map(([v, l]) => (
+            <button key={v} onClick={() => setMode(v as any)} style={{
+              flex: 1, padding: '9px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+              background: mode === v ? '#fff' : 'transparent', color: mode === v ? '#0b1120' : '#64748b',
+              boxShadow: mode === v ? '0 1px 3px rgba(0,0,0,.1)' : 'none',
+            }}>{l}</button>
+          ))}
+        </div>
+
+        {mode === 'signup' && (
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }}>الاسم الكامل</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="محمد العمري" style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid #e2e8f0', fontFamily: 'inherit', fontSize: 14, boxSizing: 'border-box' }} />
+          </div>
+        )}
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }}>البريد الإلكتروني</label>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@example.com" style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid #e2e8f0', fontFamily: 'inherit', fontSize: 14, boxSizing: 'border-box' }} />
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }}>كلمة المرور</label>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid #e2e8f0', fontFamily: 'inherit', fontSize: 14, boxSizing: 'border-box' }} />
+        </div>
+
+        <button disabled={!valid} onClick={onAuth} style={{
+          width: '100%', padding: '12px', borderRadius: 12, border: 'none', cursor: valid ? 'pointer' : 'not-allowed',
+          background: valid ? '#2563eb' : '#cbd5e1', color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 600,
+        }}>{mode === 'login' ? 'دخول' : 'إنشاء الحساب'}</button>
+
+        <div style={{ textAlign: 'center', marginTop: 16, fontSize: 12, color: '#94a3b8' }}>
+          {mode === 'login' ? 'بالدخول أنت توافق على الشروط والأحكام' : 'سيتم إنشاء حساب جديد في النظام'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // quick-add bottom sheet for mobile bottom bar's + button
 function MobileFabSheet({ onClose, onAction }: { onClose: () => void; onAction: (a: 'tx' | 'doc' | 'tracking' | 'request' | 'project') => void }) {
   const actions = [
@@ -2026,6 +2182,8 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [fabSheet, setFabSheet] = useState(false);
   const [theme, setTheme] = usePersist<'light' | 'dark'>('mz_theme', 'light');
+  const [authed, setAuthed] = usePersist<boolean>('mz_authed', false);
+  const [plan, setPlan] = usePersist<string>('mz_plan', 'free');
 
   const [projects, setProjects] = usePersist<Project[]>('mz_projects', INITIAL_PROJECTS);
   const [transactions, setTransactions] = usePersist<Transaction[]>('mz_transactions', INITIAL_TRANSACTIONS);
@@ -2148,12 +2306,23 @@ export default function App() {
       case 'trackings': return <Trackings projectId={projectId} trackings={trackings} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
       case 'requests': return <Requests projectId={projectId} requests={requests} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
       case 'notifications': return <Notifications notifs={notifs} onMarkRead={markRead} onMarkAll={markAll} />;
-      case 'settings': return <Settings />;
+      case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => setAuthed(false)} />;
+      case 'subscription': return <Subscription current={plan} onChoose={setPlan} />;
       default: return null;
     }
   };
 
   const currentProject = projects.find(p => p.id === projectId);
+
+  // login gate
+  if (!authed) {
+    return (
+      <>
+        <style>{KEYFRAMES}</style>
+        <Login onAuth={() => setAuthed(true)} />
+      </>
+    );
+  }
 
   return (
     <>
@@ -2170,6 +2339,7 @@ export default function App() {
                 <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>موازين</div>
                 {currentProject && <div style={{ color: 'var(--text-3)', fontSize: 11 }}>{currentProject.icon} {currentProject.name}</div>}
               </div>
+              <button onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 16 }}>{theme === 'dark' ? '☀️' : '🌙'}</button>
               <button onClick={() => setPage('notifications')} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 16, position: 'relative' }}>
                 🔔
                 {unread > 0 && <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, padding: '0 4px', borderRadius: 99, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--sidebar)' }}>{unread}</span>}
