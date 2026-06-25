@@ -150,6 +150,17 @@ function usePersist<T>(key: string, initial: T): [T, React.Dispatch<React.SetSta
 }
 
 // ── computed balance: opening + income − expense ± transfers ──
+// detect mobile viewport (responsive layout switch)
+function useIsMobile(breakpoint = 768): boolean {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < breakpoint : false);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 function computeBalance(project: Project, transactions: Transaction[]): number {
   let bal = project.balance; // opening balance
   for (const t of transactions) {
@@ -332,14 +343,21 @@ const NAV = [
   { id: 'settings',      icon: '◎',  label: 'الإعدادات' },
 ];
 
-function Sidebar({ page, onNav, projects, projectId, onProject, unread }: {
+function Sidebar({ page, onNav, projects, projectId, onProject, unread, isMobile, open, onClose }: {
   page: Page; onNav: (p: Page) => void; projects: Project[];
   projectId: string; onProject: (id: string) => void; unread: number;
+  isMobile: boolean; open: boolean; onClose: () => void;
 }) {
-  return (
-    <aside style={{ width: 240, background: '#0f1117', display: 'flex', flexDirection: 'column', height: '100vh', flexShrink: 0 }}>
+  // on mobile, sidebar is an overlay drawer; hidden unless open
+  if (isMobile && !open) return null;
+
+  const aside = (
+    <aside style={{
+      width: 240, background: '#0f1117', display: 'flex', flexDirection: 'column', height: '100vh', flexShrink: 0,
+      ...(isMobile ? { position: 'fixed', top: 0, right: 0, zIndex: 1100, animation: 'mzSlideRight .25s ease' } : {}),
+    }}>
       {/* Logo */}
-      <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid #1e2230' }}>
+      <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid #1e2230', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ color: '#fff', fontWeight: 900, fontSize: 18, fontFamily: 'serif' }}>م</span>
@@ -349,13 +367,14 @@ function Sidebar({ page, onNav, projects, projectId, onProject, unread }: {
             <div style={{ color: '#6b7280', fontSize: 11 }}>المنصة المالية الذكية</div>
           </div>
         </div>
+        {isMobile && <button onClick={onClose} style={{ background: '#1e2230', border: 'none', color: '#9ca3af', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', fontSize: 16 }}>✕</button>}
       </div>
 
       {/* Project switcher */}
       <div style={{ padding: '12px 12px 8px', borderBottom: '1px solid #1e2230' }}>
         <div style={{ color: '#4b5563', fontSize: 11, padding: '0 8px', marginBottom: 6 }}>المشروع الحالي</div>
         {projects.map(p => (
-          <button key={p.id} onClick={() => onProject(p.id)} style={{
+          <button key={p.id} onClick={() => { onProject(p.id); if (isMobile) onClose(); }} style={{
             width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
             borderRadius: 10, border: 'none', cursor: 'pointer', textAlign: 'right', transition: 'background .15s',
             background: projectId === p.id ? '#1e2230' : 'transparent', marginBottom: 2,
@@ -373,7 +392,7 @@ function Sidebar({ page, onNav, projects, projectId, onProject, unread }: {
           const active = page === item.id;
           const hasNotif = item.id === 'notifications' && unread > 0;
           return (
-            <button key={item.id} onClick={() => onNav(item.id as Page)} style={{
+            <button key={item.id} onClick={() => { onNav(item.id as Page); if (isMobile) onClose(); }} style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
               borderRadius: 10, border: 'none', cursor: 'pointer', textAlign: 'right', marginBottom: 2,
               background: active ? '#2563eb' : 'transparent', transition: 'background .15s', fontFamily: 'inherit',
@@ -404,8 +423,16 @@ function Sidebar({ page, onNav, projects, projectId, onProject, unread }: {
       </div>
     </aside>
   );
-}
 
+  // desktop: plain sidebar. mobile: drawer + dimmed backdrop
+  if (!isMobile) return aside;
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,17,23,.5)', zIndex: 1099, animation: 'mzFade .2s ease' }} />
+      {aside}
+    </>
+  );
+}
 // ═══════════════════════════════════════════
 //  FLOATING ACTION CENTER (animated, sticky)
 // ═══════════════════════════════════════════
@@ -1893,11 +1920,16 @@ const KEYFRAMES = `
 @keyframes mzSlideUp { from { transform: translateY(100%) } to { transform: translateY(0) } }
 @keyframes mzPop { from { opacity: 0; transform: translateY(8px) scale(.9) } to { opacity: 1; transform: translateY(0) scale(1) } }
 @keyframes mzPulse { 0%,100% { box-shadow: 0 6px 22px rgba(37,99,235,.45) } 50% { box-shadow: 0 6px 30px rgba(37,99,235,.7) } }
-@keyframes mzProgress { from { width: 0% } to { width: 100% } }`;
+@keyframes mzProgress { from { width: 0% } to { width: 100% } }
+@keyframes mzSlideRight { from { transform: translateX(100%) } to { transform: translateX(0) } }
+/* mobile: tighten the 24px page padding so content isn't cramped */
+.mz-mobile > div { padding: 16px !important; max-width: 100% !important; }`;
 
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard');
   const [projectId, setProjectId] = useState('p1');
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const [projects, setProjects] = usePersist<Project[]>('mz_projects', INITIAL_PROJECTS);
   const [transactions, setTransactions] = usePersist<Transaction[]>('mz_transactions', INITIAL_TRANSACTIONS);
@@ -2025,13 +2057,31 @@ export default function App() {
     }
   };
 
+  const currentProject = projects.find(p => p.id === projectId);
+
   return (
     <>
       <style>{KEYFRAMES}</style>
       <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'IBM Plex Sans Arabic', sans-serif", direction: 'rtl', background: '#f8f9fb' }}>
-        <Sidebar page={page} onNav={setPage} projects={projects} projectId={projectId} onProject={setProjectId} unread={unread} />
-        <main style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
-          {renderPage()}
+        <Sidebar page={page} onNav={setPage} projects={projects} projectId={projectId} onProject={setProjectId} unread={unread} isMobile={isMobile} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+        <main style={{ flex: 1, overflowY: 'auto', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+          {/* mobile top bar */}
+          {isMobile && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#0f1117', position: 'sticky', top: 0, zIndex: 50 }}>
+              <button onClick={() => setDrawerOpen(true)} style={{ background: '#1e2230', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 18 }}>☰</button>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>موازين</div>
+                {currentProject && <div style={{ color: '#9ca3af', fontSize: 11 }}>{currentProject.icon} {currentProject.name}</div>}
+              </div>
+              <button onClick={() => setPage('notifications')} style={{ background: '#1e2230', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 16, position: 'relative' }}>
+                🔔
+                {unread > 0 && <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, padding: '0 4px', borderRadius: 99, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #0f1117' }}>{unread}</span>}
+              </button>
+            </div>
+          )}
+          <div style={{ flex: 1, overflowY: 'auto' }} className={isMobile ? 'mz-mobile' : ''}>
+            {renderPage()}
+          </div>
         </main>
         <ActionCenter unread={unread} onAction={fabAction} onNav={setPage} />
       </div>
