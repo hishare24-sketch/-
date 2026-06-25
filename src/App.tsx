@@ -9,8 +9,16 @@ type TrackingStatus = 'active' | 'expiring' | 'expired';
 type RequestStatus = 'pending' | 'approved' | 'rejected';
 
 type Project = { id: string; name: string; icon: string; balance: number; color: string; type?: string; description?: string };
-type Member = { id: string; projectId: string; name: string; email: string; role: MemberRole; permissions: string[] };
+type Member = { id: string; projectId: string; name: string; email: string; role: MemberRole; permissions: string[]; balance?: number; status?: 'active' | 'invited' };
 type MemberRole = 'owner' | 'manager' | 'member' | 'viewer';
+// member custody / settlement movements (طلب → قبول/رفض)
+type MemberTxnType = 'custody' | 'settlement' | 'expense' | 'deduction';
+type MemberTxnStatus = 'pending' | 'accepted' | 'rejected';
+type MemberTxn = {
+  id: string; projectId: string; memberId: string; type: MemberTxnType;
+  amount: number; note?: string; date: string; status: MemberTxnStatus;
+  direction: 'to_member' | 'from_member'; // money flow relative to member
+};
 type Transaction = { id: string; projectId: string; type: TxType; description: string; amount: number; category: string; date: string; hasDoc: boolean; note?: string; toProject?: string; transferDir?: 'out' | 'in'; linkId?: string };
 type Tracking = { id: string; name: string; type: string; icon: string; status: TrackingStatus; daysLeft: number; expiryDate: string; projectId: string; note?: string };
 type RequestItem = { id: string; title: string; amount: number; requestedBy: string; status: RequestStatus; date: string; type: string; projectId: string; note?: string };
@@ -117,10 +125,23 @@ const INITIAL_NOTIFS: Notif[] = [
 ];
 
 const INITIAL_MEMBERS: Member[] = [
-  { id: 'm1', projectId: 'p1', name: 'محمد العمري', email: 'mohammed@example.com', role: 'owner', permissions: ROLE_PERMS.owner },
-  { id: 'm2', projectId: 'p1', name: 'سارة المحمد', email: 'sara@example.com', role: 'manager', permissions: ROLE_PERMS.manager },
-  { id: 'm3', projectId: 'p1', name: 'أحمد العلي', email: 'ahmad@example.com', role: 'member', permissions: ROLE_PERMS.member },
-  { id: 'm4', projectId: 'p3', name: 'محمد الزيد', email: 'mz@example.com', role: 'manager', permissions: ROLE_PERMS.manager },
+  { id: 'm1', projectId: 'p1', name: 'محمد العمري', email: 'mohammed@example.com', role: 'owner', permissions: ROLE_PERMS.owner, balance: 0, status: 'active' },
+  { id: 'm2', projectId: 'p1', name: 'سارة المحمد', email: 'sara@example.com', role: 'manager', permissions: ROLE_PERMS.manager, balance: 5000, status: 'active' },
+  { id: 'm3', projectId: 'p1', name: 'أحمد العلي', email: 'ahmad@example.com', role: 'member', permissions: ROLE_PERMS.member, balance: 1200, status: 'active' },
+  { id: 'm4', projectId: 'p3', name: 'محمد الزيد', email: 'mz@example.com', role: 'manager', permissions: ROLE_PERMS.manager, balance: 0, status: 'active' },
+];
+
+const MEMBER_TXN_TYPES: { id: MemberTxnType; label: string; icon: string; direction: 'to_member' | 'from_member'; desc: string }[] = [
+  { id: 'custody',    label: 'صرف عهدة',     icon: '📤', direction: 'to_member',   desc: 'صرف مبلغ كعهدة للعضو' },
+  { id: 'expense',    label: 'مصروف للعضو',  icon: '💸', direction: 'to_member',   desc: 'تعويض مصروف تكبّده العضو' },
+  { id: 'settlement', label: 'تسوية/إرجاع',  icon: '📥', direction: 'from_member', desc: 'استرجاع مبلغ من العضو' },
+  { id: 'deduction',  label: 'خصم/تصفية',   icon: '➖', direction: 'from_member', desc: 'خصم من رصيد العضو' },
+];
+
+const INITIAL_MEMBER_TXNS: MemberTxn[] = [
+  { id: 'mt1', projectId: 'p1', memberId: 'm2', type: 'custody', amount: 5000, note: 'عهدة مصاريف تشغيلية', date: '2025-06-15', status: 'accepted', direction: 'to_member' },
+  { id: 'mt2', projectId: 'p1', memberId: 'm3', type: 'custody', amount: 1200, note: 'عهدة نثرية', date: '2025-06-18', status: 'accepted', direction: 'to_member' },
+  { id: 'mt3', projectId: 'p1', memberId: 'm3', type: 'custody', amount: 2000, note: 'عهدة إضافية بانتظار القبول', date: '2025-06-22', status: 'pending', direction: 'to_member' },
 ];
 
 // ═══════════════════════════════════════════
@@ -903,14 +924,116 @@ function MemberForm({ initial, projectId, onSave, onCancel }: {
   );
 }
 
-function ProjectDetail({ projectId, projects, transactions, trackings, requests, documents, members, notifs, onNav, onSaveMember, onDeleteMember }: {
+// member custody/settlement movement form
+function MemberTxnForm({ projectId, members, onSave, onCancel }: {
+  projectId: string; members: Member[];
+  onSave: (t: Omit<MemberTxn, 'id'>) => void; onCancel: () => void;
+}) {
+  const projMembers = members.filter(m => m.projectId === projectId && m.role !== 'owner');
+  const [memberId, setMemberId] = useState(projMembers[0]?.id ?? '');
+  const [type, setType] = useState<MemberTxnType>('custody');
+  const [amount, setAmount] = useState<number | ''>('');
+  const [note, setNote] = useState('');
+  const typeInfo = MEMBER_TXN_TYPES.find(t => t.id === type)!;
+  const valid = memberId && amount !== '' && Number(amount) > 0;
+
+  return (
+    <>
+      <Field label="العضو">
+        <Select value={memberId} onChange={setMemberId} options={projMembers.map(m => ({ v: m.id, l: `${m.name} (رصيد: ${fmtNum(m.balance ?? 0)})` }))} />
+      </Field>
+      <Field label="نوع الحركة">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {MEMBER_TXN_TYPES.map(t => (
+            <button key={t.id} onClick={() => setType(t.id)} style={{
+              display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+              border: `1.5px solid ${type === t.id ? '#2563eb' : 'var(--border)'}`, background: type === t.id ? '#2563eb12' : 'var(--surface)',
+              textAlign: 'right', fontFamily: 'inherit',
+            }}>
+              <span style={{ fontSize: 20 }}>{t.icon}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{t.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{t.desc}</div>
+              </div>
+              <span style={{ fontSize: 11, color: t.direction === 'to_member' ? '#15803d' : '#b91c1c', fontWeight: 600 }}>
+                {t.direction === 'to_member' ? '+ للعضو' : '− من العضو'}
+              </span>
+            </button>
+          ))}
+        </div>
+      </Field>
+      <Field label="المبلغ (ر.س)">
+        <NumInput value={amount} onChange={setAmount} placeholder="0" />
+      </Field>
+      <Field label="ملاحظات (اختياري)">
+        <TextArea value={note} onChange={setNote} placeholder="سبب الحركة..." />
+      </Field>
+      <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#1d4ed8' }}>
+        ℹ️ ستُرسل الحركة للعضو بانتظار {typeInfo.direction === 'to_member' ? 'قبوله الاستلام' : 'موافقته على الخصم'}.
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
+        <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
+          projectId, memberId, type, amount: amount === '' ? 0 : amount, note, date: today(),
+          status: 'pending', direction: typeInfo.direction,
+        })}>إرسال الحركة</Btn>
+      </div>
+    </>
+  );
+}
+
+// invite member by email (simulated)
+function InviteForm({ projectId, onInvite, onCancel }: {
+  projectId: string; onInvite: (m: Omit<Member, 'id'> & { id?: string }) => void; onCancel: () => void;
+}) {
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<MemberRole>('member');
+  const valid = email.includes('@') && email.length > 4;
+  return (
+    <>
+      <div style={{ background: '#f5f3ff', borderRadius: 12, padding: 14, marginBottom: 16, fontSize: 12, color: '#6d28d9' }}>
+        📧 ستُرسل دعوة انضمام عبر البريد. يشترط أن يكون المدعو مسجلاً في النظام لقبول الدعوة.
+      </div>
+      <Field label="البريد الإلكتروني للمدعو">
+        <TextInput type="email" value={email} onChange={setEmail} placeholder="name@example.com" />
+      </Field>
+      <Field label="الدور عند الانضمام">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {ROLES.filter(r => r.id !== 'owner').map(r => (
+            <button key={r.id} onClick={() => setRole(r.id)} style={{
+              display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+              border: `1.5px solid ${role === r.id ? r.color : 'var(--border)'}`, background: role === r.id ? r.color + '12' : 'var(--surface)',
+              textAlign: 'right', fontFamily: 'inherit',
+            }}>
+              <span style={{ width: 10, height: 10, borderRadius: 99, background: r.color, flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{r.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{r.desc}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </Field>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
+        <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onInvite({
+          projectId, name: email.split('@')[0], email: email.trim(), role,
+          permissions: ROLE_PERMS[role], balance: 0, status: 'invited',
+        })}>📧 إرسال الدعوة</Btn>
+      </div>
+    </>
+  );
+}
+
+function ProjectDetail({ projectId, projects, transactions, trackings, requests, documents, members, memberTxns, notifs, onNav, onSaveMember, onDeleteMember, onSaveMemberTxn, onDecideMemberTxn }: {
   projectId: string; projects: Project[]; transactions: Transaction[]; trackings: Tracking[];
-  requests: RequestItem[]; documents: DocItem[]; members: Member[]; notifs: Notif[];
+  requests: RequestItem[]; documents: DocItem[]; members: Member[]; memberTxns: MemberTxn[]; notifs: Notif[];
   onNav: (p: Page) => void;
   onSaveMember: (m: Omit<Member, 'id'> & { id?: string }) => void; onDeleteMember: (id: string) => void;
+  onSaveMemberTxn: (t: Omit<MemberTxn, 'id'>) => void; onDecideMemberTxn: (id: string, status: MemberTxnStatus) => void;
 }) {
   const [tab, setTab] = useState<'overview' | 'members' | 'cashflow'>('overview');
-  const [sheet, setSheet] = useState<null | { mode: 'add' } | { mode: 'edit'; member: Member }>(null);
+  const [sheet, setSheet] = useState<null | { mode: 'add' } | { mode: 'edit'; member: Member } | { mode: 'txn' } | { mode: 'invite' }>(null);
   const project = projects.find(p => p.id === projectId);
   if (!project) return <div style={{ padding: 24 }}>المشروع غير موجود.</div>;
 
@@ -1035,12 +1158,46 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
       )}
 
       {/* MEMBERS */}
-      {tab === 'members' && (
+      {tab === 'members' && (() => {
+        const projTxns = memberTxns.filter(t => t.projectId === projectId);
+        const pendingTxns = projTxns.filter(t => t.status === 'pending');
+        return (
         <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>أطراف العلاقة في هذا المشروع وصلاحياتهم</div>
-            <Btn size="sm" onClick={() => setSheet({ mode: 'add' })}>+ إضافة عضو</Btn>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>أطراف العلاقة وأرصدتهم وحركاتهم</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Btn size="sm" variant="outline" onClick={() => setSheet({ mode: 'invite' })}>📧 دعوة</Btn>
+              <Btn size="sm" variant="outline" onClick={() => setSheet({ mode: 'txn' })}>💱 حركة</Btn>
+              <Btn size="sm" onClick={() => setSheet({ mode: 'add' })}>+ عضو</Btn>
+            </div>
           </div>
+
+          {/* pending movements requiring accept/reject */}
+          {pendingTxns.length > 0 && (
+            <Card style={{ marginBottom: 16, border: '1.5px solid #fde68a' }}>
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 12, color: '#a16207' }}>⏳ حركات بانتظار القبول/الرفض</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {pendingTxns.map(t => {
+                  const m = members.find(x => x.id === t.memberId);
+                  const ti = MEMBER_TXN_TYPES.find(x => x.id === t.type)!;
+                  return (
+                    <div key={t.id} style={{ padding: '12px 14px', background: '#fffbeb', borderRadius: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{ti.icon} {ti.label} — {m?.name}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: t.direction === 'to_member' ? '#15803d' : '#b91c1c' }}>{t.direction === 'to_member' ? '+' : '−'}{fmtNum(t.amount)}</div>
+                      </div>
+                      {t.note && <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>{t.note}</div>}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => onDecideMemberTxn(t.id, 'accepted')} style={{ flex: 1, padding: 6, borderRadius: 8, background: '#15803d', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>✓ قبول</button>
+                        <button onClick={() => onDecideMemberTxn(t.id, 'rejected')} style={{ flex: 1, padding: 6, borderRadius: 8, background: '#fee2e2', color: '#b91c1c', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>✕ رفض</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
           {projMembers.length === 0 && (
             <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>👥</div>
@@ -1057,7 +1214,10 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                       {m.name.charAt(0)}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{m.name}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {m.name}
+                        {m.status === 'invited' && <span style={{ fontSize: 10, background: '#fef3c7', color: '#a16207', padding: '1px 7px', borderRadius: 99 }}>دعوة معلّقة</span>}
+                      </div>
                       <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{m.email}</div>
                     </div>
                     <span style={{ background: roleInfo.color + '18', color: roleInfo.color, padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{roleInfo.label}</span>
@@ -1065,7 +1225,13 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                       <button onClick={() => setSheet({ mode: 'edit', member: m })} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: 'var(--text-3)', flexShrink: 0 }}>✎</button>
                     )}
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12, paddingTop: 12, borderTop: '1px solid #f9fafb' }}>
+                  {m.role !== 'owner' && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>رصيد العضو (عُهد)</span>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: (m.balance ?? 0) > 0 ? '#15803d' : 'var(--text-3)' }}>{fmt(m.balance ?? 0)}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
                     {m.permissions.map(pid => {
                       const p = PERMISSIONS.find(x => x.id === pid);
                       return p ? <span key={pid} style={{ fontSize: 11, background: 'var(--surface-3)', color: '#64748b', padding: '3px 9px', borderRadius: 99 }}>{p.label}</span> : null;
@@ -1079,12 +1245,19 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
           <Sheet open={sheet?.mode === 'add'} onClose={close} title="إضافة عضو">
             <MemberForm projectId={projectId} onSave={(m) => { onSaveMember(m); close(); }} onCancel={close} />
           </Sheet>
+          <Sheet open={sheet?.mode === 'invite'} onClose={close} title="دعوة عضو">
+            <InviteForm projectId={projectId} onInvite={(m) => { onSaveMember(m); close(); }} onCancel={close} />
+          </Sheet>
+          <Sheet open={sheet?.mode === 'txn'} onClose={close} title="حركة على رصيد عضو">
+            <MemberTxnForm projectId={projectId} members={members} onSave={(t) => { onSaveMemberTxn(t); close(); }} onCancel={close} />
+          </Sheet>
           <Sheet open={sheet?.mode === 'edit'} onClose={close} title="تعديل العضو والصلاحيات"
             footer={sheet?.mode === 'edit' ? <Btn variant="danger" onClick={() => { onDeleteMember(sheet.member.id); close(); }}>🗑️ إزالة العضو</Btn> : undefined}>
             {sheet?.mode === 'edit' && <MemberForm key={sheet.member.id} initial={sheet.member} projectId={projectId} onSave={(m) => { onSaveMember(m); close(); }} onCancel={close} />}
           </Sheet>
         </>
-      )}
+        );
+      })()}
 
       {/* CASH FLOW */}
       {tab === 'cashflow' && (
@@ -2192,6 +2365,7 @@ export default function App() {
   const [documents, setDocuments] = usePersist<DocItem[]>('mz_documents', INITIAL_DOCUMENTS);
   const [notifs, setNotifs] = usePersist<Notif[]>('mz_notifs', INITIAL_NOTIFS);
   const [members, setMembers] = usePersist<Member[]>('mz_members', INITIAL_MEMBERS);
+  const [memberTxns, setMemberTxns] = usePersist<MemberTxn[]>('mz_member_txns', INITIAL_MEMBER_TXNS);
 
   // create-sheet flags triggered by FAB / headers
   const [createTx, setCreateTx] = useState(false);
@@ -2281,6 +2455,29 @@ export default function App() {
     setMembers(list => m.id ? list.map(x => x.id === m.id ? { ...x, ...m } as Member : x) : [...list, { ...m, id: uid('m') }]);
   const deleteMember = (id: string) => setMembers(l => l.filter(x => x.id !== id));
 
+  const saveMemberTxn = (t: Omit<MemberTxn, 'id'>) => setMemberTxns(list => [{ ...t, id: uid('mt') }, ...list]);
+  const decideMemberTxn = (id: string, status: MemberTxnStatus) => {
+    const txn = memberTxns.find(t => t.id === id);
+    setMemberTxns(list => list.map(t => t.id === id ? { ...t, status } : t));
+    if (txn && status === 'accepted') {
+      // update member balance: +amount when money goes to member, −amount when taken from member
+      const delta = txn.direction === 'to_member' ? txn.amount : -txn.amount;
+      setMembers(ms => ms.map(m => m.id === txn.memberId ? { ...m, balance: (m.balance ?? 0) + delta } : m));
+      const m = members.find(x => x.id === txn.memberId);
+      const ti = MEMBER_TXN_TYPES.find(x => x.id === txn.type);
+      // reflect in project finances: money to member = expense, money from member = income
+      const projTx: Transaction = {
+        id: uid('t'), projectId: txn.projectId,
+        type: txn.direction === 'to_member' ? 'expense' : 'income',
+        description: `${ti?.label ?? 'حركة عضو'} — ${m?.name ?? ''}`,
+        amount: txn.amount, category: 'عُهد', date: today(), hasDoc: false,
+        note: `حركة على رصيد العضو (${txn.type})`,
+      };
+      setTransactions(list => [projTx, ...list]);
+      setNotifs(ns => [{ id: uid('n'), type: 'success', title: 'تمت حركة على رصيد عضو', body: `${ti?.label} بمبلغ ${fmt(txn.amount)} لـ ${m?.name ?? ''}.`, time: 'الآن', read: false }, ...ns]);
+    }
+  };
+
   // document → action bridges
   const docAction = (action: 'tx' | 'tracking', doc: DocItem) => {
     if (action === 'tx') { setPage('finance'); setCreateTx(true); }
@@ -2300,7 +2497,7 @@ export default function App() {
     switch (page) {
       case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} />;
       case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} />;
-      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} />;
+      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} />;
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} />;
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} />;
       case 'trackings': return <Trackings projectId={projectId} trackings={trackings} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
