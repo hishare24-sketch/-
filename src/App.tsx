@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react';
 // ═══════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════
-type Page = 'dashboard' | 'projects' | 'finance' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings';
+type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 type RequestStatus = 'pending' | 'approved' | 'rejected';
 
-type Project = { id: string; name: string; icon: string; balance: number; color: string };
+type Project = { id: string; name: string; icon: string; balance: number; color: string; type?: string; description?: string };
+type Member = { id: string; projectId: string; name: string; email: string; role: MemberRole; permissions: string[] };
+type MemberRole = 'owner' | 'manager' | 'member' | 'viewer';
 type Transaction = { id: string; projectId: string; type: TxType; description: string; amount: number; category: string; date: string; hasDoc: boolean; note?: string; toProject?: string; transferDir?: 'out' | 'in'; linkId?: string };
 type Tracking = { id: string; name: string; type: string; icon: string; status: TrackingStatus; daysLeft: number; expiryDate: string; projectId: string; note?: string };
 type RequestItem = { id: string; title: string; amount: number; requestedBy: string; status: RequestStatus; date: string; type: string; projectId: string; note?: string };
@@ -19,6 +21,30 @@ type Notif = { id: string; type: string; title: string; body: string; time: stri
 //  CONSTANTS (type options per module)
 // ═══════════════════════════════════════════
 const PROJECT_ICONS = ['🏢', '🏠', '🍽️', '🏪', '🚗', '💼', '🏭', '⚙️', '📦', '🌿'];
+const PROJECT_TYPES = ['شركة', 'مؤسسة', 'مشروع منزلي', 'مشروع أسري', 'متجر إلكتروني', 'مطعم', 'أخرى'];
+
+// roles & permissions (نوع التمكين والصلاحيات)
+const ROLES: { id: MemberRole; label: string; desc: string; color: string }[] = [
+  { id: 'owner',   label: 'مالك المشروع', desc: 'تحكم كامل بكل شيء', color: '#7c3aed' },
+  { id: 'manager', label: 'مدير مالي',    desc: 'إدارة المالية والموافقات', color: '#2563eb' },
+  { id: 'member',  label: 'عضو',          desc: 'إضافة عمليات ومستندات', color: '#059669' },
+  { id: 'viewer',  label: 'مشاهد',        desc: 'عرض فقط دون تعديل', color: '#6b7280' },
+];
+const PERMISSIONS: { id: string; label: string }[] = [
+  { id: 'finance_view',   label: 'عرض المالية' },
+  { id: 'finance_edit',   label: 'إدارة العمليات المالية' },
+  { id: 'docs_manage',    label: 'إدارة المستندات' },
+  { id: 'tracking_manage',label: 'إدارة المتابعات' },
+  { id: 'requests_approve',label: 'اعتماد الطلبات' },
+  { id: 'members_manage', label: 'إدارة الأعضاء' },
+];
+// default permissions per role
+const ROLE_PERMS: Record<MemberRole, string[]> = {
+  owner:   PERMISSIONS.map(p => p.id),
+  manager: ['finance_view', 'finance_edit', 'docs_manage', 'tracking_manage', 'requests_approve'],
+  member:  ['finance_view', 'finance_edit', 'docs_manage', 'tracking_manage'],
+  viewer:  ['finance_view'],
+};
 const PROJECT_COLORS = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#dc2626', '#0891b2'];
 
 const TX_TYPES: { id: TxType; label: string; icon: string }[] = [
@@ -45,9 +71,9 @@ const DOC_TYPES = ['فاتورة', 'عقد', 'كشف حساب', 'وثيقة رس
 //  MOCK DATA
 // ═══════════════════════════════════════════
 const INITIAL_PROJECTS: Project[] = [
-  { id: 'p1', name: 'شركة النخيل', icon: '🏢', balance: 284500, color: '#2563eb' },
-  { id: 'p2', name: 'مشروع المنزل', icon: '🏠', balance: 52300, color: '#059669' },
-  { id: 'p3', name: 'مطعم الديوانية', icon: '🍽️', balance: 118900, color: '#d97706' },
+  { id: 'p1', name: 'شركة النخيل', icon: '🏢', balance: 284500, color: '#2563eb', type: 'شركة', description: 'شركة تجارية متخصصة في التوريدات' },
+  { id: 'p2', name: 'مشروع المنزل', icon: '🏠', balance: 52300, color: '#059669', type: 'مشروع منزلي', description: 'إدارة مصاريف والتزامات المنزل' },
+  { id: 'p3', name: 'مطعم الديوانية', icon: '🍽️', balance: 118900, color: '#d97706', type: 'مطعم', description: 'مطعم وجبات شعبية' },
 ];
 
 const INITIAL_TRANSACTIONS: Transaction[] = [
@@ -88,6 +114,13 @@ const INITIAL_NOTIFS: Notif[] = [
   { id: 'n2', type: 'warning', title: 'ضمان يوشك على الانتهاء', body: 'ضمان ثلاجة المطبخ ينتهي خلال 12 يوم.', time: 'قبل 3 ساعات', read: false },
   { id: 'n3', type: 'info', title: 'طلب جديد بانتظار موافقتك', body: 'طلب صرف مصروفات السفر بمبلغ 3,200 ر.س.', time: 'أمس', read: false },
   { id: 'n4', type: 'success', title: 'تمت معالجة مستند', body: 'تمت قراءة فاتورة مورد يونيو بنجاح.', time: 'أمس', read: true },
+];
+
+const INITIAL_MEMBERS: Member[] = [
+  { id: 'm1', projectId: 'p1', name: 'محمد العمري', email: 'mohammed@example.com', role: 'owner', permissions: ROLE_PERMS.owner },
+  { id: 'm2', projectId: 'p1', name: 'سارة المحمد', email: 'sara@example.com', role: 'manager', permissions: ROLE_PERMS.manager },
+  { id: 'm3', projectId: 'p1', name: 'أحمد العلي', email: 'ahmad@example.com', role: 'member', permissions: ROLE_PERMS.member },
+  { id: 'm4', projectId: 'p3', name: 'محمد الزيد', email: 'mz@example.com', role: 'manager', permissions: ROLE_PERMS.manager },
 ];
 
 // ═══════════════════════════════════════════
@@ -608,12 +641,20 @@ function ProjectForm({ initial, onSave, onCancel }: {
   const [icon, setIcon] = useState(initial?.icon ?? PROJECT_ICONS[0]);
   const [color, setColor] = useState(initial?.color ?? PROJECT_COLORS[0]);
   const [balance, setBalance] = useState<number | ''>(initial?.balance ?? '');
+  const [type, setType] = useState(initial?.type ?? PROJECT_TYPES[0]);
+  const [description, setDescription] = useState(initial?.description ?? '');
   const valid = name.trim().length > 0;
 
   return (
     <>
       <Field label="اسم المشروع">
         <TextInput value={name} onChange={setName} placeholder="مثال: شركة النخيل" />
+      </Field>
+      <Field label="نوع المشروع">
+        <Select value={type} onChange={setType} options={PROJECT_TYPES.map(t => ({ v: t, l: t }))} />
+      </Field>
+      <Field label="وصف المشروع (اختياري)">
+        <TextArea value={description} onChange={setDescription} placeholder="نبذة قصيرة عن المشروع..." />
       </Field>
       <Field label="الأيقونة">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -640,7 +681,7 @@ function ProjectForm({ initial, onSave, onCancel }: {
       </Field>
       <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
-        <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({ id: initial?.id, name: name.trim(), icon, color, balance: balance === '' ? 0 : balance })}>
+        <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({ id: initial?.id, name: name.trim(), icon, color, balance: balance === '' ? 0 : balance, type, description: description.trim() })}>
           {initial ? 'حفظ التعديلات' : 'إنشاء المشروع'}
         </Btn>
       </div>
@@ -671,7 +712,7 @@ function Projects({ projects, transactions, onOpen, onSave, onDelete }: {
                 <div style={{ width: 48, height: 48, borderRadius: 14, background: p.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>{p.icon}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: '#9ca3af' }}>مشروع نشط</div>
+                  <div style={{ fontSize: 11, color: '#9ca3af' }}>{p.type ?? 'مشروع نشط'}</div>
                 </div>
                 <button onClick={() => setSheet({ mode: 'view', project: p })} style={{ background: '#f3f4f6', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', fontSize: 14, color: '#6b7280' }}>⋯</button>
               </div>
@@ -716,7 +757,7 @@ function Projects({ projects, transactions, onOpen, onSave, onDelete }: {
           <>
             <Btn variant="danger" onClick={() => { onDelete(sheet.project.id); close(); }}>🗑️ حذف</Btn>
             <Btn variant="outline" style={{ flex: 1 }} onClick={() => setSheet({ mode: 'edit', project: sheet.project })}>✎ تعديل</Btn>
-            <Btn style={{ flex: 1 }} onClick={() => { onOpen(sheet.project.id); close(); }}>فتح المالية</Btn>
+            <Btn style={{ flex: 1 }} onClick={() => { onOpen(sheet.project.id); close(); }}>فتح التفاصيل</Btn>
           </>
         ) : undefined}>
         {sheet?.mode === 'view' && (() => {
@@ -748,6 +789,318 @@ function Projects({ projects, transactions, onOpen, onSave, onDelete }: {
     </div>
   );
 }
+
+// ═══════════════════════════════════════════
+//  PROJECT DETAIL  (overview / members & permissions / cash flow)
+// ═══════════════════════════════════════════
+function MemberForm({ initial, projectId, onSave, onCancel }: {
+  initial?: Member; projectId: string;
+  onSave: (m: Omit<Member, 'id'> & { id?: string }) => void; onCancel: () => void;
+}) {
+  const [name, setName] = useState(initial?.name ?? '');
+  const [email, setEmail] = useState(initial?.email ?? '');
+  const [role, setRole] = useState<MemberRole>(initial?.role ?? 'member');
+  const [perms, setPerms] = useState<string[]>(initial?.permissions ?? ROLE_PERMS.member);
+  const valid = name.trim().length > 0 && email.trim().length > 0;
+
+  // when role changes, reset to that role's default permissions
+  const pickRole = (r: MemberRole) => { setRole(r); setPerms(ROLE_PERMS[r]); };
+  const togglePerm = (id: string) => setPerms(ps => ps.includes(id) ? ps.filter(x => x !== id) : [...ps, id]);
+
+  return (
+    <>
+      <Field label="اسم العضو">
+        <TextInput value={name} onChange={setName} placeholder="مثال: أحمد العلي" />
+      </Field>
+      <Field label="البريد الإلكتروني">
+        <TextInput type="email" value={email} onChange={setEmail} placeholder="name@example.com" />
+      </Field>
+      <Field label="نوع التمكين (الدور)">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {ROLES.map(r => (
+            <button key={r.id} onClick={() => pickRole(r.id)} style={{
+              display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+              border: `1.5px solid ${role === r.id ? r.color : '#e5e7eb'}`, background: role === r.id ? r.color + '12' : '#fff',
+              textAlign: 'right', fontFamily: 'inherit',
+            }}>
+              <span style={{ width: 10, height: 10, borderRadius: 99, background: r.color, flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{r.label}</div>
+                <div style={{ fontSize: 11, color: '#9ca3af' }}>{r.desc}</div>
+              </div>
+              {role === r.id && <span style={{ color: r.color, fontWeight: 700 }}>✓</span>}
+            </button>
+          ))}
+        </div>
+      </Field>
+      <Field label="الصلاحيات التفصيلية">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {PERMISSIONS.map(p => {
+            const on = perms.includes(p.id);
+            return (
+              <button key={p.id} onClick={() => togglePerm(p.id)} disabled={role === 'owner'} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', borderRadius: 9,
+                border: '1px solid #f1f5f9', background: on ? '#eff6ff' : '#fff', cursor: role === 'owner' ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit', opacity: role === 'owner' ? 0.7 : 1,
+              }}>
+                <span style={{ fontSize: 13, color: '#374151' }}>{p.label}</span>
+                <span style={{
+                  width: 36, height: 20, borderRadius: 99, background: on ? '#2563eb' : '#e5e7eb', position: 'relative', transition: 'background .15s', flexShrink: 0,
+                }}>
+                  <span style={{ position: 'absolute', top: 2, [on ? 'left' : 'right']: 2, width: 16, height: 16, borderRadius: 99, background: '#fff' } as React.CSSProperties} />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {role === 'owner' && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>المالك يملك جميع الصلاحيات تلقائياً.</div>}
+      </Field>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
+        <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
+          id: initial?.id, projectId, name: name.trim(), email: email.trim(), role,
+          permissions: role === 'owner' ? ROLE_PERMS.owner : perms,
+        })}>{initial ? 'حفظ التعديلات' : 'إضافة العضو'}</Btn>
+      </div>
+    </>
+  );
+}
+
+function ProjectDetail({ projectId, projects, transactions, trackings, requests, documents, members, notifs, onNav, onSaveMember, onDeleteMember }: {
+  projectId: string; projects: Project[]; transactions: Transaction[]; trackings: Tracking[];
+  requests: RequestItem[]; documents: DocItem[]; members: Member[]; notifs: Notif[];
+  onNav: (p: Page) => void;
+  onSaveMember: (m: Omit<Member, 'id'> & { id?: string }) => void; onDeleteMember: (id: string) => void;
+}) {
+  const [tab, setTab] = useState<'overview' | 'members' | 'cashflow'>('overview');
+  const [sheet, setSheet] = useState<null | { mode: 'add' } | { mode: 'edit'; member: Member }>(null);
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return <div style={{ padding: 24 }}>المشروع غير موجود.</div>;
+
+  const txns = transactions.filter(t => t.projectId === projectId);
+  const income = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const expense = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const transfersOut = txns.filter(t => t.type === 'transfer' && t.transferDir === 'out').reduce((s, t) => s + t.amount, 0);
+  const transfersIn = txns.filter(t => t.type === 'transfer' && t.transferDir === 'in').reduce((s, t) => s + t.amount, 0);
+  const balance = computeBalance(project, transactions);
+  const projMembers = members.filter(m => m.projectId === projectId);
+  const projTrackings = trackings.filter(t => t.projectId === projectId);
+  const projDocs = documents.filter(d => d.projectId === projectId);
+  const projReqs = requests.filter(r => r.projectId === projectId);
+  const pendingReqs = projReqs.filter(r => r.status === 'pending');
+
+  // cash flow by month (group income/expense per month)
+  const byMonth: Record<string, { income: number; expense: number }> = {};
+  txns.forEach(t => {
+    const m = t.date.slice(0, 7);
+    if (!byMonth[m]) byMonth[m] = { income: 0, expense: 0 };
+    if (t.type === 'income' || (t.type === 'transfer' && t.transferDir === 'in')) byMonth[m].income += t.amount;
+    else byMonth[m].expense += t.amount;
+  });
+  const months = Object.keys(byMonth).sort();
+  const maxFlow = Math.max(...months.map(m => Math.max(byMonth[m].income, byMonth[m].expense)), 1);
+
+  const close = () => setSheet(null);
+
+  return (
+    <div style={{ padding: 24, maxWidth: 1100 }}>
+      {/* header */}
+      <button onClick={() => onNav('projects')} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12 }}>‹ رجوع للمشاريع</button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+        <div style={{ width: 64, height: 64, borderRadius: 18, background: project.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>{project.icon}</div>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827' }}>{project.name}</h1>
+          <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>{project.type ?? 'مشروع'}{project.description ? ` — ${project.description}` : ''}</div>
+        </div>
+        <div style={{ textAlign: 'left' }}>
+          <div style={{ fontSize: 12, color: '#6b7280' }}>الرصيد الحالي</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: balance >= 0 ? '#15803d' : '#b91c1c' }}>{fmt(balance)}</div>
+        </div>
+      </div>
+
+      {/* tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#f3f4f6', padding: 4, borderRadius: 12, width: 'fit-content', flexWrap: 'wrap' }}>
+        {[['overview', 'نظرة عامة'], ['members', 'الأعضاء والصلاحيات'], ['cashflow', 'التدفقات النقدية']].map(([v, l]) => (
+          <button key={v} onClick={() => setTab(v as any)} style={{
+            padding: '7px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500,
+            background: tab === v ? '#fff' : 'transparent', color: tab === v ? '#111827' : '#6b7280',
+            boxShadow: tab === v ? '0 1px 3px rgba(0,0,0,.08)' : 'none',
+          }}>{l}</button>
+        ))}
+      </div>
+
+      {/* OVERVIEW */}
+      {tab === 'overview' && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 14, marginBottom: 20 }}>
+            {[
+              { l: 'إجمالي الإيرادات', v: fmt(income), c: '#15803d', bg: '#f0fdf4', i: '📈' },
+              { l: 'إجمالي المصروفات', v: fmt(expense), c: '#b91c1c', bg: '#fef2f2', i: '📉' },
+              { l: 'صافي الربح', v: fmt(income - expense), c: '#1d4ed8', bg: '#eff6ff', i: '💰' },
+              { l: 'عدد الأعضاء', v: String(projMembers.length), c: '#7c3aed', bg: '#faf5ff', i: '👥' },
+            ].map(s => (
+              <div key={s.l} style={{ background: s.bg, borderRadius: 14, padding: 16 }}>
+                <div style={{ fontSize: 22, marginBottom: 6 }}>{s.i}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: s.c }}>{s.v}</div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* resources summary */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px,1fr))', gap: 16 }}>
+            <Card>
+              <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>الموارد والمستندات</div>
+              {[
+                ['📄 المستندات', projDocs.length],
+                ['🛡️ المتابعات والضمانات', projTrackings.length],
+                ['📝 الطلبات', projReqs.length],
+                ['⏳ طلبات معلقة', pendingReqs.length],
+              ].map(([l, n]) => (
+                <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f9fafb', fontSize: 13 }}>
+                  <span style={{ color: '#374151' }}>{l}</span>
+                  <span style={{ fontWeight: 700, color: '#111827' }}>{n as number}</span>
+                </div>
+              ))}
+            </Card>
+
+            {/* procedural notifications */}
+            <Card>
+              <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>الإشعارات الإجرائية</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {pendingReqs.length === 0 && projTrackings.filter(t => t.status !== 'active').length === 0 && (
+                  <div style={{ padding: '16px 0', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>لا توجد إجراءات مطلوبة ✅</div>
+                )}
+                {pendingReqs.map(r => (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: '#fffbeb' }}>
+                    <span>⏳</span>
+                    <div style={{ flex: 1, fontSize: 12 }}>
+                      <div style={{ fontWeight: 500, color: '#111827' }}>{r.title}</div>
+                      <div style={{ color: '#a16207' }}>طلب بانتظار الاعتماد — {fmtNum(r.amount)} ر.س</div>
+                    </div>
+                  </div>
+                ))}
+                {projTrackings.filter(t => t.status !== 'active').map(t => (
+                  <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: t.status === 'expired' ? '#fef2f2' : '#fffbeb' }}>
+                    <span>{t.icon}</span>
+                    <div style={{ flex: 1, fontSize: 12 }}>
+                      <div style={{ fontWeight: 500, color: '#111827' }}>{t.name}</div>
+                      <div style={{ color: t.status === 'expired' ? '#b91c1c' : '#a16207' }}>
+                        {t.status === 'expired' ? 'منتهي — يتطلب تجديد' : `ينتهي خلال ${t.daysLeft} يوم`}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </>
+      )}
+
+      {/* MEMBERS */}
+      {tab === 'members' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontSize: 13, color: '#6b7280' }}>أطراف العلاقة في هذا المشروع وصلاحياتهم</div>
+            <Btn size="sm" onClick={() => setSheet({ mode: 'add' })}>+ إضافة عضو</Btn>
+          </div>
+          {projMembers.length === 0 && (
+            <Card style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>👥</div>
+              <div style={{ fontSize: 14 }}>لا يوجد أعضاء — أضف أول طرف للمشروع</div>
+            </Card>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {projMembers.map(m => {
+              const roleInfo = ROLES.find(r => r.id === m.role)!;
+              return (
+                <Card key={m.id} style={{ padding: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 99, background: roleInfo.color + '20', color: roleInfo.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
+                      {m.name.charAt(0)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>{m.name}</div>
+                      <div style={{ fontSize: 12, color: '#9ca3af' }}>{m.email}</div>
+                    </div>
+                    <span style={{ background: roleInfo.color + '18', color: roleInfo.color, padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{roleInfo.label}</span>
+                    {m.role !== 'owner' && (
+                      <button onClick={() => setSheet({ mode: 'edit', member: m })} style={{ background: '#f3f4f6', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: '#6b7280', flexShrink: 0 }}>✎</button>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12, paddingTop: 12, borderTop: '1px solid #f9fafb' }}>
+                    {m.permissions.map(pid => {
+                      const p = PERMISSIONS.find(x => x.id === pid);
+                      return p ? <span key={pid} style={{ fontSize: 11, background: '#f1f5f9', color: '#64748b', padding: '3px 9px', borderRadius: 99 }}>{p.label}</span> : null;
+                    })}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          <Sheet open={sheet?.mode === 'add'} onClose={close} title="إضافة عضو">
+            <MemberForm projectId={projectId} onSave={(m) => { onSaveMember(m); close(); }} onCancel={close} />
+          </Sheet>
+          <Sheet open={sheet?.mode === 'edit'} onClose={close} title="تعديل العضو والصلاحيات"
+            footer={sheet?.mode === 'edit' ? <Btn variant="danger" onClick={() => { onDeleteMember(sheet.member.id); close(); }}>🗑️ إزالة العضو</Btn> : undefined}>
+            {sheet?.mode === 'edit' && <MemberForm key={sheet.member.id} initial={sheet.member} projectId={projectId} onSave={(m) => { onSaveMember(m); close(); }} onCancel={close} />}
+          </Sheet>
+        </>
+      )}
+
+      {/* CASH FLOW */}
+      {tab === 'cashflow' && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 14, marginBottom: 20 }}>
+            {[
+              { l: 'تدفق داخل (إيرادات)', v: income, c: '#15803d', bg: '#f0fdf4' },
+              { l: 'تدفق خارج (مصروفات)', v: expense, c: '#b91c1c', bg: '#fef2f2' },
+              { l: 'تحويلات واردة', v: transfersIn, c: '#1d4ed8', bg: '#eff6ff' },
+              { l: 'تحويلات صادرة', v: transfersOut, c: '#a16207', bg: '#fffbeb' },
+            ].map(s => (
+              <div key={s.l} style={{ background: s.bg, borderRadius: 14, padding: 16 }}>
+                <div style={{ fontSize: 17, fontWeight: 700, color: s.c }}>{fmt(s.v)}</div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+          <Card>
+            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 16 }}>التدفق النقدي الشهري</div>
+            {months.length === 0 && <div style={{ padding: '20px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>لا توجد بيانات تدفق بعد</div>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {months.map(m => (
+                <div key={m}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#6b7280', marginBottom: 4 }}>
+                    <span>{m}</span>
+                    <span style={{ color: byMonth[m].income - byMonth[m].expense >= 0 ? '#15803d' : '#b91c1c', fontWeight: 600 }}>
+                      صافي: {fmtNum(byMonth[m].income - byMonth[m].expense)}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, color: '#15803d', width: 50 }}>داخل</span>
+                    <div style={{ flex: 1, height: 14, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${(byMonth[m].income / maxFlow) * 100}%`, background: '#22c55e', borderRadius: 99 }} />
+                    </div>
+                    <span style={{ fontSize: 11, color: '#15803d', width: 60, textAlign: 'left' }}>{fmtNum(byMonth[m].income)}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <span style={{ fontSize: 10, color: '#b91c1c', width: 50 }}>خارج</span>
+                    <div style={{ flex: 1, height: 14, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${(byMonth[m].expense / maxFlow) * 100}%`, background: '#f87171', borderRadius: 99 }} />
+                    </div>
+                    <span style={{ fontSize: 11, color: '#b91c1c', width: 60, textAlign: 'left' }}>{fmtNum(byMonth[m].expense)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════
 //  FINANCE  (create / view / edit transaction by type)
 // ═══════════════════════════════════════════
@@ -968,13 +1321,24 @@ function DocForm({ initial, projectId, onSave, onCancel }: {
   );
 }
 
+// simulated AI extraction by document type (محاكاة استخراج البيانات)
+function aiExtract(doc: DocItem): [string, string][] {
+  const base: [string, string][] = [['نوع المستند', doc.type], ['تاريخ المستند', doc.date]];
+  if (doc.type === 'فاتورة') return [...base, ['المورد', 'مؤسسة الإمداد التجارية'], ['المبلغ الإجمالي', '4,250 ر.س'], ['الضريبة (15%)', '554 ر.س'], ['طريقة الدفع', 'تحويل بنكي'], ['الضمان', '12 شهر']];
+  if (doc.type === 'عقد') return [...base, ['الأطراف', 'الطرف الأول / الطرف الثاني'], ['قيمة العقد', '36,000 ر.س'], ['مدة العقد', '12 شهر'], ['تاريخ البداية', doc.date], ['الالتزامات', 'دفعات شهرية']];
+  if (doc.type === 'كشف حساب') return [...base, ['البنك', 'البنك الأهلي'], ['عدد العمليات', '24'], ['إجمالي الإيداعات', '52,000 ر.س'], ['إجمالي السحوبات', '38,400 ر.س'], ['الرصيد الختامي', '13,600 ر.س']];
+  if (doc.type === 'وثيقة رسمية') return [...base, ['رقم الوثيقة', '1078-4521'], ['الجهة المصدرة', 'وزارة التجارة'], ['تاريخ الإصدار', doc.date], ['تاريخ الانتهاء', '2026-07-15'], ['الحالة', 'سارية']];
+  return [...base, ['المحتوى', 'تم تحليل المستند العام'], ['عدد الصفحات', '3']];
+}
+
 function Documents({ projectId, projects, documents, onSave, onDelete, onAction, openCreate, onOpenCreate, onCloseCreate }: {
   projectId: string; projects: Project[]; documents: DocItem[];
   onSave: (d: Omit<DocItem, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
   onAction: (action: 'tx' | 'tracking', doc: DocItem) => void;
   openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void;
 }) {
-  const [sheet, setSheet] = useState<null | { mode: 'view' | 'edit' | 'actions'; doc: DocItem }>(null);
+  const [sheet, setSheet] = useState<null | { mode: 'view' | 'edit' | 'actions' | 'ai'; doc: DocItem }>(null);
+  const [aiBusy, setAiBusy] = useState(false);
   const docs = documents.filter(d => d.projectId === projectId);
   const close = () => setSheet(null);
 
@@ -1066,7 +1430,7 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
         {sheet?.mode === 'actions' && (() => {
           const d = sheet.doc;
           const items = [
-            { icon: '🤖', label: 'تحليل بالذكاء الاصطناعي', desc: 'استخراج البيانات تلقائياً', onClick: () => { onSave({ ...d, aiRead: true, status: 'processed' }); close(); } },
+            { icon: '🤖', label: 'تحليل بالذكاء الاصطناعي', desc: 'استخراج البيانات تلقائياً', onClick: () => { setSheet({ mode: 'ai', doc: d }); setAiBusy(true); setTimeout(() => setAiBusy(false), 1600); } },
             { icon: '💸', label: 'إنشاء عملية مالية', desc: 'تحويل الفاتورة إلى مصروف/إيراد', onClick: () => { onAction('tx', d); close(); } },
             { icon: '🛡️', label: 'إضافة عنصر متابعة', desc: 'إنشاء ضمان أو عقد من المستند', onClick: () => { onAction('tracking', d); close(); } },
             { icon: '📥', label: 'تنزيل المستند', desc: 'حفظ نسخة على جهازك', onClick: close },
@@ -1090,6 +1454,49 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
             </div>
           );
         })()}
+      </Sheet>
+
+      {/* AI Analysis */}
+      <Sheet open={sheet?.mode === 'ai'} onClose={close} title="🤖 تحليل الذكاء الاصطناعي"
+        footer={sheet?.mode === 'ai' && !aiBusy ? (
+          <>
+            <Btn variant="outline" style={{ flex: 1 }} onClick={close}>إغلاق</Btn>
+            <Btn style={{ flex: 1 }} onClick={() => { onSave({ ...sheet.doc, aiRead: true, status: 'processed' }); close(); }}>اعتماد النتائج</Btn>
+          </>
+        ) : undefined}>
+        {sheet?.mode === 'ai' && (
+          aiBusy ? (
+            <div style={{ padding: '30px 10px', textAlign: 'center' }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>🤖</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#4c1d95', marginBottom: 14 }}>جارٍ قراءة المستند واستخراج البيانات...</div>
+              <div style={{ height: 6, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{ height: '100%', background: 'linear-gradient(90deg,#7c3aed,#2563eb)', borderRadius: 99, animation: 'mzProgress 1.6s ease forwards' }} />
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ background: '#f8fafc', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14 }}>📄 {sheet.doc.name}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                  {aiExtract(sheet.doc).map(([k, v]) => (
+                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, paddingBottom: 8, borderBottom: '1px solid #eef2f6' }}>
+                      <span style={{ color: '#6b7280' }}>{k}</span>
+                      <span style={{ fontWeight: 600, color: '#111827' }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ background: '#f0fdf4', borderRadius: 12, padding: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d', marginBottom: 8 }}>✨ اقتراحات إجرائية</div>
+                <div style={{ fontSize: 12, color: '#374151', lineHeight: 1.9 }}>
+                  • إنشاء عملية مالية من هذا المستند<br />
+                  • إضافة عنصر متابعة للضمان/الانتهاء<br />
+                  • أرشفة المستند وربطه بالمشروع
+                </div>
+              </div>
+            </>
+          )
+        )}
       </Sheet>
     </div>
   );
@@ -1486,7 +1893,7 @@ const KEYFRAMES = `
 @keyframes mzSlideUp { from { transform: translateY(100%) } to { transform: translateY(0) } }
 @keyframes mzPop { from { opacity: 0; transform: translateY(8px) scale(.9) } to { opacity: 1; transform: translateY(0) scale(1) } }
 @keyframes mzPulse { 0%,100% { box-shadow: 0 6px 22px rgba(37,99,235,.45) } 50% { box-shadow: 0 6px 30px rgba(37,99,235,.7) } }
-`;
+@keyframes mzProgress { from { width: 0% } to { width: 100% } }`;
 
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard');
@@ -1498,6 +1905,7 @@ export default function App() {
   const [requests, setRequests] = usePersist<RequestItem[]>('mz_requests', INITIAL_REQUESTS);
   const [documents, setDocuments] = usePersist<DocItem[]>('mz_documents', INITIAL_DOCUMENTS);
   const [notifs, setNotifs] = usePersist<Notif[]>('mz_notifs', INITIAL_NOTIFS);
+  const [members, setMembers] = usePersist<Member[]>('mz_members', INITIAL_MEMBERS);
 
   // create-sheet flags triggered by FAB / headers
   const [createTx, setCreateTx] = useState(false);
@@ -1583,6 +1991,10 @@ export default function App() {
     setDocuments(list => d.id ? list.map(x => x.id === d.id ? { ...x, ...d } as DocItem : x) : [{ ...d, id: uid('d') }, ...list]);
   const deleteDoc = (id: string) => setDocuments(l => l.filter(x => x.id !== id));
 
+  const saveMember = (m: Omit<Member, 'id'> & { id?: string }) =>
+    setMembers(list => m.id ? list.map(x => x.id === m.id ? { ...x, ...m } as Member : x) : [...list, { ...m, id: uid('m') }]);
+  const deleteMember = (id: string) => setMembers(l => l.filter(x => x.id !== id));
+
   // document → action bridges
   const docAction = (action: 'tx' | 'tracking', doc: DocItem) => {
     if (action === 'tx') { setPage('finance'); setCreateTx(true); }
@@ -1601,7 +2013,8 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} />;
-      case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('finance'); }} onSave={saveProject} onDelete={deleteProject} />;
+      case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} />;
+      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} />;
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} />;
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} />;
       case 'trackings': return <Trackings projectId={projectId} trackings={trackings} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
