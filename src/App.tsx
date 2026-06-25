@@ -1365,34 +1365,43 @@ function TxForm({ initial, projectId, projects, onSave, onCancel }: {
   );
 }
 
-function Finance({ projectId, projects, transactions, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate }: {
+function Finance({ projectId, projects, transactions, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate, onNav }: {
   projectId: string; projects: Project[]; transactions: Transaction[];
   onSave: (t: Omit<Transaction, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
-  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void;
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; onNav: (p: Page) => void;
 }) {
   const [tab, setTab] = useState<'all' | TxType>('all');
+  const [search, setSearch] = useState('');
+  const [catFilter, setCatFilter] = useState('all');
   const [sheet, setSheet] = useState<null | { mode: 'edit' | 'view'; tx: Transaction }>(null);
   const project = projects.find(p => p.id === projectId)!;
   const txns = transactions.filter(t => t.projectId === projectId);
-  const filtered = tab === 'all' ? txns : txns.filter(t => t.type === tab);
+  const cats = Array.from(new Set(txns.map(t => t.category)));
+  const filtered = txns
+    .filter(t => tab === 'all' ? true : t.type === tab)
+    .filter(t => catFilter === 'all' ? true : t.category === catFilter)
+    .filter(t => search.trim() === '' ? true : t.description.includes(search.trim()));
   const income = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const expense = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const transfersIn = txns.filter(t => t.type === 'transfer' && t.transferDir === 'in').reduce((s, t) => s + t.amount, 0);
+  const transfersOut = txns.filter(t => t.type === 'transfer' && t.transferDir === 'out').reduce((s, t) => s + t.amount, 0);
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
       <PageHeader title="الإدارة المالية" subtitle={project.name}
-        action={<div style={{ display: 'flex', gap: 8 }}><Btn variant="outline" size="sm">📥 تصدير</Btn><Btn size="sm" onClick={onOpenCreate}>+ عملية جديدة</Btn></div>}
+        action={<div style={{ display: 'flex', gap: 8 }}><Btn variant="outline" size="sm" onClick={() => onNav('projectDetail')}>👥 تحويل لعضو</Btn><Btn size="sm" onClick={onOpenCreate}>+ عملية جديدة</Btn></div>}
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 16, marginBottom: 24 }}>
         {[
           { label: 'إجمالي الإيرادات', val: income, color: '#15803d', bg: '#f0fdf4', icon: '📈' },
           { label: 'إجمالي المصروفات', val: expense, color: '#b91c1c', bg: '#fef2f2', icon: '📉' },
           { label: 'صافي الربح', val: income - expense, color: '#1d4ed8', bg: '#eff6ff', icon: '💰' },
+          { label: 'صافي التحويلات', val: transfersIn - transfersOut, color: '#a16207', bg: '#fffbeb', icon: '↔' },
         ].map((s, i) => (
-          <div key={i} style={{ background: s.bg, borderRadius: 16, padding: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ fontSize: 28 }}>{s.icon}</span>
-            <div><div style={{ fontSize: 12, color: 'var(--text-3)' }}>{s.label}</div><div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{fmt(s.val)}</div></div>
+          <div key={i} style={{ background: s.bg, borderRadius: 16, padding: 18, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 24 }}>{s.icon}</span>
+            <div><div style={{ fontSize: 12, color: 'var(--text-3)' }}>{s.label}</div><div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{fmt(s.val)}</div></div>
           </div>
         ))}
       </div>
@@ -1406,6 +1415,17 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
               boxShadow: tab === val ? '0 1px 3px rgba(0,0,0,.08)' : 'none',
             }}>{label}</button>
           ))}
+        </div>
+        {/* filter bar: search + category */}
+        <div style={{ display: 'flex', gap: 8, padding: '12px 16px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 بحث في الوصف..." style={{ flex: 1, minWidth: 160, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13 }} />
+          <select value={catFilter} onChange={e => setCatFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer' }}>
+            <option value="all">كل التصنيفات</option>
+            {cats.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          {(search || catFilter !== 'all') && (
+            <button onClick={() => { setSearch(''); setCatFilter('all'); }} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, color: 'var(--text-3)' }}>مسح الفلترة</button>
+          )}
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }}>
@@ -1492,19 +1512,36 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
 // ═══════════════════════════════════════════
 //  DOCUMENTS  (upload by type / actions / view / edit)
 // ═══════════════════════════════════════════
-function DocForm({ initial, projectId, onSave, onCancel }: {
-  initial?: DocItem; projectId: string;
+function DocForm({ initial, projectId, projects, onSave, onCancel }: {
+  initial?: DocItem; projectId: string; projects: Project[];
   onSave: (d: Omit<DocItem, 'id'> & { id?: string }) => void; onCancel: () => void;
 }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [type, setType] = useState(initial?.type ?? DOC_TYPES[0]);
   const [date, setDate] = useState(initial?.date ?? today());
+  const [targetProject, setTargetProject] = useState(initial?.projectId ?? projectId);
   const valid = name.trim().length > 0;
+
+  // smart suggestion: route document to a project type that fits the doc type
+  const suggestProject = (docType: string): string | null => {
+    const map: Record<string, string[]> = {
+      'فاتورة': ['شركة', 'متجر إلكتروني', 'مطعم', 'مؤسسة'],
+      'عقد': ['شركة', 'مؤسسة'],
+      'كشف حساب': ['شركة', 'مؤسسة', 'مشروع منزلي'],
+      'وثيقة رسمية': ['شركة', 'مؤسسة'],
+    };
+    const wanted = map[docType];
+    if (!wanted) return null;
+    const match = projects.find(p => p.type && wanted.includes(p.type));
+    return match && match.id !== targetProject ? match.id : null;
+  };
+  const suggestion = suggestProject(type);
+  const suggestedProject = suggestion ? projects.find(p => p.id === suggestion) : null;
 
   return (
     <>
       {!initial && (
-        <div style={{ border: '2px dashed #e5e7eb', borderRadius: 14, padding: '24px 16px', textAlign: 'center', marginBottom: 18, background: 'var(--surface-2)' }}>
+        <div style={{ border: '2px dashed var(--border)', borderRadius: 14, padding: '24px 16px', textAlign: 'center', marginBottom: 18, background: 'var(--surface-2)' }}>
           <div style={{ fontSize: 28, marginBottom: 6 }}>☁️</div>
           <div style={{ fontSize: 13, color: 'var(--text-3)' }}>اسحب الملف هنا أو اضغط للاختيار</div>
           <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>PDF, JPG, PNG — حد أقصى 10MB</div>
@@ -1513,6 +1550,15 @@ function DocForm({ initial, projectId, onSave, onCancel }: {
       <Field label="نوع المستند">
         <TypePicker value={type} onChange={setType} options={DOC_TYPES.map(t => ({ v: t, l: t }))} />
       </Field>
+      <Field label="المشروع">
+        <Select value={targetProject} onChange={setTargetProject} options={projects.map(p => ({ v: p.id, l: `${p.icon} ${p.name}` }))} />
+      </Field>
+      {suggestedProject && (
+        <div style={{ background: '#f5f3ff', borderRadius: 10, padding: '10px 14px', marginTop: -8, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 12, color: '#6d28d9' }}>🤖 مقترح حسب نوع المستند: {suggestedProject.icon} {suggestedProject.name}</span>
+          <button onClick={() => setTargetProject(suggestedProject.id)} style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, padding: '4px 12px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>توجيه</button>
+        </div>
+      )}
       <Field label="اسم المستند">
         <TextInput value={name} onChange={setName} placeholder="مثال: فاتورة مورد يونيو" />
       </Field>
@@ -1524,7 +1570,7 @@ function DocForm({ initial, projectId, onSave, onCancel }: {
         <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
           id: initial?.id, name: name.trim(), type, date,
           size: initial?.size ?? Math.round(100 + Math.random() * 900) + ' KB',
-          status: initial?.status ?? 'pending', projectId, aiRead: initial?.aiRead ?? false,
+          status: initial?.status ?? 'pending', projectId: targetProject, aiRead: initial?.aiRead ?? false,
         })}>{initial ? 'حفظ التعديلات' : 'رفع المستند'}</Btn>
       </div>
     </>
@@ -1598,12 +1644,12 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
 
       {/* Upload */}
       <Sheet open={openCreate} onClose={onCloseCreate} title="رفع مستند">
-        <DocForm projectId={projectId} onSave={(d) => { onSave(d); onCloseCreate(); }} onCancel={onCloseCreate} />
+        <DocForm projectId={projectId} projects={projects} onSave={(d) => { onSave(d); onCloseCreate(); }} onCancel={onCloseCreate} />
       </Sheet>
 
       {/* Edit */}
       <Sheet open={sheet?.mode === 'edit'} onClose={close} title="تعديل المستند">
-        {sheet?.mode === 'edit' && <DocForm key={sheet.doc.id} initial={sheet.doc} projectId={projectId} onSave={(d) => { onSave(d); close(); }} onCancel={close} />}
+        {sheet?.mode === 'edit' && <DocForm key={sheet.doc.id} initial={sheet.doc} projectId={projectId} projects={projects} onSave={(d) => { onSave(d); close(); }} onCancel={close} />}
       </Sheet>
 
       {/* View */}
@@ -2498,7 +2544,7 @@ export default function App() {
       case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} />;
       case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} />;
       case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} />;
-      case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} />;
+      case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} />;
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} />;
       case 'trackings': return <Trackings projectId={projectId} trackings={trackings} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
       case 'requests': return <Requests projectId={projectId} requests={requests} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
