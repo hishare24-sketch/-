@@ -28,7 +28,7 @@ const ROLES: { id: MemberRole; label: string; desc: string; color: string }[] = 
   { id: 'owner',   label: 'مالك المشروع', desc: 'تحكم كامل بكل شيء', color: '#7c3aed' },
   { id: 'manager', label: 'مدير مالي',    desc: 'إدارة المالية والموافقات', color: '#2563eb' },
   { id: 'member',  label: 'عضو',          desc: 'إضافة عمليات ومستندات', color: '#059669' },
-  { id: 'viewer',  label: 'مشاهد',        desc: 'عرض فقط دون تعديل', color: '#6b7280' },
+  { id: 'viewer',  label: 'مشاهد',        desc: 'عرض فقط دون تعديل', color: 'var(--text-3)' },
 ];
 const PERMISSIONS: { id: string; label: string }[] = [
   { id: 'finance_view',   label: 'عرض المالية' },
@@ -185,7 +185,7 @@ function StatusBadge({ status }: { status: string }) {
     rejected:  { label: 'مرفوض',           bg: '#fee2e2', color: '#b91c1c' },
     processed: { label: 'تمت المعالجة',    bg: '#dbeafe', color: '#1d4ed8' },
   };
-  const s = map[status] || { label: status, bg: '#f3f4f6', color: '#6b7280' };
+  const s = map[status] || { label: status, bg: '#f3f4f6', color: 'var(--text-3)' };
   return (
     <span style={{ background: s.bg, color: s.color, padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>
       {s.label}
@@ -195,7 +195,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function Card({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #f1f3f5', padding: 20, ...style }}>
+    <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border)', padding: 20, ...style }}>
       {children}
     </div>
   );
@@ -205,8 +205,8 @@ function PageHeader({ title, subtitle, action }: { title: string; subtitle?: str
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827' }}>{title}</h1>
-        {subtitle && <p style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>{subtitle}</p>}
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{title}</h1>
+        {subtitle && <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 2 }}>{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -226,8 +226,8 @@ function Btn({ children, variant = 'primary', onClick, size = 'md', style = {}, 
   };
   const variants: Record<string, React.CSSProperties> = {
     primary: { background: '#2563eb', color: '#fff' },
-    outline: { background: '#fff', color: '#374151', border: '1px solid #e5e7eb' },
-    ghost:   { background: 'transparent', color: '#6b7280' },
+    outline: { background: 'var(--surface)', color: 'var(--text-2)', border: '1px solid var(--border)' },
+    ghost:   { background: 'transparent', color: 'var(--text-3)' },
     danger:  { background: '#fee2e2', color: '#b91c1c' },
     success: { background: '#dcfce7', color: '#15803d' },
   };
@@ -252,7 +252,7 @@ function Sheet({ open, onClose, title, children, footer }: {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#fff', width: '100%', maxWidth: 560, maxHeight: '92vh',
+          background: 'var(--surface)', width: '100%', maxWidth: 560, maxHeight: '92vh',
           borderRadius: '22px 22px 0 0', display: 'flex', flexDirection: 'column',
           animation: 'mzSlideUp .28s cubic-bezier(.16,1,.3,1)', boxShadow: '0 -8px 40px rgba(0,0,0,.18)',
         }}
@@ -262,9 +262,9 @@ function Sheet({ open, onClose, title, children, footer }: {
           <div style={{ width: 40, height: 4, borderRadius: 99, background: '#e5e7eb' }} />
         </div>
         {/* header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 14px', borderBottom: '1px solid #f1f5f9' }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: '#111827' }}>{title}</div>
-          <button onClick={onClose} style={{ background: '#f3f4f6', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', fontSize: 16, color: '#6b7280' }}>✕</button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 14px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{title}</div>
+          <button onClick={onClose} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', fontSize: 16, color: 'var(--text-3)' }}>✕</button>
         </div>
         {/* body */}
         <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>{children}</div>
@@ -279,15 +279,15 @@ function Sheet({ open, onClose, title, children, footer }: {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }}>{label}</label>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>{label}</label>
       {children}
     </div>
   );
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #e5e7eb',
-  fontFamily: 'inherit', fontSize: 14, color: '#111827', background: '#fff', boxSizing: 'border-box',
+  width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)',
+  fontFamily: 'inherit', fontSize: 14, color: 'var(--text)', background: 'var(--surface)', boxSizing: 'border-box',
 };
 
 function TextInput({ value, onChange, placeholder, type = 'text' }: { value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
@@ -343,35 +343,36 @@ const NAV = [
   { id: 'settings',      icon: '◎',  label: 'الإعدادات' },
 ];
 
-function Sidebar({ page, onNav, projects, projectId, onProject, unread, isMobile, open, onClose }: {
+function Sidebar({ page, onNav, projects, projectId, onProject, unread, isMobile, open, onClose, theme, onToggleTheme }: {
   page: Page; onNav: (p: Page) => void; projects: Project[];
   projectId: string; onProject: (id: string) => void; unread: number;
   isMobile: boolean; open: boolean; onClose: () => void;
+  theme: 'light' | 'dark'; onToggleTheme: () => void;
 }) {
   // on mobile, sidebar is an overlay drawer; hidden unless open
   if (isMobile && !open) return null;
 
   const aside = (
     <aside style={{
-      width: 240, background: '#0f1117', display: 'flex', flexDirection: 'column', height: '100vh', flexShrink: 0,
+      width: 240, background: 'var(--sidebar)', display: 'flex', flexDirection: 'column', height: '100vh', flexShrink: 0,
       ...(isMobile ? { position: 'fixed', top: 0, right: 0, zIndex: 1100, animation: 'mzSlideRight .25s ease' } : {}),
     }}>
       {/* Logo */}
-      <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid #1e2230', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid var(--sidebar-2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ color: '#fff', fontWeight: 900, fontSize: 18, fontFamily: 'serif' }}>م</span>
           </div>
           <div>
             <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>موازين</div>
-            <div style={{ color: '#6b7280', fontSize: 11 }}>المنصة المالية الذكية</div>
+            <div style={{ color: 'var(--text-3)', fontSize: 11 }}>المنصة المالية الذكية</div>
           </div>
         </div>
-        {isMobile && <button onClick={onClose} style={{ background: '#1e2230', border: 'none', color: '#9ca3af', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', fontSize: 16 }}>✕</button>}
+        {isMobile && <button onClick={onClose} style={{ background: 'var(--sidebar-2)', border: 'none', color: 'var(--text-3)', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', fontSize: 16 }}>✕</button>}
       </div>
 
       {/* Project switcher */}
-      <div style={{ padding: '12px 12px 8px', borderBottom: '1px solid #1e2230' }}>
+      <div style={{ padding: '12px 12px 8px', borderBottom: '1px solid var(--sidebar-2)' }}>
         <div style={{ color: '#4b5563', fontSize: 11, padding: '0 8px', marginBottom: 6 }}>المشروع الحالي</div>
         {projects.map(p => (
           <button key={p.id} onClick={() => { onProject(p.id); if (isMobile) onClose(); }} style={{
@@ -410,14 +411,23 @@ function Sidebar({ page, onNav, projects, projectId, onProject, unread, isMobile
       </nav>
 
       {/* User */}
-      <div style={{ padding: '12px 20px 20px', borderTop: '1px solid #1e2230' }}>
+      <div style={{ padding: '12px 20px 20px', borderTop: '1px solid var(--sidebar-2)' }}>
+        <button onClick={onToggleTheme} style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 12px',
+          borderRadius: 10, border: 'none', cursor: 'pointer', background: 'var(--sidebar-2)', marginBottom: 12, fontFamily: 'inherit',
+        }}>
+          <span style={{ color: '#9ca3af', fontSize: 13, fontWeight: 500 }}>{theme === 'dark' ? '🌙 الوضع الليلي' : '☀️ الوضع النهاري'}</span>
+          <span style={{ width: 40, height: 22, borderRadius: 99, background: theme === 'dark' ? '#2563eb' : '#cbd5e1', position: 'relative', flexShrink: 0 }}>
+            <span style={{ position: 'absolute', top: 2, [theme === 'dark' ? 'left' : 'right']: 2, width: 18, height: 18, borderRadius: 99, background: '#fff' } as React.CSSProperties} />
+          </span>
+        </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 32, height: 32, borderRadius: 99, background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <span style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>م</span>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>محمد العمري</div>
-            <div style={{ color: '#6b7280', fontSize: 11 }}>مالك المشروع</div>
+            <div style={{ color: 'var(--text-3)', fontSize: 11 }}>مالك المشروع</div>
           </div>
         </div>
       </div>
@@ -465,21 +475,21 @@ function ActionCenter({ unread, onAction, onNav }: {
             {actions.map((a, i) => (
               <button key={a.id} onClick={() => { setOpen(false); onAction(a.id); }} style={{
                 display: 'flex', alignItems: 'center', gap: 10, border: 'none', cursor: 'pointer',
-                background: '#fff', borderRadius: 99, padding: '8px 16px 8px 8px', boxShadow: '0 4px 18px rgba(0,0,0,.16)',
+                background: 'var(--surface)', borderRadius: 99, padding: '8px 16px 8px 8px', boxShadow: '0 4px 18px rgba(0,0,0,.16)',
                 fontFamily: 'inherit', animation: `mzPop .28s cubic-bezier(.16,1,.3,1) ${i * 0.04}s both`,
               }}>
                 <span style={{ width: 34, height: 34, borderRadius: 99, background: a.bg, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{a.icon}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#111827', whiteSpace: 'nowrap' }}>{a.label}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap' }}>{a.label}</span>
               </button>
             ))}
             {/* quick notifications shortcut */}
             <button onClick={() => { setOpen(false); onNav('notifications'); }} style={{
               display: 'flex', alignItems: 'center', gap: 10, border: 'none', cursor: 'pointer',
-              background: '#fff', borderRadius: 99, padding: '8px 16px 8px 8px', boxShadow: '0 4px 18px rgba(0,0,0,.16)',
+              background: 'var(--surface)', borderRadius: 99, padding: '8px 16px 8px 8px', boxShadow: '0 4px 18px rgba(0,0,0,.16)',
               fontFamily: 'inherit', animation: `mzPop .28s cubic-bezier(.16,1,.3,1) ${actions.length * 0.04}s both`,
             }}>
               <span style={{ width: 34, height: 34, borderRadius: 99, background: '#ef4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>🔔</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#111827', whiteSpace: 'nowrap' }}>الإشعارات{unread > 0 ? ` (${unread})` : ''}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap' }}>الإشعارات{unread > 0 ? ` (${unread})` : ''}</span>
             </button>
           </div>
         )}
@@ -553,8 +563,8 @@ function Dashboard({ projectId, onNav, projects, transactions, trackings, reques
           <Card key={i} style={{ padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 6 }}>{s.label}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#111827' }}>{s.value}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 6 }}>{s.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>{s.value}</div>
                 {s.trend && <div style={{ fontSize: 12, color: s.trend.startsWith('+') ? '#15803d' : '#b91c1c', marginTop: 4 }}>{s.trend} من الشهر الماضي</div>}
               </div>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{s.icon}</div>
@@ -567,7 +577,7 @@ function Dashboard({ projectId, onNav, projects, transactions, trackings, reques
         <Card>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div style={{ fontWeight: 600, fontSize: 15 }}>الإيرادات والمصروفات</div>
-            <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#6b7280' }}>
+            <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-3)' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: '#3b82f6', borderRadius: 2, display: 'inline-block' }} />إيرادات</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: '#f87171', borderRadius: 2, display: 'inline-block' }} />مصروفات</span>
             </div>
@@ -579,7 +589,7 @@ function Dashboard({ projectId, onNav, projects, transactions, trackings, reques
                   <div style={{ flex: 1, background: '#3b82f6', borderRadius: '3px 3px 0 0', height: `${(d.income / maxVal) * 100}%`, minHeight: 4 }} />
                   <div style={{ flex: 1, background: '#f87171', borderRadius: '3px 3px 0 0', height: `${(d.expense / maxVal) * 100}%`, minHeight: 4 }} />
                 </div>
-                <span style={{ fontSize: 10, color: '#9ca3af' }}>{d.month.slice(0, 3)}</span>
+                <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{d.month.slice(0, 3)}</span>
               </div>
             ))}
           </div>
@@ -591,12 +601,12 @@ function Dashboard({ projectId, onNav, projects, transactions, trackings, reques
             <button onClick={() => onNav('trackings')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {urgentTrackings.length === 0 && <div style={{ padding: '20px 12px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>✅ لا توجد تنبيهات عاجلة</div>}
+            {urgentTrackings.length === 0 && <div style={{ padding: '20px 12px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>✅ لا توجد تنبيهات عاجلة</div>}
             {urgentTrackings.slice(0, 4).map(t => (
               <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: t.status === 'expired' ? '#fef2f2' : '#fffbeb' }}>
                 <span style={{ fontSize: 18 }}>{t.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
                   <div style={{ fontSize: 11, color: t.status === 'expired' ? '#b91c1c' : '#a16207', marginTop: 1 }}>
                     {t.status === 'expired' ? 'منتهي منذ ' + Math.abs(t.daysLeft) + ' أيام' : 'يتبقى ' + t.daysLeft + ' يوم'}
                   </div>
@@ -614,15 +624,15 @@ function Dashboard({ projectId, onNav, projects, transactions, trackings, reques
             <button onClick={() => onNav('finance')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {txns.length === 0 && <div style={{ padding: '20px 12px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>لا توجد عمليات في هذا المشروع</div>}
+            {txns.length === 0 && <div style={{ padding: '20px 12px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>لا توجد عمليات في هذا المشروع</div>}
             {txns.slice(0, 5).map(t => (
               <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 34, height: 34, borderRadius: 9, background: t.type === 'income' ? '#f0fdf4' : '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 14 }}>
                   {t.type === 'income' ? '↑' : t.type === 'expense' ? '↓' : '↔'}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description}</div>
-                  <div style={{ fontSize: 11, color: '#9ca3af' }}>{t.date}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{t.date}</div>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: t.type === 'income' ? '#15803d' : t.type === 'expense' ? '#b91c1c' : '#1d4ed8', flexShrink: 0 }}>
                   {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : t.transferDir === 'in' ? '+' : '-'}{fmtNum(t.amount)}
@@ -638,14 +648,14 @@ function Dashboard({ projectId, onNav, projects, transactions, trackings, reques
             <button onClick={() => onNav('requests')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {pendingReqs.length === 0 && <div style={{ padding: '20px 12px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>لا توجد طلبات تنتظر موافقتك</div>}
+            {pendingReqs.length === 0 && <div style={{ padding: '20px 12px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>لا توجد طلبات تنتظر موافقتك</div>}
             {pendingReqs.map(r => (
               <div key={r.id} style={{ padding: '12px 14px', background: '#fffbeb', borderRadius: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>{r.title}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#374151', flexShrink: 0 }}>{fmtNum(r.amount)}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{r.title}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-2)', flexShrink: 0 }}>{fmtNum(r.amount)}</div>
                 </div>
-                <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 10 }}>من: {r.requestedBy}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 10 }}>من: {r.requestedBy}</div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => onDecide(r.id, 'approved')} style={{ flex: 1, padding: 6, borderRadius: 8, background: '#15803d', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>✓ موافقة</button>
                   <button onClick={() => onDecide(r.id, 'rejected')} style={{ flex: 1, padding: 6, borderRadius: 8, background: '#fee2e2', color: '#b91c1c', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>✕ رفض</button>
@@ -739,13 +749,13 @@ function Projects({ projects, transactions, onOpen, onSave, onDelete }: {
                 <div style={{ width: 48, height: 48, borderRadius: 14, background: p.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>{p.icon}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: '#9ca3af' }}>{p.type ?? 'مشروع نشط'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{p.type ?? 'مشروع نشط'}</div>
                 </div>
-                <button onClick={() => setSheet({ mode: 'view', project: p })} style={{ background: '#f3f4f6', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', fontSize: 14, color: '#6b7280' }}>⋯</button>
+                <button onClick={() => setSheet({ mode: 'view', project: p })} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', fontSize: 14, color: 'var(--text-3)' }}>⋯</button>
               </div>
-              <div style={{ background: '#f9fafb', borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>الرصيد الحالي</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#111827' }}>{fmt(computeBalance(p, transactions))}</div>
+              <div style={{ background: 'var(--surface-2)', borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 2 }}>الرصيد الحالي</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>{fmt(computeBalance(p, transactions))}</div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
                 <div style={{ background: '#f0fdf4', borderRadius: 8, padding: '8px 10px' }}>
@@ -761,7 +771,7 @@ function Projects({ projects, transactions, onOpen, onSave, onDelete }: {
             </Card>
           );
         })}
-        <div onClick={() => setSheet({ mode: 'create' })} style={{ border: '2px dashed #e5e7eb', borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', minHeight: 200, color: '#9ca3af' }}>
+        <div onClick={() => setSheet({ mode: 'create' })} style={{ border: '2px dashed #e5e7eb', borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', minHeight: 200, color: 'var(--text-3)' }}>
           <span style={{ fontSize: 32 }}>+</span>
           <span style={{ fontSize: 14, fontWeight: 500 }}>إضافة مشروع جديد</span>
         </div>
@@ -798,14 +808,14 @@ function Projects({ projects, transactions, onOpen, onSave, onDelete }: {
                 <div style={{ width: 60, height: 60, borderRadius: 16, background: p.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>{p.icon}</div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 18 }}>{p.name}</div>
-                  <div style={{ fontSize: 13, color: '#6b7280' }}>الرصيد: {fmt(computeBalance(p, transactions))}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-3)' }}>الرصيد: {fmt(computeBalance(p, transactions))}</div>
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
                 {[['إيرادات', income, '#15803d'], ['مصروفات', expense, '#b91c1c'], ['عدد العمليات', txns.length, '#1d4ed8']].map(([l, v, c]) => (
-                  <div key={l as string} style={{ background: '#f9fafb', borderRadius: 10, padding: '12px', textAlign: 'center' }}>
+                  <div key={l as string} style={{ background: 'var(--surface-2)', borderRadius: 10, padding: '12px', textAlign: 'center' }}>
                     <div style={{ fontSize: 17, fontWeight: 700, color: c as string }}>{typeof v === 'number' && (l === 'عدد العمليات') ? v : fmtNum(v as number)}</div>
-                    <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{l}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{l}</div>
                   </div>
                 ))}
               </div>
@@ -852,8 +862,8 @@ function MemberForm({ initial, projectId, onSave, onCancel }: {
             }}>
               <span style={{ width: 10, height: 10, borderRadius: 99, background: r.color, flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{r.label}</div>
-                <div style={{ fontSize: 11, color: '#9ca3af' }}>{r.desc}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{r.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{r.desc}</div>
               </div>
               {role === r.id && <span style={{ color: r.color, fontWeight: 700 }}>✓</span>}
             </button>
@@ -867,20 +877,20 @@ function MemberForm({ initial, projectId, onSave, onCancel }: {
             return (
               <button key={p.id} onClick={() => togglePerm(p.id)} disabled={role === 'owner'} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', borderRadius: 9,
-                border: '1px solid #f1f5f9', background: on ? '#eff6ff' : '#fff', cursor: role === 'owner' ? 'not-allowed' : 'pointer',
+                border: '1px solid var(--border)', background: on ? '#eff6ff' : '#fff', cursor: role === 'owner' ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit', opacity: role === 'owner' ? 0.7 : 1,
               }}>
-                <span style={{ fontSize: 13, color: '#374151' }}>{p.label}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{p.label}</span>
                 <span style={{
                   width: 36, height: 20, borderRadius: 99, background: on ? '#2563eb' : '#e5e7eb', position: 'relative', transition: 'background .15s', flexShrink: 0,
                 }}>
-                  <span style={{ position: 'absolute', top: 2, [on ? 'left' : 'right']: 2, width: 16, height: 16, borderRadius: 99, background: '#fff' } as React.CSSProperties} />
+                  <span style={{ position: 'absolute', top: 2, [on ? 'left' : 'right']: 2, width: 16, height: 16, borderRadius: 99, background: 'var(--surface)' } as React.CSSProperties} />
                 </span>
               </button>
             );
           })}
         </div>
-        {role === 'owner' && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>المالك يملك جميع الصلاحيات تلقائياً.</div>}
+        {role === 'owner' && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>المالك يملك جميع الصلاحيات تلقائياً.</div>}
       </Field>
       <div style={{ display: 'flex', gap: 10 }}>
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
@@ -932,21 +942,21 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
       {/* header */}
-      <button onClick={() => onNav('projects')} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12 }}>‹ رجوع للمشاريع</button>
+      <button onClick={() => onNav('projects')} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12 }}>‹ رجوع للمشاريع</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
         <div style={{ width: 64, height: 64, borderRadius: 18, background: project.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>{project.icon}</div>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827' }}>{project.name}</h1>
-          <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>{project.type ?? 'مشروع'}{project.description ? ` — ${project.description}` : ''}</div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{project.name}</h1>
+          <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 2 }}>{project.type ?? 'مشروع'}{project.description ? ` — ${project.description}` : ''}</div>
         </div>
         <div style={{ textAlign: 'left' }}>
-          <div style={{ fontSize: 12, color: '#6b7280' }}>الرصيد الحالي</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>الرصيد الحالي</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: balance >= 0 ? '#15803d' : '#b91c1c' }}>{fmt(balance)}</div>
         </div>
       </div>
 
       {/* tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#f3f4f6', padding: 4, borderRadius: 12, width: 'fit-content', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'var(--surface-3)', padding: 4, borderRadius: 12, width: 'fit-content', flexWrap: 'wrap' }}>
         {[['overview', 'نظرة عامة'], ['members', 'الأعضاء والصلاحيات'], ['cashflow', 'التدفقات النقدية']].map(([v, l]) => (
           <button key={v} onClick={() => setTab(v as any)} style={{
             padding: '7px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500,
@@ -969,7 +979,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
               <div key={s.l} style={{ background: s.bg, borderRadius: 14, padding: 16 }}>
                 <div style={{ fontSize: 22, marginBottom: 6 }}>{s.i}</div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: s.c }}>{s.v}</div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{s.l}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{s.l}</div>
               </div>
             ))}
           </div>
@@ -984,9 +994,9 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                 ['📝 الطلبات', projReqs.length],
                 ['⏳ طلبات معلقة', pendingReqs.length],
               ].map(([l, n]) => (
-                <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f9fafb', fontSize: 13 }}>
-                  <span style={{ color: '#374151' }}>{l}</span>
-                  <span style={{ fontWeight: 700, color: '#111827' }}>{n as number}</span>
+                <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+                  <span style={{ color: 'var(--text-2)' }}>{l}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text)' }}>{n as number}</span>
                 </div>
               ))}
             </Card>
@@ -996,13 +1006,13 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
               <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>الإشعارات الإجرائية</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {pendingReqs.length === 0 && projTrackings.filter(t => t.status !== 'active').length === 0 && (
-                  <div style={{ padding: '16px 0', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>لا توجد إجراءات مطلوبة ✅</div>
+                  <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>لا توجد إجراءات مطلوبة ✅</div>
                 )}
                 {pendingReqs.map(r => (
                   <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: '#fffbeb' }}>
                     <span>⏳</span>
                     <div style={{ flex: 1, fontSize: 12 }}>
-                      <div style={{ fontWeight: 500, color: '#111827' }}>{r.title}</div>
+                      <div style={{ fontWeight: 500, color: 'var(--text)' }}>{r.title}</div>
                       <div style={{ color: '#a16207' }}>طلب بانتظار الاعتماد — {fmtNum(r.amount)} ر.س</div>
                     </div>
                   </div>
@@ -1011,7 +1021,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                   <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: t.status === 'expired' ? '#fef2f2' : '#fffbeb' }}>
                     <span>{t.icon}</span>
                     <div style={{ flex: 1, fontSize: 12 }}>
-                      <div style={{ fontWeight: 500, color: '#111827' }}>{t.name}</div>
+                      <div style={{ fontWeight: 500, color: 'var(--text)' }}>{t.name}</div>
                       <div style={{ color: t.status === 'expired' ? '#b91c1c' : '#a16207' }}>
                         {t.status === 'expired' ? 'منتهي — يتطلب تجديد' : `ينتهي خلال ${t.daysLeft} يوم`}
                       </div>
@@ -1028,11 +1038,11 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
       {tab === 'members' && (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontSize: 13, color: '#6b7280' }}>أطراف العلاقة في هذا المشروع وصلاحياتهم</div>
+            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>أطراف العلاقة في هذا المشروع وصلاحياتهم</div>
             <Btn size="sm" onClick={() => setSheet({ mode: 'add' })}>+ إضافة عضو</Btn>
           </div>
           {projMembers.length === 0 && (
-            <Card style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
+            <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>👥</div>
               <div style={{ fontSize: 14 }}>لا يوجد أعضاء — أضف أول طرف للمشروع</div>
             </Card>
@@ -1047,18 +1057,18 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                       {m.name.charAt(0)}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>{m.name}</div>
-                      <div style={{ fontSize: 12, color: '#9ca3af' }}>{m.email}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{m.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{m.email}</div>
                     </div>
                     <span style={{ background: roleInfo.color + '18', color: roleInfo.color, padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{roleInfo.label}</span>
                     {m.role !== 'owner' && (
-                      <button onClick={() => setSheet({ mode: 'edit', member: m })} style={{ background: '#f3f4f6', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: '#6b7280', flexShrink: 0 }}>✎</button>
+                      <button onClick={() => setSheet({ mode: 'edit', member: m })} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: 'var(--text-3)', flexShrink: 0 }}>✎</button>
                     )}
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12, paddingTop: 12, borderTop: '1px solid #f9fafb' }}>
                     {m.permissions.map(pid => {
                       const p = PERMISSIONS.find(x => x.id === pid);
-                      return p ? <span key={pid} style={{ fontSize: 11, background: '#f1f5f9', color: '#64748b', padding: '3px 9px', borderRadius: 99 }}>{p.label}</span> : null;
+                      return p ? <span key={pid} style={{ fontSize: 11, background: 'var(--surface-3)', color: '#64748b', padding: '3px 9px', borderRadius: 99 }}>{p.label}</span> : null;
                     })}
                   </div>
                 </Card>
@@ -1088,17 +1098,17 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
             ].map(s => (
               <div key={s.l} style={{ background: s.bg, borderRadius: 14, padding: 16 }}>
                 <div style={{ fontSize: 17, fontWeight: 700, color: s.c }}>{fmt(s.v)}</div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{s.l}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{s.l}</div>
               </div>
             ))}
           </div>
           <Card>
             <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 16 }}>التدفق النقدي الشهري</div>
-            {months.length === 0 && <div style={{ padding: '20px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>لا توجد بيانات تدفق بعد</div>}
+            {months.length === 0 && <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>لا توجد بيانات تدفق بعد</div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {months.map(m => (
                 <div key={m}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#6b7280', marginBottom: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>
                     <span>{m}</span>
                     <span style={{ color: byMonth[m].income - byMonth[m].expense >= 0 ? '#15803d' : '#b91c1c', fontWeight: 600 }}>
                       صافي: {fmtNum(byMonth[m].income - byMonth[m].expense)}
@@ -1106,14 +1116,14 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
                     <span style={{ fontSize: 10, color: '#15803d', width: 50 }}>داخل</span>
-                    <div style={{ flex: 1, height: 14, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ flex: 1, height: 14, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${(byMonth[m].income / maxFlow) * 100}%`, background: '#22c55e', borderRadius: 99 }} />
                     </div>
                     <span style={{ fontSize: 11, color: '#15803d', width: 60, textAlign: 'left' }}>{fmtNum(byMonth[m].income)}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     <span style={{ fontSize: 10, color: '#b91c1c', width: 50 }}>خارج</span>
-                    <div style={{ flex: 1, height: 14, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ flex: 1, height: 14, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${(byMonth[m].expense / maxFlow) * 100}%`, background: '#f87171', borderRadius: 99 }} />
                     </div>
                     <span style={{ fontSize: 11, color: '#b91c1c', width: 60, textAlign: 'left' }}>{fmtNum(byMonth[m].expense)}</span>
@@ -1209,13 +1219,13 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
         ].map((s, i) => (
           <div key={i} style={{ background: s.bg, borderRadius: 16, padding: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
             <span style={{ fontSize: 28 }}>{s.icon}</span>
-            <div><div style={{ fontSize: 12, color: '#6b7280' }}>{s.label}</div><div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{fmt(s.val)}</div></div>
+            <div><div style={{ fontSize: 12, color: 'var(--text-3)' }}>{s.label}</div><div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{fmt(s.val)}</div></div>
           </div>
         ))}
       </div>
 
       <Card style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', gap: 4, padding: 16, background: '#f9fafb', borderBottom: '1px solid #f1f3f5', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 4, padding: 16, background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
           {[['all', 'الكل'], ['income', 'إيرادات'], ['expense', 'مصروفات'], ['transfer', 'تحويلات']].map(([val, label]) => (
             <button key={val} onClick={() => setTab(val as any)} style={{
               padding: '6px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500,
@@ -1227,26 +1237,26 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }}>
             <thead>
-              <tr style={{ background: '#f9fafb' }}>
+              <tr style={{ background: 'var(--surface-2)' }}>
                 {['الوصف', 'التصنيف', 'التاريخ', 'المستند', 'المبلغ'].map(h => (
-                  <th key={h} style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #f1f3f5' }}>{h}</th>
+                  <th key={h} style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 500, color: 'var(--text-3)', borderBottom: '1px solid var(--border)' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && <tr><td colSpan={5} style={{ padding: '32px 16px', textAlign: 'center', color: '#9ca3af' }}>لا توجد عمليات مطابقة</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={5} style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-3)' }}>لا توجد عمليات مطابقة</td></tr>}
               {filtered.map(t => (
-                <tr key={t.id} onClick={() => setSheet({ mode: 'view', tx: t })} style={{ cursor: 'pointer', borderBottom: '1px solid #f9fafb' }}>
+                <tr key={t.id} onClick={() => setSheet({ mode: 'view', tx: t })} style={{ cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 30, height: 30, borderRadius: 8, background: t.type === 'income' ? '#f0fdf4' : t.type === 'expense' ? '#fef2f2' : '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
                         {t.type === 'income' ? '↑' : t.type === 'expense' ? '↓' : '↔'}
                       </div>
-                      <span style={{ color: '#374151', fontWeight: 500 }}>{t.description}</span>
+                      <span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{t.description}</span>
                     </div>
                   </td>
-                  <td style={{ padding: '12px 16px', color: '#6b7280' }}>{t.category}</td>
-                  <td style={{ padding: '12px 16px', color: '#6b7280' }}>{t.date}</td>
+                  <td style={{ padding: '12px 16px', color: 'var(--text-3)' }}>{t.category}</td>
+                  <td style={{ padding: '12px 16px', color: 'var(--text-3)' }}>{t.date}</td>
                   <td style={{ padding: '12px 16px' }}>{t.hasDoc ? <span style={{ color: '#2563eb', fontSize: 12 }}>📎 مرفق</span> : <span style={{ color: '#d1d5db', fontSize: 12 }}>—</span>}</td>
                   <td style={{ padding: '12px 16px', fontWeight: 600, color: t.type === 'income' ? '#15803d' : t.type === 'expense' ? '#b91c1c' : '#1d4ed8' }}>
                     {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : t.transferDir === 'in' ? '+' : '-'}{fmtNum(t.amount)} ر.س
@@ -1294,9 +1304,9 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {rows.map(([k, v]) => (
-                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, paddingBottom: 10, borderBottom: '1px solid #f9fafb' }}>
-                  <span style={{ color: '#9ca3af', flexShrink: 0 }}>{k}</span>
-                  <span style={{ fontWeight: 500, color: '#374151', textAlign: 'left' }}>{v}</span>
+                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+                  <span style={{ color: 'var(--text-3)', flexShrink: 0 }}>{k}</span>
+                  <span style={{ fontWeight: 500, color: 'var(--text-2)', textAlign: 'left' }}>{v}</span>
                 </div>
               ))}
             </div>
@@ -1321,10 +1331,10 @@ function DocForm({ initial, projectId, onSave, onCancel }: {
   return (
     <>
       {!initial && (
-        <div style={{ border: '2px dashed #e5e7eb', borderRadius: 14, padding: '24px 16px', textAlign: 'center', marginBottom: 18, background: '#fafafa' }}>
+        <div style={{ border: '2px dashed #e5e7eb', borderRadius: 14, padding: '24px 16px', textAlign: 'center', marginBottom: 18, background: 'var(--surface-2)' }}>
           <div style={{ fontSize: 28, marginBottom: 6 }}>☁️</div>
-          <div style={{ fontSize: 13, color: '#6b7280' }}>اسحب الملف هنا أو اضغط للاختيار</div>
-          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>PDF, JPG, PNG — حد أقصى 10MB</div>
+          <div style={{ fontSize: 13, color: 'var(--text-3)' }}>اسحب الملف هنا أو اضغط للاختيار</div>
+          <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>PDF, JPG, PNG — حد أقصى 10MB</div>
         </div>
       )}
       <Field label="نوع المستند">
@@ -1373,10 +1383,10 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
     <div style={{ padding: 24, maxWidth: 1100 }}>
       <PageHeader title="المستندات" subtitle="رفع وإدارة المستندات" action={<Btn size="sm" onClick={onOpenCreate}>+ رفع مستند</Btn>} />
 
-      <div onClick={onOpenCreate} style={{ border: '2px dashed #e5e7eb', borderRadius: 16, padding: '32px 20px', textAlign: 'center', marginBottom: 24, background: '#fafafa', cursor: 'pointer' }}>
+      <div onClick={onOpenCreate} style={{ border: '2px dashed #e5e7eb', borderRadius: 16, padding: '32px 20px', textAlign: 'center', marginBottom: 24, background: 'var(--surface-2)', cursor: 'pointer' }}>
         <div style={{ fontSize: 32, marginBottom: 8 }}>☁️</div>
-        <div style={{ fontWeight: 500, color: '#374151', marginBottom: 4 }}>اسحب المستندات هنا أو اضغط للرفع</div>
-        <div style={{ fontSize: 12, color: '#9ca3af' }}>PDF, JPG, PNG — حد أقصى 10MB</div>
+        <div style={{ fontWeight: 500, color: 'var(--text-2)', marginBottom: 4 }}>اسحب المستندات هنا أو اضغط للرفع</div>
+        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>PDF, JPG, PNG — حد أقصى 10MB</div>
       </div>
 
       <div style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%)', borderRadius: 14, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, border: '1px solid #ddd6fe' }}>
@@ -1388,7 +1398,7 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
       </div>
 
       {docs.length === 0 && (
-        <Card style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
+        <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>📂</div>
           <div style={{ fontSize: 14 }}>لا توجد مستندات في هذا المشروع</div>
         </Card>
@@ -1397,11 +1407,11 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
         {docs.map(d => (
           <Card key={d.id} style={{ padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div style={{ width: 40, height: 48, background: '#f1f5f9', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>📄</div>
+              <div style={{ width: 40, height: 48, background: 'var(--surface-3)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>📄</div>
               {d.aiRead && <span style={{ fontSize: 10, background: '#f5f3ff', color: '#7c3aed', padding: '2px 7px', borderRadius: 99, fontWeight: 500 }}>✨ AI</span>}
             </div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: '#111827', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
-            <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 8 }}>{d.type} · {d.size}</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>{d.type} · {d.size}</div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <StatusBadge status={d.status} />
             </div>
@@ -1436,14 +1446,14 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
           const d = sheet.doc;
           return (
             <>
-              <div style={{ background: '#f8fafc', borderRadius: 12, padding: 18, textAlign: 'center', marginBottom: 16 }}>
+              <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 18, textAlign: 'center', marginBottom: 16 }}>
                 <div style={{ fontSize: 48 }}>📄</div>
                 <div style={{ fontWeight: 600, marginTop: 8 }}>{d.name}</div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[['النوع', d.type], ['التاريخ', d.date], ['الحجم', d.size], ['الحالة', d.status === 'processed' ? 'تمت المعالجة' : 'قيد الانتظار'], ['قراءة AI', d.aiRead ? 'تمت ✅' : 'لم تتم ❌']].map(([k, v]) => (
-                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, paddingBottom: 9, borderBottom: '1px solid #f9fafb' }}>
-                    <span style={{ color: '#9ca3af' }}>{k}</span><span style={{ fontWeight: 500, color: '#374151' }}>{v}</span>
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, paddingBottom: 9, borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ color: 'var(--text-3)' }}>{k}</span><span style={{ fontWeight: 500, color: 'var(--text-2)' }}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -1464,16 +1474,16 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
           ];
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>📄 {d.name}</div>
+              <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 4 }}>📄 {d.name}</div>
               {items.map(it => (
                 <button key={it.label} onClick={it.onClick} style={{
                   display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 12,
-                  border: '1px solid #f1f5f9', background: '#fff', cursor: 'pointer', textAlign: 'right', fontFamily: 'inherit',
+                  border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', textAlign: 'right', fontFamily: 'inherit',
                 }}>
                   <span style={{ fontSize: 22 }}>{it.icon}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>{it.label}</div>
-                    <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 1 }}>{it.desc}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{it.label}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 1 }}>{it.desc}</div>
                   </div>
                   <span style={{ color: '#d1d5db' }}>‹</span>
                 </button>
@@ -1496,26 +1506,26 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
             <div style={{ padding: '30px 10px', textAlign: 'center' }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>🤖</div>
               <div style={{ fontSize: 14, fontWeight: 600, color: '#4c1d95', marginBottom: 14 }}>جارٍ قراءة المستند واستخراج البيانات...</div>
-              <div style={{ height: 6, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
+              <div style={{ height: 6, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}>
                 <div style={{ height: '100%', background: 'linear-gradient(90deg,#7c3aed,#2563eb)', borderRadius: 99, animation: 'mzProgress 1.6s ease forwards' }} />
               </div>
             </div>
           ) : (
             <>
-              <div style={{ background: '#f8fafc', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+              <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
                 <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14 }}>📄 {sheet.doc.name}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                   {aiExtract(sheet.doc).map(([k, v]) => (
                     <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, paddingBottom: 8, borderBottom: '1px solid #eef2f6' }}>
-                      <span style={{ color: '#6b7280' }}>{k}</span>
-                      <span style={{ fontWeight: 600, color: '#111827' }}>{v}</span>
+                      <span style={{ color: 'var(--text-3)' }}>{k}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--text)' }}>{v}</span>
                     </div>
                   ))}
                 </div>
               </div>
               <div style={{ background: '#f0fdf4', borderRadius: 12, padding: 14 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d', marginBottom: 8 }}>✨ اقتراحات إجرائية</div>
-                <div style={{ fontSize: 12, color: '#374151', lineHeight: 1.9 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.9 }}>
                   • إنشاء عملية مالية من هذا المستند<br />
                   • إضافة عنصر متابعة للضمان/الانتهاء<br />
                   • أرشفة المستند وربطه بالمشروع
@@ -1590,7 +1600,7 @@ function Trackings({ projectId, trackings, onSave, onDelete, openCreate, onOpenC
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 14, marginBottom: 24 }}>
         {[
-          { key: 'all', label: 'الكل', val: counts.all, color: '#6b7280', bg: '#f9fafb' },
+          { key: 'all', label: 'الكل', val: counts.all, color: 'var(--text-3)', bg: '#f9fafb' },
           { key: 'active', label: 'نشط', val: counts.active, color: '#15803d', bg: '#f0fdf4' },
           { key: 'expiring', label: 'يوشك على الانتهاء', val: counts.expiring, color: '#a16207', bg: '#fffbeb' },
           { key: 'expired', label: 'منتهي', val: counts.expired, color: '#b91c1c', bg: '#fef2f2' },
@@ -1606,7 +1616,7 @@ function Trackings({ projectId, trackings, onSave, onDelete, openCreate, onOpenC
       </div>
 
       {filtered.length === 0 && (
-        <Card style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
+        <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>🗂️</div>
           <div style={{ fontSize: 14 }}>لا توجد متابعات مطابقة</div>
         </Card>
@@ -1621,18 +1631,18 @@ function Trackings({ projectId, trackings, onSave, onDelete, openCreate, onOpenC
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 24 }}>{t.icon}</span>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>{t.name}</div>
-                    <div style={{ fontSize: 11, color: '#9ca3af' }}>{t.type}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{t.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{t.type}</div>
                   </div>
                 </div>
                 <StatusBadge status={t.status} />
               </div>
               <div style={{ marginBottom: 10 }}>
-                <div style={{ height: 5, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{ height: 5, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 99 }} />
                 </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#6b7280', marginBottom: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-3)', marginBottom: 14 }}>
                 <span>ينتهي: {t.expiryDate}</span>
                 <span style={{ color: t.status === 'expired' ? '#b91c1c' : t.status === 'expiring' ? '#a16207' : '#15803d', fontWeight: 500 }}>
                   {t.status === 'expired' ? 'منتهي منذ ' + Math.abs(t.daysLeft) + ' أيام' : 'يتبقى ' + t.daysLeft + ' يوم'}
@@ -1674,13 +1684,13 @@ function Trackings({ projectId, trackings, onSave, onDelete, openCreate, onOpenC
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
                 <span style={{ fontSize: 40 }}>{t.icon}</span>
-                <div><div style={{ fontWeight: 700, fontSize: 17 }}>{t.name}</div><div style={{ fontSize: 13, color: '#6b7280' }}>{t.type}</div></div>
+                <div><div style={{ fontWeight: 700, fontSize: 17 }}>{t.name}</div><div style={{ fontSize: 13, color: 'var(--text-3)' }}>{t.type}</div></div>
                 <div style={{ marginRight: 'auto' }}><StatusBadge status={t.status} /></div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[['تاريخ الانتهاء', t.expiryDate], ['المتبقي', t.status === 'expired' ? `منتهي منذ ${Math.abs(t.daysLeft)} يوم` : `${t.daysLeft} يوم`], ...(t.note ? [['ملاحظات', t.note]] : [])].map(([k, v]) => (
-                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, paddingBottom: 9, borderBottom: '1px solid #f9fafb' }}>
-                    <span style={{ color: '#9ca3af', flexShrink: 0 }}>{k}</span><span style={{ fontWeight: 500, color: '#374151', textAlign: 'left' }}>{v}</span>
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, paddingBottom: 9, borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ color: 'var(--text-3)', flexShrink: 0 }}>{k}</span><span style={{ fontWeight: 500, color: 'var(--text-2)', textAlign: 'left' }}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -1749,7 +1759,7 @@ function Requests({ projectId, requests, onDecide, onSave, onDelete, openCreate,
     <div style={{ padding: 24, maxWidth: 900 }}>
       <PageHeader title="الطلبات والموافقات" subtitle="إدارة دورة الاعتماد" action={<Btn size="sm" onClick={onOpenCreate}>+ طلب جديد</Btn>} />
 
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#f3f4f6', padding: 4, borderRadius: 12, width: 'fit-content', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'var(--surface-3)', padding: 4, borderRadius: 12, width: 'fit-content', flexWrap: 'wrap' }}>
         {[['all', 'الكل'], ['pending', 'معلقة'], ['approved', 'معتمدة'], ['rejected', 'مرفوضة']].map(([val, label]) => (
           <button key={val} onClick={() => setFilter(val as any)} style={{
             padding: '6px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500,
@@ -1761,7 +1771,7 @@ function Requests({ projectId, requests, onDecide, onSave, onDelete, openCreate,
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {filtered.length === 0 && (
-          <Card style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
+          <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
             <div style={{ fontSize: 14 }}>لا توجد طلبات مطابقة</div>
           </Card>
@@ -1771,22 +1781,22 @@ function Requests({ projectId, requests, onDecide, onSave, onDelete, openCreate,
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
               <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => setSheet({ mode: 'view', req: r })}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: 99 }}>{r.type}</span>
+                  <span style={{ fontSize: 11, background: 'var(--surface-3)', color: '#64748b', padding: '2px 8px', borderRadius: 99 }}>{r.type}</span>
                   <StatusBadge status={r.status} />
                 </div>
-                <div style={{ fontSize: 15, fontWeight: 600, color: '#111827', marginBottom: 4 }}>{r.title}</div>
-                <div style={{ fontSize: 12, color: '#6b7280' }}>طلب بواسطة: {r.requestedBy} · {r.date}</div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{r.title}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)' }}>طلب بواسطة: {r.requestedBy} · {r.date}</div>
               </div>
               <div style={{ textAlign: 'left', flexShrink: 0 }}>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#111827' }}>{fmtNum(r.amount)}</div>
-                <div style={{ fontSize: 11, color: '#9ca3af' }}>ر.س</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>{fmtNum(r.amount)}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>ر.س</div>
               </div>
             </div>
             {r.status === 'pending' && (
               <div style={{ display: 'flex', gap: 8, marginTop: 14, paddingTop: 14, borderTop: '1px solid #f1f5f9' }}>
                 <button onClick={() => onDecide(r.id, 'approved')} style={{ flex: 1, padding: 8, borderRadius: 10, background: '#15803d', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>✓ اعتماد</button>
                 <button onClick={() => onDecide(r.id, 'rejected')} style={{ flex: 1, padding: 8, borderRadius: 10, background: '#fef2f2', color: '#b91c1c', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>✕ رفض</button>
-                <button onClick={() => setSheet({ mode: 'edit', req: r })} style={{ padding: '8px 16px', borderRadius: 10, background: '#f9fafb', color: '#374151', border: '1px solid #e5e7eb', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>✎ تعديل</button>
+                <button onClick={() => setSheet({ mode: 'edit', req: r })} style={{ padding: '8px 16px', borderRadius: 10, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>✎ تعديل</button>
               </div>
             )}
           </Card>
@@ -1817,15 +1827,15 @@ function Requests({ projectId, requests, onDecide, onSave, onDelete, openCreate,
           return (
             <>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <span style={{ fontSize: 11, background: '#f1f5f9', color: '#64748b', padding: '3px 10px', borderRadius: 99 }}>{r.type}</span>
+                <span style={{ fontSize: 11, background: 'var(--surface-3)', color: '#64748b', padding: '3px 10px', borderRadius: 99 }}>{r.type}</span>
                 <StatusBadge status={r.status} />
               </div>
               <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{r.title}</div>
               <div style={{ fontSize: 24, fontWeight: 800, color: '#1d4ed8', marginBottom: 16 }}>{fmt(r.amount)}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[['مقدّم الطلب', r.requestedBy], ['التاريخ', r.date], ...(r.note ? [['ملاحظات', r.note]] : [])].map(([k, v]) => (
-                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, paddingBottom: 9, borderBottom: '1px solid #f9fafb' }}>
-                    <span style={{ color: '#9ca3af', flexShrink: 0 }}>{k}</span><span style={{ fontWeight: 500, color: '#374151', textAlign: 'left' }}>{v}</span>
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, paddingBottom: 9, borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ color: 'var(--text-3)', flexShrink: 0 }}>{k}</span><span style={{ fontWeight: 500, color: 'var(--text-2)', textAlign: 'left' }}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -1855,10 +1865,10 @@ function Notifications({ notifs, onMarkRead, onMarkAll }: { notifs: Notif[]; onM
             <span style={{ fontSize: 22, flexShrink: 0 }}>{icons[n.type]}</span>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                <div style={{ fontWeight: n.read ? 400 : 600, fontSize: 14, color: '#111827' }}>{n.title}</div>
-                <div style={{ fontSize: 11, color: '#9ca3af', flexShrink: 0, marginRight: 10 }}>{n.time}</div>
+                <div style={{ fontWeight: n.read ? 400 : 600, fontSize: 14, color: 'var(--text)' }}>{n.title}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', flexShrink: 0, marginRight: 10 }}>{n.time}</div>
               </div>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>{n.body}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{n.body}</div>
             </div>
             {!n.read && <span style={{ width: 8, height: 8, borderRadius: 99, background: '#2563eb', flexShrink: 0, marginTop: 5 }} />}
           </div>
@@ -1881,12 +1891,12 @@ function Settings() {
         { title: 'الأمان', items: [{ label: 'كلمة المرور', val: '••••••••' }, { label: 'التحقق الثنائي', val: 'مفعّل' }] },
       ].map(section => (
         <Card key={section.title} style={{ marginBottom: 16 }}>
-          <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid #f1f5f9' }}>{section.title}</div>
+          <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>{section.title}</div>
           {section.items.map(item => (
-            <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f9fafb' }}>
-              <span style={{ fontSize: 13, color: '#374151' }}>{item.label}</span>
+            <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{item.label}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 13, color: '#6b7280' }}>{item.val}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{item.val}</span>
                 <button style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>تعديل</button>
               </div>
             </div>
@@ -1894,11 +1904,11 @@ function Settings() {
         </Card>
       ))}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid #f1f5f9' }}>إدارة البيانات</div>
+        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>إدارة البيانات</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' }}>
           <div>
-            <div style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>تصفير البيانات</div>
-            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>حذف كل البيانات المحفوظة والعودة للبيانات الأولية</div>
+            <div style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>تصفير البيانات</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>حذف كل البيانات المحفوظة والعودة للبيانات الأولية</div>
           </div>
           <Btn variant="danger" size="sm" onClick={() => {
             if (confirm('سيتم حذف كل البيانات المحفوظة محلياً. متابعة؟')) {
@@ -1912,24 +1922,110 @@ function Settings() {
   );
 }
 // ═══════════════════════════════════════════
+// quick-add bottom sheet for mobile bottom bar's + button
+function MobileFabSheet({ onClose, onAction }: { onClose: () => void; onAction: (a: 'tx' | 'doc' | 'tracking' | 'request' | 'project') => void }) {
+  const actions = [
+    { id: 'tx' as const, icon: '💸', label: 'عملية مالية', bg: '#2563eb' },
+    { id: 'doc' as const, icon: '📄', label: 'رفع مستند', bg: '#7c3aed' },
+    { id: 'tracking' as const, icon: '🛡️', label: 'متابعة', bg: '#0891b2' },
+    { id: 'request' as const, icon: '📝', label: 'طلب جديد', bg: '#d97706' },
+    { id: 'project' as const, icon: '⬡', label: 'مشروع', bg: '#059669' },
+  ];
+  return (
+    <Sheet open={true} onClose={onClose} title="إضافة سريعة">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {actions.map(a => (
+          <button key={a.id} onClick={() => onAction(a.id)} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '18px 12px', borderRadius: 14,
+            border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            <span style={{ width: 46, height: 46, borderRadius: 99, background: a.bg, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{a.icon}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{a.label}</span>
+          </button>
+        ))}
+      </div>
+    </Sheet>
+  );
+}
+
+// ═══════════════════════════════════════════
+//  BOTTOM BAR (mobile quick nav — 5 icons)
+// ═══════════════════════════════════════════
+function BottomBar({ page, onNav, onFab, unread }: {
+  page: Page; onNav: (p: Page) => void; onFab: () => void; unread: number;
+}) {
+  const items: { id: Page | 'fab'; icon: string; label: string }[] = [
+    { id: 'dashboard', icon: '◉', label: 'الرئيسية' },
+    { id: 'projects', icon: '⬡', label: 'المشاريع' },
+    { id: 'fab', icon: '＋', label: 'إضافة' },
+    { id: 'documents', icon: '◻', label: 'المستندات' },
+    { id: 'settings', icon: '☰', label: 'المزيد' },
+  ];
+  return (
+    <div style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 800, display: 'flex',
+      background: 'var(--surface)', borderTop: '1px solid var(--border)', boxShadow: '0 -2px 12px rgba(0,0,0,.06)',
+      paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+    }}>
+      {items.map(it => {
+        if (it.id === 'fab') {
+          return (
+            <button key="fab" onClick={onFab} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', border: 'none', background: 'transparent', cursor: 'pointer', paddingTop: 4 }}>
+              <span style={{ width: 48, height: 48, marginTop: -16, borderRadius: 99, background: 'linear-gradient(135deg,#2563eb,#4f46e5)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, boxShadow: '0 4px 14px rgba(37,99,235,.5)' }}>＋</span>
+            </button>
+          );
+        }
+        const active = page === it.id;
+        const showBadge = it.id === 'settings' && unread > 0;
+        return (
+          <button key={it.id} onClick={() => onNav(it.id as Page)} style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 0 10px',
+            border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', position: 'relative',
+          }}>
+            <span style={{ fontSize: 18, color: active ? '#2563eb' : 'var(--text-3)' }}>{it.icon}</span>
+            <span style={{ fontSize: 10, color: active ? '#2563eb' : 'var(--text-3)', fontWeight: active ? 600 : 400 }}>{it.label}</span>
+            {showBadge && <span style={{ position: 'absolute', top: 4, right: '28%', width: 8, height: 8, borderRadius: 99, background: '#ef4444' }} />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════
 //  APP ROOT
 // ═══════════════════════════════════════════
 const KEYFRAMES = `
+:root, .mz-light {
+  --bg: #f4f6fa; --surface: #ffffff; --surface-2: #f8fafc; --surface-3: #f1f5f9;
+  --text: #0b1120; --text-2: #475569; --text-3: #64748b; --border: #e2e8f0;
+  --sidebar: #0b1120; --sidebar-2: #1a2234;
+}
+.mz-dark {
+  --bg: #0b0f17; --surface: #161b26; --surface-2: #1c2230; --surface-3: #232b3a;
+  --text: #f1f5f9; --text-2: #b8c2d4; --text-3: #94a3b8; --border: #2a3346;
+  --sidebar: #060911; --sidebar-2: #161b26;
+}
 @keyframes mzFade { from { opacity: 0 } to { opacity: 1 } }
 @keyframes mzSlideUp { from { transform: translateY(100%) } to { transform: translateY(0) } }
 @keyframes mzPop { from { opacity: 0; transform: translateY(8px) scale(.9) } to { opacity: 1; transform: translateY(0) scale(1) } }
 @keyframes mzPulse { 0%,100% { box-shadow: 0 6px 22px rgba(37,99,235,.45) } 50% { box-shadow: 0 6px 30px rgba(37,99,235,.7) } }
 @keyframes mzProgress { from { width: 0% } to { width: 100% } }
 @keyframes mzSlideRight { from { transform: translateX(100%) } to { transform: translateX(0) } }
-/* mobile: tighten the 24px page padding so content isn't cramped */
-.mz-mobile > div { padding: 16px !important; max-width: 100% !important; }`;
+.mz-mobile > div { padding: 16px !important; max-width: 100% !important; padding-bottom: 80px !important; }
+input, select, textarea { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }`;
 
 export default function App() {
-  const [page, setPage] = useState<Page>('dashboard');
+  const [page, setPageRaw] = useState<Page>('dashboard');
+  const [history, setHistory] = useState<Page[]>([]);
+  const setPage = (p: Page) => { setHistory(h => [...h, page]); setPageRaw(p); };
+  const goBack = () => setHistory(h => { if (h.length === 0) return h; const prev = h[h.length - 1]; setPageRaw(prev); return h.slice(0, -1); });
+  const canGoBack = history.length > 0;
   const [projectId, setProjectId] = useState('p1');
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [fabSheet, setFabSheet] = useState(false);
+  const [theme, setTheme] = usePersist<'light' | 'dark'>('mz_theme', 'light');
 
   const [projects, setProjects] = usePersist<Project[]>('mz_projects', INITIAL_PROJECTS);
   const [transactions, setTransactions] = usePersist<Transaction[]>('mz_transactions', INITIAL_TRANSACTIONS);
@@ -2062,20 +2158,29 @@ export default function App() {
   return (
     <>
       <style>{KEYFRAMES}</style>
-      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'IBM Plex Sans Arabic', sans-serif", direction: 'rtl', background: '#f8f9fb' }}>
-        <Sidebar page={page} onNav={setPage} projects={projects} projectId={projectId} onProject={setProjectId} unread={unread} isMobile={isMobile} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <div className={theme === 'dark' ? 'mz-dark' : 'mz-light'} style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'IBM Plex Sans Arabic', sans-serif", direction: 'rtl', background: 'var(--bg)', color: 'var(--text)' }}>
+        <Sidebar page={page} onNav={setPage} projects={projects} projectId={projectId} onProject={setProjectId} unread={unread} isMobile={isMobile} open={drawerOpen} onClose={() => setDrawerOpen(false)} theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} />
         <main style={{ flex: 1, overflowY: 'auto', position: 'relative', display: 'flex', flexDirection: 'column' }}>
           {/* mobile top bar */}
           {isMobile && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#0f1117', position: 'sticky', top: 0, zIndex: 50 }}>
-              <button onClick={() => setDrawerOpen(true)} style={{ background: '#1e2230', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 18 }}>☰</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'var(--sidebar)', position: 'sticky', top: 0, zIndex: 50 }}>
+              <button onClick={() => setDrawerOpen(true)} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 18 }}>☰</button>
+              {canGoBack && <button onClick={goBack} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 18 }}>›</button>}
               <div style={{ flex: 1 }}>
                 <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>موازين</div>
-                {currentProject && <div style={{ color: '#9ca3af', fontSize: 11 }}>{currentProject.icon} {currentProject.name}</div>}
+                {currentProject && <div style={{ color: 'var(--text-3)', fontSize: 11 }}>{currentProject.icon} {currentProject.name}</div>}
               </div>
-              <button onClick={() => setPage('notifications')} style={{ background: '#1e2230', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 16, position: 'relative' }}>
+              <button onClick={() => setPage('notifications')} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 16, position: 'relative' }}>
                 🔔
-                {unread > 0 && <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, padding: '0 4px', borderRadius: 99, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #0f1117' }}>{unread}</span>}
+                {unread > 0 && <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, padding: '0 4px', borderRadius: 99, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--sidebar)' }}>{unread}</span>}
+              </button>
+            </div>
+          )}
+          {/* desktop back arrow */}
+          {!isMobile && canGoBack && (
+            <div style={{ padding: '12px 24px 0' }}>
+              <button onClick={goBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-2)', borderRadius: 10, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>
+                › رجوع
               </button>
             </div>
           )}
@@ -2083,7 +2188,9 @@ export default function App() {
             {renderPage()}
           </div>
         </main>
-        <ActionCenter unread={unread} onAction={fabAction} onNav={setPage} />
+        {!isMobile && <ActionCenter unread={unread} onAction={fabAction} onNav={setPage} />}
+        {isMobile && <BottomBar page={page} onNav={setPage} onFab={() => setFabSheet(true)} unread={unread} />}
+        {isMobile && fabSheet && <MobileFabSheet onClose={() => setFabSheet(false)} onAction={(a) => { setFabSheet(false); fabAction(a); }} />}
       </div>
     </>
   );
