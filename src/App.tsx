@@ -3721,15 +3721,21 @@ function Receivables({ projectId, projects, receivables, members, onSave, onPay,
   const [kindTab, setKindTab] = useState<'all' | ReceivableKind>('all');
   const [search, setSearch] = useState('');
   const [fProject, setFProject] = useState('all');
+  const [fMember, setFMember] = useState('all');
   const [fStatus, setFStatus] = useState('all');
   const [sort, setSort] = useState('due');
   const [sheet, setSheet] = useState<null | { mode: 'pay' | 'view'; r: Receivable }>(null);
 
   const projName = (id: string) => projects.find(p => p.id === id)?.name ?? '—';
+  const memberName = (id: string) => members.find(m => m.id === id)?.name ?? '';
+  // members that actually have receivables linked (for a focused filter list)
+  const linkedMemberIds = Array.from(new Set(receivables.map(r => r.memberId).filter(Boolean) as string[]));
+  const linkedMembers = members.filter(m => linkedMemberIds.includes(m.id));
   const all = receivables;
   const filtered = all
     .filter(r => kindTab === 'all' ? true : r.kind === kindTab)
     .filter(r => fProject === 'all' ? true : r.projectId === fProject)
+    .filter(r => fMember === 'all' ? true : r.memberId === fMember)
     .filter(r => fStatus === 'all' ? true : r.status === fStatus)
     .filter(r => search.trim() === '' ? true : (r.party + (r.note ?? '')).includes(search.trim()))
     .sort((a, b) => sort === 'due' ? (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') : sort === 'amount' ? recvRemaining(b) - recvRemaining(a) : b.date.localeCompare(a.date));
@@ -3740,7 +3746,7 @@ function Receivables({ projectId, projects, receivables, members, onSave, onPay,
   const totalPay = pays.reduce((s, r) => s + recvRemaining(r), 0);
   const overdue = all.filter(r => r.status !== 'settled' && r.dueDate && r.dueDate < today()).length;
 
-  const clearFilters = () => { setSearch(''); setFProject('all'); setFStatus('all'); setSort('due'); };
+  const clearFilters = () => { setSearch(''); setFProject('all'); setFMember('all'); setFStatus('all'); setSort('due'); };
   const close = () => setSheet(null);
   const statusInfo = (s: ReceivableStatus) => s === 'settled' ? { l: 'مسددة', c: '#15803d', bg: '#dcfce7' } : s === 'partial' ? { l: 'جزئية', c: '#a16207', bg: '#fef3c7' } : { l: 'مفتوحة', c: '#1d4ed8', bg: '#dbeafe' };
 
@@ -3767,11 +3773,12 @@ function Receivables({ projectId, projects, receivables, members, onSave, onPay,
 
       <FilterBar
         search={search} onSearch={setSearch} searchPlaceholder="🔍 بحث في الذمم..."
-        values={{ project: fProject, status: fStatus, sort }}
-        onChange={(k, v) => { if (k === 'project') setFProject(v); else if (k === 'status') setFStatus(v); else if (k === 'sort') setSort(v); }}
+        values={{ project: fProject, member: fMember, status: fStatus, sort }}
+        onChange={(k, v) => { if (k === 'project') setFProject(v); else if (k === 'member') setFMember(v); else if (k === 'status') setFStatus(v); else if (k === 'sort') setSort(v); }}
         onClear={clearFilters}
         filters={[
           { key: 'project', placeholder: 'المشروع', options: [{ v: 'all', l: 'كل المشاريع' }, ...projects.map(p => ({ v: p.id, l: p.name }))] },
+          ...(linkedMembers.length > 0 ? [{ key: 'member', placeholder: 'العضو', options: [{ v: 'all', l: 'كل الأعضاء' }, ...linkedMembers.map(m => ({ v: m.id, l: m.name }))] }] : []),
           { key: 'status', placeholder: 'الحالة', options: [{ v: 'all', l: 'كل الحالات' }, { v: 'open', l: 'مفتوحة' }, { v: 'partial', l: 'جزئية' }, { v: 'settled', l: 'مسددة' }] },
           { key: 'sort', placeholder: 'الترتيب', options: [{ v: 'due', l: 'الأقرب استحقاقاً' }, { v: 'amount', l: 'الأعلى مبلغاً' }, { v: 'newest', l: 'الأحدث' }] },
         ]}
@@ -3803,7 +3810,7 @@ function Receivables({ projectId, projects, receivables, members, onSave, onPay,
                     {isOverdue && <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: '#fee2e2', color: '#b91c1c' }}>⏰ متأخرة</span>}
                   </div>
                   <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>
-                    {projName(r.projectId)}{r.note ? ` · ${r.note}` : ''}{r.dueDate ? ` · تستحق ${r.dueDate}` : ''}
+                    {projName(r.projectId)}{r.memberId ? ` · 👤 ${memberName(r.memberId)}` : ''}{r.note ? ` · ${r.note}` : ''}{r.dueDate ? ` · تستحق ${r.dueDate}` : ''}
                   </div>
                   {/* progress */}
                   {paid > 0 && (
@@ -3899,13 +3906,14 @@ const COMMITMENT_KINDS: { id: CommitmentKind; label: string; icon: string }[] = 
   { id: 'obligation', label: 'التزام دوري', icon: '🔁' },
   { id: 'subscription', label: 'اشتراك', icon: '💳' },
 ];
-function CommitmentForm({ projectId, projects, onSave, onCancel }: {
-  projectId: string; projects: Project[];
+function CommitmentForm({ projectId, projects, members, onSave, onCancel }: {
+  projectId: string; projects: Project[]; members: Member[];
   onSave: (c: Omit<Commitment, 'id'>) => void; onCancel: () => void;
 }) {
   const [kind, setKind] = useState<CommitmentKind>('installment');
   const [direction, setDirection] = useState<CommitmentDir>('out');
   const [targetProject, setTargetProject] = useState(projectId);
+  const [memberId, setMemberId] = useState('');
   const [name, setName] = useState('');
   const [party, setParty] = useState('');
   const [amount, setAmount] = useState<number | ''>('');
@@ -3936,6 +3944,9 @@ function CommitmentForm({ projectId, projects, onSave, onCancel }: {
       </Field>
       <Field label="الطرف (اختياري)">
         <TextInput value={party} onChange={setParty} placeholder="مثال: بنك، مالك العقار، مزوّد..." />
+      </Field>
+      <Field label="ربط بعضو (اختياري)">
+        <Select value={memberId} onChange={setMemberId} options={[{ v: '', l: 'بدون ربط' }, ...members.filter(m => m.projectId === targetProject).map(m => ({ v: m.id, l: m.name }))]} />
       </Field>
       <Field label="مبلغ الدفعة الواحدة (ر.س)">
         <NumInput value={amount} onChange={setAmount} placeholder="0" />
@@ -3971,7 +3982,7 @@ function CommitmentForm({ projectId, projects, onSave, onCancel }: {
       <div style={{ display: 'flex', gap: 10 }}>
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
         <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
-          projectId: targetProject, kind, direction, name: name.trim(), party: party.trim() || undefined,
+          projectId: targetProject, kind, direction, name: name.trim(), party: party.trim() || undefined, memberId: memberId || undefined,
           amount: amount === '' ? 0 : amount, freq, startDate,
           totalCount: hasCount ? (totalCount === '' ? undefined : Number(totalCount)) : undefined,
           paidCount: 0, nextDue: startDate, active: true, payments: [], note, attachments, createdBy: CURRENT_USER,
@@ -3981,22 +3992,27 @@ function CommitmentForm({ projectId, projects, onSave, onCancel }: {
   );
 }
 
-function Commitments({ projectId, projects, commitments, onSave, onPay, onToggle, onDelete, openCreate, onOpenCreate, onCloseCreate }: {
-  projectId: string; projects: Project[]; commitments: Commitment[];
+function Commitments({ projectId, projects, commitments, members, onSave, onPay, onToggle, onDelete, openCreate, onOpenCreate, onCloseCreate }: {
+  projectId: string; projects: Project[]; commitments: Commitment[]; members: Member[];
   onSave: (c: Omit<Commitment, 'id'>) => void; onPay: (id: string) => void; onToggle: (id: string) => void; onDelete: (id: string) => void;
   openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void;
 }) {
   const [kindTab, setKindTab] = useState<'all' | CommitmentKind>('all');
   const [search, setSearch] = useState('');
   const [fProject, setFProject] = useState('all');
+  const [fMember, setFMember] = useState('all');
   const [fStatus, setFStatus] = useState('all');
   const [sort, setSort] = useState('due');
   const [viewC, setViewC] = useState<Commitment | null>(null);
 
   const projName = (id: string) => projects.find(p => p.id === id)?.name ?? '—';
+  const memberName = (id: string) => members.find(m => m.id === id)?.name ?? '';
+  const linkedMemberIds = Array.from(new Set(commitments.map(c => c.memberId).filter(Boolean) as string[]));
+  const linkedMembers = members.filter(m => linkedMemberIds.includes(m.id));
   const filtered = commitments
     .filter(c => kindTab === 'all' ? true : c.kind === kindTab)
     .filter(c => fProject === 'all' ? true : c.projectId === fProject)
+    .filter(c => fMember === 'all' ? true : c.memberId === fMember)
     .filter(c => fStatus === 'all' ? true : fStatus === 'active' ? (c.active && !commitmentDone(c)) : fStatus === 'paused' ? !c.active : commitmentDone(c))
     .filter(c => search.trim() === '' ? true : (c.name + (c.party ?? '') + (c.note ?? '')).includes(search.trim()))
     .sort((a, b) => sort === 'due' ? a.nextDue.localeCompare(b.nextDue) : sort === 'amount' ? b.amount - a.amount : b.startDate.localeCompare(a.startDate));
@@ -4012,7 +4028,7 @@ function Commitments({ projectId, projects, commitments, onSave, onPay, onToggle
   const monthlyIn = activeCs.filter(c => c.direction === 'in').reduce((s, c) => s + Math.abs(monthlyImpact(c)), 0);
   const dueSoon = activeCs.filter(c => c.nextDue <= advanceDate(today(), 'weekly')).length;
 
-  const clearFilters = () => { setSearch(''); setFProject('all'); setFStatus('all'); setSort('due'); };
+  const clearFilters = () => { setSearch(''); setFProject('all'); setFMember('all'); setFStatus('all'); setSort('due'); };
   const kindInfo = (k: CommitmentKind) => COMMITMENT_KINDS.find(x => x.id === k)!;
 
   return (
@@ -4038,11 +4054,12 @@ function Commitments({ projectId, projects, commitments, onSave, onPay, onToggle
 
       <FilterBar
         search={search} onSearch={setSearch} searchPlaceholder="🔍 بحث في الالتزامات..."
-        values={{ project: fProject, status: fStatus, sort }}
-        onChange={(k, v) => { if (k === 'project') setFProject(v); else if (k === 'status') setFStatus(v); else if (k === 'sort') setSort(v); }}
+        values={{ project: fProject, member: fMember, status: fStatus, sort }}
+        onChange={(k, v) => { if (k === 'project') setFProject(v); else if (k === 'member') setFMember(v); else if (k === 'status') setFStatus(v); else if (k === 'sort') setSort(v); }}
         onClear={clearFilters}
         filters={[
           { key: 'project', placeholder: 'المشروع', options: [{ v: 'all', l: 'كل المشاريع' }, ...projects.map(p => ({ v: p.id, l: p.name }))] },
+          ...(linkedMembers.length > 0 ? [{ key: 'member', placeholder: 'العضو', options: [{ v: 'all', l: 'كل الأعضاء' }, ...linkedMembers.map(m => ({ v: m.id, l: m.name }))] }] : []),
           { key: 'status', placeholder: 'الحالة', options: [{ v: 'all', l: 'كل الحالات' }, { v: 'active', l: 'نشطة' }, { v: 'paused', l: 'موقوفة' }, { v: 'done', l: 'مكتملة' }] },
           { key: 'sort', placeholder: 'الترتيب', options: [{ v: 'due', l: 'الأقرب استحقاقاً' }, { v: 'amount', l: 'الأعلى مبلغاً' }, { v: 'newest', l: 'الأحدث' }] },
         ]}
@@ -4075,7 +4092,7 @@ function Commitments({ projectId, projects, commitments, onSave, onPay, onToggle
                     {overdue && <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: '#fee2e2', color: '#b91c1c' }}>⏰ متأخر</span>}
                   </div>
                   <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>
-                    {projName(c.projectId)}{c.party ? ` · ${c.party}` : ''}{!done ? ` · يستحق ${c.nextDue}` : ''}
+                    {projName(c.projectId)}{c.memberId ? ` · 👤 ${memberName(c.memberId)}` : ''}{c.party ? ` · ${c.party}` : ''}{!done ? ` · يستحق ${c.nextDue}` : ''}
                   </div>
                   {c.totalCount != null && (
                     <div style={{ marginTop: 8 }}>
@@ -4109,7 +4126,7 @@ function Commitments({ projectId, projects, commitments, onSave, onPay, onToggle
 
       {/* create */}
       <Sheet open={openCreate} onClose={onCloseCreate} title="التزام دوري جديد">
-        {openCreate && <CommitmentForm projectId={projectId} projects={projects} onSave={(c) => { onSave(c); onCloseCreate(); }} onCancel={onCloseCreate} />}
+        {openCreate && <CommitmentForm projectId={projectId} projects={projects} members={members} onSave={(c) => { onSave(c); onCloseCreate(); }} onCancel={onCloseCreate} />}
       </Sheet>
 
       {/* view */}
@@ -4688,7 +4705,7 @@ export default function App() {
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} />;
       case 'receivables': return <Receivables projectId={projectId} projects={projects} receivables={receivables} members={members} onSave={saveReceivable} onPay={payReceivable} onDelete={deleteReceivable} openCreate={createReceivable} onOpenCreate={() => setCreateReceivable(true)} onCloseCreate={() => setCreateReceivable(false)} />;
-      case 'commitments': return <Commitments projectId={projectId} projects={projects} commitments={commitments} onSave={saveCommitment} onPay={payCommitment} onToggle={toggleCommitment} onDelete={deleteCommitment} openCreate={createCommitment} onOpenCreate={() => setCreateCommitment(true)} onCloseCreate={() => setCreateCommitment(false)} />;
+      case 'commitments': return <Commitments projectId={projectId} projects={projects} commitments={commitments} members={members} onSave={saveCommitment} onPay={payCommitment} onToggle={toggleCommitment} onDelete={deleteCommitment} openCreate={createCommitment} onOpenCreate={() => setCreateCommitment(true)} onCloseCreate={() => setCreateCommitment(false)} />;
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} />;
       case 'trackings': return <Trackings projectId={projectId} projects={projects} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
       case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
