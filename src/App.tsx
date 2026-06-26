@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 // ═══════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════
-type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail' | 'audit' | 'customize';
+type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'reports' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail' | 'audit' | 'customize';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 // unified attachment (image/file) — preview kept in-session, real upload later via backend
@@ -826,6 +826,7 @@ const NAV = [
   { id: 'projects',      icon: '⬡',  label: 'المشاريع' },
   { id: 'finance',       icon: '◈',  label: 'الإدارة المالية' },
   { id: 'ledger',        icon: '⛃',  label: 'السجل المالي' },
+  { id: 'reports',       icon: '◳',  label: 'التقارير والتحليلات' },
   { id: 'receivables',   icon: '⇄',  label: 'الذمم' },
   { id: 'commitments',   icon: '↻',  label: 'الالتزامات الدورية' },
   { id: 'documents',     icon: '◻',  label: 'المستندات' },
@@ -4364,6 +4365,383 @@ function Commitments({ projectId, projects, commitments, members, onSave, onPay,
   );
 }
 
+// ═══════════════════════════════════════════
+//  REPORTS & ANALYTICS (التقارير والتحليلات)
+// ═══════════════════════════════════════════
+const REPORT_PERIODS: { v: string; l: string; days: number }[] = [
+  { v: '1m', l: 'آخر شهر', days: 30 },
+  { v: '3m', l: 'آخر 3 أشهر', days: 91 },
+  { v: '6m', l: 'آخر 6 أشهر', days: 182 },
+  { v: '12m', l: 'آخر سنة', days: 365 },
+  { v: 'all', l: 'كل الفترات', days: 99999 },
+];
+const monthKey = (iso: string) => iso.slice(0, 7); // YYYY-MM
+const monthLabelAr = (key: string) => {
+  const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  const [y, m] = key.split('-');
+  return `${months[Number(m) - 1]} ${y.slice(2)}`;
+};
+
+function Reports({ projects, transactions, receivables, commitments, trackings, requests, members }: {
+  projects: Project[]; transactions: Transaction[]; receivables: Receivable[];
+  commitments: Commitment[]; trackings: Tracking[]; requests: RequestItem[]; members: Member[];
+}) {
+  const [tab, setTab] = useState<'financial' | 'operational' | 'smart'>('financial');
+  const [fProject, setFProject] = useState('all');
+  const [period, setPeriod] = useState('6m');
+  const palette = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#dc2626', '#0891b2', '#db2777', '#65a30d'];
+
+  const periodDays = REPORT_PERIODS.find(p => p.v === period)?.days ?? 182;
+  const cutoff = new Date(Date.now() - periodDays * 86400000).toISOString().slice(0, 10);
+  const inProject = (pid: string) => fProject === 'all' || pid === fProject;
+  const projName = (id: string) => projects.find(p => p.id === id)?.name ?? '—';
+
+  // filtered datasets
+  const txs = transactions.filter(t => inProject(t.projectId) && t.date >= cutoff);
+  const recvs = receivables.filter(r => inProject(r.projectId));
+  const comms = commitments.filter(c => inProject(c.projectId));
+  const tracks = trackings.filter(t => inProject(t.projectId));
+  const reqs = requests.filter(r => inProject(r.projectId) && r.date >= cutoff);
+
+  const scopeLabel = fProject === 'all' ? 'كل المشاريع' : projName(fProject);
+  const periodLabel = REPORT_PERIODS.find(p => p.v === period)?.l ?? '';
+
+  return (
+    <div style={{ padding: 24, maxWidth: 1000 }}>
+      <PageHeader title="التقارير والتحليلات" subtitle={`${scopeLabel} · ${periodLabel}`} action={
+        <Btn size="sm" variant="outline" onClick={() => window.print()}>🖨️ تصدير / طباعة</Btn>
+      } />
+
+      {/* scope filters */}
+      <Card style={{ marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 4 }}>المشروع</div>
+          <Select value={fProject} onChange={setFProject} options={[{ v: 'all', l: 'كل المشاريع' }, ...projects.map(p => ({ v: p.id, l: p.name }))]} />
+        </div>
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 4 }}>الفترة</div>
+          <Select value={period} onChange={setPeriod} options={REPORT_PERIODS.map(p => ({ v: p.v, l: p.l }))} />
+        </div>
+      </Card>
+
+      {/* tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'var(--surface-3)', padding: 4, borderRadius: 12, width: 'fit-content', flexWrap: 'wrap' }}>
+        {[['financial', '💰 مالية'], ['operational', '⚙️ تشغيلية'], ['smart', '🧠 ذكية']].map(([v, l]) => (
+          <button key={v} onClick={() => setTab(v as any)} style={{
+            padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+            background: tab === v ? 'var(--surface)' : 'transparent', color: tab === v ? 'var(--text)' : 'var(--text-3)',
+          }}>{l}</button>
+        ))}
+      </div>
+
+      {tab === 'financial' && <FinancialReport txs={txs} recvs={recvs} projects={projects} fProject={fProject} palette={palette} />}
+      {tab === 'operational' && <OperationalReport tracks={tracks} reqs={reqs} comms={comms} projects={projects} palette={palette} projName={projName} />}
+      {tab === 'smart' && <SmartReport txs={txs} recvs={recvs} comms={comms} tracks={tracks} reqs={reqs} projName={projName} />}
+    </div>
+  );
+}
+
+// ── tab 1: financial ──
+function FinancialReport({ txs, recvs, projects, fProject, palette }: {
+  txs: Transaction[]; recvs: Receivable[]; projects: Project[];
+  fProject: string; palette: string[];
+}) {
+  const income = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const expense = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const net = income - expense;
+  const recvOpen = recvs.filter(r => r.kind === 'receivable').reduce((s, r) => s + recvRemaining(r), 0);
+  const payOpen = recvs.filter(r => r.kind === 'payable').reduce((s, r) => s + recvRemaining(r), 0);
+
+  // monthly income vs expense
+  const months = Array.from(new Set(txs.map(t => monthKey(t.date)))).sort();
+  const monthlyIncome = months.map(m => txs.filter(t => t.type === 'income' && monthKey(t.date) === m).reduce((s, t) => s + t.amount, 0));
+  const monthlyExpense = months.map(m => txs.filter(t => t.type === 'expense' && monthKey(t.date) === m).reduce((s, t) => s + t.amount, 0));
+
+  // expense by category
+  const catMap = new Map<string, number>();
+  txs.filter(t => t.type === 'expense').forEach(t => catMap.set(t.category, (catMap.get(t.category) ?? 0) + t.amount));
+  const catSegments = Array.from(catMap.entries()).sort((a, b) => b[1] - a[1]).map(([label, value], i) => ({ label, value: Math.round(value), color: palette[i % palette.length] }));
+
+  // income/expense by project (only when viewing all)
+  const projBars = fProject === 'all' ? projects.map((p, i) => {
+    const pinc = txs.filter(t => t.projectId === p.id && t.type === 'income').reduce((s, t) => s + t.amount, 0);
+    const pexp = txs.filter(t => t.projectId === p.id && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    return { label: p.name, value: Math.round(pinc - pexp), color: palette[i % palette.length] };
+  }).filter(b => b.value !== 0) : [];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <StatCards cards={[
+        { label: 'إجمالي الإيرادات', value: fmtNum(Math.round(income)), color: '#15803d', bg: '#f0fdf4', icon: '↓' },
+        { label: 'إجمالي المصروفات', value: fmtNum(Math.round(expense)), color: '#b91c1c', bg: '#fef2f2', icon: '↑' },
+        { label: 'صافي التدفق', value: fmtNum(Math.round(net)), color: net >= 0 ? '#1d4ed8' : '#b91c1c', bg: '#eff6ff', icon: '⇄' },
+        { label: 'عدد العمليات', value: txs.length, color: '#7c3aed', bg: '#faf5ff', icon: '#' },
+      ]} />
+
+      {months.length > 0 && (
+        <Card>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 16 }}>الإيرادات والمصروفات شهرياً</div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 180, padding: '0 4px', overflowX: 'auto' }}>
+            {months.map((m, i) => {
+              const maxV = Math.max(...monthlyIncome, ...monthlyExpense, 1);
+              return (
+                <div key={m} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 56, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 140 }}>
+                    <div title={`إيراد: ${fmt(monthlyIncome[i])}`} style={{ width: 14, height: `${(monthlyIncome[i] / maxV) * 140}px`, background: '#22c55e', borderRadius: '3px 3px 0 0', minHeight: 2 }} />
+                    <div title={`مصروف: ${fmt(monthlyExpense[i])}`} style={{ width: 14, height: `${(monthlyExpense[i] / maxV) * 140}px`, background: '#f87171', borderRadius: '3px 3px 0 0', minHeight: 2 }} />
+                  </div>
+                  <span style={{ fontSize: 10, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{monthLabelAr(m)}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: 16, marginTop: 12, justifyContent: 'center', fontSize: 11.5, color: 'var(--text-3)' }}>
+            <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: '#22c55e', marginLeft: 4 }} />إيرادات</span>
+            <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: '#f87171', marginLeft: 4 }} />مصروفات</span>
+          </div>
+        </Card>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+        {catSegments.length > 0 && (
+          <Card>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 16 }}>المصروفات حسب التصنيف</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <Donut segments={catSegments} size={130} label="مصروف" />
+              <div style={{ flex: 1, minWidth: 120, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {catSegments.slice(0, 6).map(s => (
+                  <div key={s.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-2)' }}><span style={{ width: 9, height: 9, borderRadius: 2, background: s.color }} />{s.label}</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-3)' }}>{fmtNum(s.value)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        )}
+
+        <Card>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 16 }}>وضع الذمم</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: '#f0fdf4', borderRadius: 10 }}>
+              <span style={{ fontSize: 13, color: '#15803d' }}>ذمم مدينة (لنا)</span>
+              <span style={{ fontWeight: 800, fontSize: 16, color: '#15803d' }}>{fmt(recvOpen)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: '#fef2f2', borderRadius: 10 }}>
+              <span style={{ fontSize: 13, color: '#b91c1c' }}>ذمم دائنة (علينا)</span>
+              <span style={{ fontWeight: 800, fontSize: 16, color: '#b91c1c' }}>{fmt(payOpen)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'var(--surface-2)', borderRadius: 10 }}>
+              <span style={{ fontSize: 13, color: 'var(--text-2)' }}>صافي الذمم</span>
+              <span style={{ fontWeight: 800, fontSize: 16, color: recvOpen - payOpen >= 0 ? '#15803d' : '#b91c1c' }}>{fmt(recvOpen - payOpen)}</span>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {projBars.length > 0 && (
+        <Card>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 16 }}>صافي كل مشروع (إيراد − مصروف)</div>
+          <StatBars bars={projBars} />
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ── tab 2: operational ──
+function OperationalReport({ tracks, reqs, comms, projects, palette, projName }: {
+  tracks: Tracking[]; reqs: RequestItem[]; comms: Commitment[];
+  projects: Project[]; palette: string[]; projName: (id: string) => string;
+}) {
+  const expiring = tracks.filter(t => t.status === 'expiring').length;
+  const expired = tracks.filter(t => t.status === 'expired').length;
+  const pendingReqs = reqs.filter(r => r.status === 'pending').length;
+  const activeComms = comms.filter(c => c.active && !commitmentDone(c)).length;
+
+  // trackings by type
+  const typeMap = new Map<string, number>();
+  tracks.forEach(t => typeMap.set(t.type, (typeMap.get(t.type) ?? 0) + 1));
+  const typeBars = Array.from(typeMap.entries()).map(([label, value], i) => ({ label, value, color: palette[i % palette.length] }));
+
+  // upcoming commitments (next due, sorted)
+  const upcoming = [...comms].filter(c => c.active && !commitmentDone(c)).sort((a, b) => a.nextDue.localeCompare(b.nextDue)).slice(0, 6);
+  // soonest expiring trackings
+  const soonExpiring = [...tracks].filter(t => t.status !== 'active').sort((a, b) => a.expiryDate.localeCompare(b.expiryDate)).slice(0, 6);
+
+  // requests by status
+  const reqStatuses = ['pending', 'approved', 'rejected'] as const;
+  const reqLabels: Record<string, string> = { pending: 'معلّقة', approved: 'معتمدة', rejected: 'مرفوضة' };
+  const reqColors: Record<string, string> = { pending: '#d97706', approved: '#15803d', rejected: '#b91c1c' };
+  const reqBars = reqStatuses.map(s => ({ label: reqLabels[s], value: reqs.filter(r => r.status === s).length, color: reqColors[s] }));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <StatCards cards={[
+        { label: 'متابعات تنتهي قريباً', value: expiring, color: '#c2410c', bg: '#fff7ed', icon: '⏰' },
+        { label: 'متابعات منتهية', value: expired, color: '#b91c1c', bg: '#fef2f2', icon: '⚠️' },
+        { label: 'طلبات معلّقة', value: pendingReqs, color: '#d97706', bg: '#fffbeb', icon: '◫' },
+        { label: 'التزامات نشطة', value: activeComms, color: '#1d4ed8', bg: '#eff6ff', icon: '↻' },
+      ]} />
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+        {typeBars.length > 0 && (
+          <Card>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 16 }}>المتابعات حسب النوع</div>
+            <StatBars bars={typeBars} />
+          </Card>
+        )}
+        {reqs.length > 0 && (
+          <Card>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 16 }}>الطلبات حسب الحالة</div>
+            <StatBars bars={reqBars} />
+          </Card>
+        )}
+      </div>
+
+      {soonExpiring.length > 0 && (
+        <Card>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 12 }}>أقرب المتابعات انتهاءً</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {soonExpiring.map(t => (
+              <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--surface-2)', borderRadius: 8 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' }}>
+                  <span>{t.icon}</span>{t.name}
+                  <span style={{ fontSize: 10.5, color: 'var(--text-3)' }}>· {projName(t.projectId)}</span>
+                </span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: t.status === 'expired' ? '#b91c1c' : '#c2410c' }}>{t.expiryDate}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {upcoming.length > 0 && (
+        <Card>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 12 }}>الالتزامات القادمة</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {upcoming.map(c => (
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--surface-2)', borderRadius: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{c.name} <span style={{ fontSize: 10.5, color: 'var(--text-3)' }}>· {projName(c.projectId)} · يستحق {c.nextDue}</span></span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: c.direction === 'out' ? '#b91c1c' : '#15803d' }}>{c.direction === 'out' ? '−' : '+'}{fmtNum(c.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ── tab 3: smart insights ──
+function SmartReport({ txs, recvs, comms, tracks, reqs, projName }: {
+  txs: Transaction[]; recvs: Receivable[]; comms: Commitment[]; tracks: Tracking[]; reqs: RequestItem[];
+  projName: (id: string) => string;
+}) {
+  type Insight = { kind: 'risk' | 'trend' | 'tip'; icon: string; title: string; body: string; color: string; bg: string };
+  const insights: Insight[] = [];
+
+  // RISK: overdue receivables
+  const overdueRecv = recvs.filter(r => r.kind === 'receivable' && r.status !== 'settled' && r.dueDate && r.dueDate < today());
+  if (overdueRecv.length > 0) {
+    const sum = overdueRecv.reduce((s, r) => s + recvRemaining(r), 0);
+    insights.push({ kind: 'risk', icon: '⚠️', color: '#b91c1c', bg: '#fef2f2', title: `${overdueRecv.length} ذمة مدينة متأخرة`, body: `بإجمالي ${fmt(sum)} تجاوزت تاريخ الاستحقاق ولم تُحصّل بعد. يُنصح بالمتابعة مع الأطراف.` });
+  }
+  // RISK: overdue payables
+  const overduePay = recvs.filter(r => r.kind === 'payable' && r.status !== 'settled' && r.dueDate && r.dueDate < today());
+  if (overduePay.length > 0) {
+    const sum = overduePay.reduce((s, r) => s + recvRemaining(r), 0);
+    insights.push({ kind: 'risk', icon: '⚠️', color: '#b91c1c', bg: '#fef2f2', title: `${overduePay.length} ذمة دائنة متأخرة`, body: `بإجمالي ${fmt(sum)} مستحقة عليك وتجاوزت موعدها. سدادها يحافظ على علاقاتك ومصداقيتك.` });
+  }
+  // RISK: expired/expiring trackings
+  const expiredTr = tracks.filter(t => t.status === 'expired');
+  const expiringTr = tracks.filter(t => t.status === 'expiring');
+  if (expiredTr.length > 0) insights.push({ kind: 'risk', icon: '🔴', color: '#b91c1c', bg: '#fef2f2', title: `${expiredTr.length} متابعة منتهية`, body: `هناك عقود أو ضمانات أو وثائق انتهت صلاحيتها. راجعها لتجنّب انقطاع الخدمة أو فقد الضمان.` });
+  if (expiringTr.length > 0) insights.push({ kind: 'risk', icon: '⏰', color: '#c2410c', bg: '#fff7ed', title: `${expiringTr.length} متابعة تنتهي قريباً`, body: `تنتهي خلال 30 يوماً. بادر بالتجديد قبل فوات الموعد.` });
+
+  // TREND: expense trend (last 2 months)
+  const months = Array.from(new Set(txs.map(t => monthKey(t.date)))).sort();
+  if (months.length >= 2) {
+    const last = months[months.length - 1], prev = months[months.length - 2];
+    const lastExp = txs.filter(t => t.type === 'expense' && monthKey(t.date) === last).reduce((s, t) => s + t.amount, 0);
+    const prevExp = txs.filter(t => t.type === 'expense' && monthKey(t.date) === prev).reduce((s, t) => s + t.amount, 0);
+    if (prevExp > 0) {
+      const change = Math.round(((lastExp - prevExp) / prevExp) * 100);
+      if (Math.abs(change) >= 10) {
+        insights.push({
+          kind: 'trend', icon: change > 0 ? '📈' : '📉', color: change > 0 ? '#b91c1c' : '#15803d', bg: change > 0 ? '#fef2f2' : '#f0fdf4',
+          title: `المصروفات ${change > 0 ? 'ارتفعت' : 'انخفضت'} ${Math.abs(change)}%`, body: `مقارنةً بالشهر السابق (${monthLabelAr(prev)}). ${change > 0 ? 'راجع بنود الصرف لتحديد سبب الزيادة.' : 'استمرار جيد في ضبط المصروفات.'}`
+        });
+      }
+    }
+  }
+
+  // TREND: top expense category
+  const catMap = new Map<string, number>();
+  txs.filter(t => t.type === 'expense').forEach(t => catMap.set(t.category, (catMap.get(t.category) ?? 0) + t.amount));
+  const topCat = Array.from(catMap.entries()).sort((a, b) => b[1] - a[1])[0];
+  if (topCat) insights.push({ kind: 'trend', icon: '🏷️', color: '#7c3aed', bg: '#faf5ff', title: `أكبر بند مصروف: ${topCat[0]}`, body: `استحوذ على ${fmt(topCat[1])} من إجمالي مصروفاتك في الفترة. مراقبته تساعد على ضبط التكاليف.` });
+
+  // TIP: monthly commitment load
+  const monthlyOut = comms.filter(c => c.active && !commitmentDone(c) && c.direction === 'out').reduce((s, c) => {
+    const perMonth = c.freq === 'weekly' ? c.amount * 4.33 : c.freq === 'monthly' ? c.amount : c.freq === 'quarterly' ? c.amount / 3 : c.amount / 12;
+    return s + perMonth;
+  }, 0);
+  if (monthlyOut > 0) insights.push({ kind: 'tip', icon: '💡', color: '#1d4ed8', bg: '#eff6ff', title: `التزاماتك الشهرية ≈ ${fmt(Math.round(monthlyOut))}`, body: `هذا متوسط ما يخرج شهرياً من أقساط والتزامات واشتراكات. خطّط لتدفقك النقدي بناءً عليه.` });
+
+  // TIP: pending requests
+  const pending = reqs.filter(r => r.status === 'pending');
+  if (pending.length > 0) insights.push({ kind: 'tip', icon: '📋', color: '#d97706', bg: '#fffbeb', title: `${pending.length} طلب بانتظار قرارك`, body: `هناك طلبات معلّقة تنتظر الاعتماد أو الرفض. مراجعتها تُبقي سير العمل سلساً.` });
+
+  if (insights.length === 0) {
+    return (
+      <Card style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-3)' }}>
+        <div style={{ fontSize: 36, marginBottom: 10 }}>✨</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-2)', marginBottom: 4 }}>كل شيء يبدو على ما يرام</div>
+        <div style={{ fontSize: 13 }}>لا توجد مخاطر أو تنبيهات بارزة في هذه الفترة والنطاق.</div>
+      </Card>
+    );
+  }
+
+  const order = { risk: 0, trend: 1, tip: 2 };
+  insights.sort((a, b) => order[a.kind] - order[b.kind]);
+  const kindLabel = { risk: 'مخاطر وتنبيهات', trend: 'اتجاهات وأنماط', tip: 'توصيات' };
+  const groups = (['risk', 'trend', 'tip'] as const).filter(k => insights.some(i => i.kind === k));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <Card style={{ background: 'linear-gradient(135deg, #1e293b, #334155)', border: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 28 }}>🧠</span>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: '#fff' }}>تحليل ذكي لبياناتك</div>
+            <div style={{ fontSize: 12, color: '#cbd5e1', marginTop: 2 }}>{insights.length} ملاحظة مستخرجة تلقائياً من عملياتك وذممك والتزاماتك ومتابعاتك</div>
+          </div>
+        </div>
+      </Card>
+
+      {groups.map(g => (
+        <div key={g}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', marginBottom: 10 }}>{kindLabel[g]}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {insights.filter(i => i.kind === g).map((ins, idx) => (
+              <Card key={idx} style={{ borderRight: `3px solid ${ins.color}`, background: ins.bg }}>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <span style={{ fontSize: 22, flexShrink: 0 }}>{ins.icon}</span>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: ins.color, marginBottom: 4 }}>{ins.title}</div>
+                    <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.7 }}>{ins.body}</div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AuditLog({ audit, onNav }: { audit: AuditEntry[]; onNav: (p: Page) => void }) {
   const [search, setSearch] = useState('');
   const [fAction, setFAction] = useState('all');
@@ -4891,6 +5269,7 @@ export default function App() {
       case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} onBack={goBack} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} txCategories={lists.txCategories} helpEntry={help.finance} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} helpEntry={help.ledger} />;
+      case 'reports': return <Reports projects={projects} transactions={transactions} receivables={receivables} commitments={commitments} trackings={trackings} requests={requests} members={members} />;
       case 'receivables': return <Receivables projectId={projectId} projects={projects} receivables={receivables} members={members} onSave={saveReceivable} onPay={payReceivable} onDelete={deleteReceivable} openCreate={createReceivable} onOpenCreate={() => setCreateReceivable(true)} onCloseCreate={() => setCreateReceivable(false)} helpEntry={help.receivables} />;
       case 'commitments': return <Commitments projectId={projectId} projects={projects} commitments={commitments} members={members} onSave={saveCommitment} onPay={payCommitment} onToggle={toggleCommitment} onDelete={deleteCommitment} openCreate={createCommitment} onOpenCreate={() => setCreateCommitment(true)} onCloseCreate={() => setCreateCommitment(false)} helpEntry={help.commitments} />;
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} docTypeOptions={lists.docTypes} helpEntry={help.documents} />;
