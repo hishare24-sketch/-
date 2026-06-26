@@ -946,7 +946,6 @@ function Dashboard({ projectId, onNav, projects, transactions, trackings, reques
               <div>
                 <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 6 }}>{s.label}</div>
                 <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>{s.value}</div>
-                {s.trend && <div style={{ fontSize: 12, color: s.trend.startsWith('+') ? '#15803d' : '#b91c1c', marginTop: 4 }}>{s.trend} من الشهر الماضي</div>}
               </div>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{s.icon}</div>
             </div>
