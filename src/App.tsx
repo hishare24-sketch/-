@@ -846,7 +846,7 @@ function StatBars({ bars }: { bars: { label: string; value: number; color: strin
 // small stat number cards row
 function StatCards({ cards }: { cards: { label: string; value: string | number; color: string; bg: string; icon?: string }[] }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 12, marginBottom: 16 }}>
+    <div className="mz-statgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 12, marginBottom: 16 }}>
       {cards.map(c => (
         <div key={c.label} style={{ background: c.bg, borderRadius: 14, padding: 14 }}>
           {c.icon && <div style={{ fontSize: 16, marginBottom: 3 }}>{c.icon}</div>}
@@ -5876,6 +5876,12 @@ const KEYFRAMES = `
 @keyframes mzProgress { from { width: 0% } to { width: 100% } }
 @keyframes mzSlideRight { from { transform: translateX(100%) } to { transform: translateX(0) } }
 .mz-mobile > div { padding: 16px !important; max-width: 100% !important; padding-bottom: 80px !important; }
+.mz-mobile h1 { font-size: 19px !important; }
+.mz-mobile table { font-size: 12px !important; }
+.mz-mobile input, .mz-mobile select, .mz-mobile textarea { font-size: 16px !important; }
+@media (max-width: 420px) {
+  .mz-mobile .mz-statgrid { grid-template-columns: 1fr 1fr !important; }
+}
 input, select, textarea { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }`;
 
 // ═══════════════════════════════════════════
@@ -6264,16 +6270,16 @@ export default function App() {
         <main style={{ flex: 1, overflowY: 'auto', position: 'relative', display: 'flex', flexDirection: 'column' }}>
           {/* mobile top bar */}
           {isMobile && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'var(--sidebar)', position: 'sticky', top: 0, zIndex: 50 }}>
-              <button onClick={() => setDrawerOpen(true)} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 18 }}>☰</button>
-              {canGoBack && <button onClick={goBack} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 18 }}>›</button>}
-              <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 12px', background: 'var(--sidebar)', position: 'sticky', top: 0, zIndex: 50 }}>
+              <button onClick={() => setDrawerOpen(true)} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', fontSize: 17, flexShrink: 0 }}>☰</button>
+              {canGoBack && <button onClick={goBack} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', fontSize: 17, flexShrink: 0 }}>›</button>}
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>موازين</div>
-                {currentProject && <div style={{ color: 'var(--text-3)', fontSize: 11 }}>{currentProject.icon} {currentProject.name}</div>}
+                {currentProject && <div style={{ color: 'var(--text-3)', fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentProject.icon} {currentProject.name}</div>}
               </div>
-              <button onClick={() => setSearchOpen(true)} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 16 }}>🔍</button>
-              <button onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 16 }}>{theme === 'dark' ? '☀️' : '🌙'}</button>
-              <button onClick={() => setPage('notifications')} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 16, position: 'relative' }}>
+              <button onClick={() => setSearchOpen(true)} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', fontSize: 15, flexShrink: 0 }}>🔍</button>
+              <button onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', fontSize: 15, flexShrink: 0 }}>{theme === 'dark' ? '☀️' : '🌙'}</button>
+              <button onClick={() => setPage('notifications')} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', fontSize: 15, position: 'relative', flexShrink: 0 }}>
                 🔔
                 {unread > 0 && <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, padding: '0 4px', borderRadius: 99, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--sidebar)' }}>{unread}</span>}
               </button>
