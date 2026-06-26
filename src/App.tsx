@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 // ═══════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════
-type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail' | 'audit';
+type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'receivables' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail' | 'audit';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 // unified attachment (image/file) — preview kept in-session, real upload later via backend
@@ -22,6 +22,21 @@ type MemberTxn = {
   amount: number; note?: string; date: string; status: MemberTxnStatus;
   direction: 'to_member' | 'from_member'; // money flow relative to member
   attachments?: Attachment[]; createdBy?: string;
+};
+// receivables/payables (الذمم): future obligations that turn into real cash flow on settlement
+type ReceivableKind = 'receivable' | 'payable'; // مدينة (لك) | دائنة (عليك)
+type ReceivableStatus = 'open' | 'partial' | 'settled';
+type ReceivablePayment = { id: string; amount: number; date: string; note?: string; createdBy?: string };
+type Receivable = {
+  id: string; projectId: string; kind: ReceivableKind;
+  party: string;            // اسم الطرف (نص حر) — عميل/مورد/جهة
+  memberId?: string;        // أو ربط بعضو داخلي (مندوب/شريك)
+  amount: number;           // المبلغ الأصلي
+  dueDate?: string;         // تاريخ الاستحقاق
+  date: string;             // تاريخ الإنشاء
+  status: ReceivableStatus;
+  payments: ReceivablePayment[]; // دفعات السداد/التحصيل (جزئي أو كلي)
+  note?: string; attachments?: Attachment[]; createdBy?: string;
 };
 type Transaction = { id: string; projectId: string; type: TxType; description: string; amount: number; category: string; date: string; hasDoc: boolean; note?: string; toProject?: string; transferDir?: 'out' | 'in'; linkId?: string; source?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
 type Tracking = { id: string; name: string; type: string; icon: string; status: TrackingStatus; daysLeft: number; expiryDate: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
@@ -230,11 +245,25 @@ const INITIAL_MEMBER_TXNS: MemberTxn[] = [
   { id: 'mt9', projectId: 'p5', memberId: 'm12', type: 'expense', amount: 600, note: 'تعويض مواصلات', date: '2025-06-22', status: 'pending', direction: 'to_member', createdBy: 'عبدالله الشمري' },
 ];
 
+const INITIAL_RECEIVABLES: Receivable[] = [
+  // ذمم مدينة (لنا)
+  { id: 'rc1', projectId: 'p1', kind: 'receivable', party: 'مجموعة الرواد', amount: 18000, dueDate: '2025-07-15', date: '2025-06-10', status: 'partial', payments: [{ id: 'pm1', amount: 8000, date: '2025-06-20', note: 'دفعة أولى', createdBy: 'محمد العمري' }], note: 'فاتورة مبيعات آجلة', createdBy: 'محمد العمري' },
+  { id: 'rc2', projectId: 'p1', kind: 'receivable', memberId: 'm3', party: 'أحمد العلي (مندوب مبيعات)', amount: 4500, dueDate: '2025-07-01', date: '2025-06-18', status: 'open', payments: [], note: 'مبالغ حصّلها المندوب ولم تورّد بعد', createdBy: 'سارة المحمد' },
+  { id: 'rc3', projectId: 'p4', kind: 'receivable', party: 'عميل التجزئة - طلب #482', amount: 3200, dueDate: '2025-07-05', date: '2025-06-21', status: 'open', payments: [], note: 'طلب بالأجل', createdBy: 'نورة القحطاني' },
+  // ذمم دائنة (علينا)
+  { id: 'rc4', projectId: 'p1', kind: 'payable', party: 'مورد المعدات المكتبية', amount: 9500, dueDate: '2025-07-10', date: '2025-06-12', status: 'open', payments: [], note: 'فاتورة توريد آجلة', createdBy: 'محمد العمري' },
+  { id: 'rc5', projectId: 'p3', kind: 'payable', party: 'سوق الخضار المركزي', amount: 6200, dueDate: '2025-06-30', date: '2025-06-17', status: 'partial', payments: [{ id: 'pm2', amount: 3000, date: '2025-06-22', createdBy: 'محمد الزيد' }], note: 'مستحقات مواد خام', createdBy: 'محمد الزيد' },
+  { id: 'rc6', projectId: 'p5', kind: 'payable', memberId: 'm11', party: 'عبدالله الشمري (مندوب مشتريات)', amount: 2400, dueDate: '2025-07-08', date: '2025-06-18', status: 'open', payments: [], note: 'مبالغ صرفها المندوب تُستحق له', createdBy: 'د. ليلى الحربي' },
+];
+
 // ═══════════════════════════════════════════
 //  HELPERS
 // ═══════════════════════════════════════════
 const fmt = (n: number) => n.toLocaleString('ar-SA') + ' ر.س';
 const fmtNum = (n: number) => n.toLocaleString('ar-SA');
+// remaining balance on a receivable (original − payments)
+const recvPaid = (r: Receivable) => r.payments.reduce((s, p) => s + p.amount, 0);
+const recvRemaining = (r: Receivable) => Math.max(0, r.amount - recvPaid(r));
 const today = () => new Date().toISOString().slice(0, 10);
 const nowStamp = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
 const uid = (p: string) => p + Math.random().toString(36).slice(2, 8);
@@ -244,7 +273,7 @@ const statusFromDays = (d: number): TrackingStatus => d < 0 ? 'expired' : d <= 3
 // ── localStorage-backed state (replaceable by a real DB later) ──
 // data version: bump this whenever seed/initial data changes,
 // so stale localStorage from older versions is cleared automatically (one-time).
-const DATA_VERSION = '3';
+const DATA_VERSION = '4';
 (() => {
   try {
     const stored = localStorage.getItem('mz_data_version');
@@ -687,6 +716,7 @@ const NAV = [
   { id: 'projects',      icon: '⬡',  label: 'المشاريع' },
   { id: 'finance',       icon: '◈',  label: 'الإدارة المالية' },
   { id: 'ledger',        icon: '⛃',  label: 'السجل المالي' },
+  { id: 'receivables',   icon: '⇄',  label: 'الذمم' },
   { id: 'documents',     icon: '◻',  label: 'المستندات' },
   { id: 'trackings',     icon: '◷',  label: 'المتابعات والضمانات' },
   { id: 'requests',      icon: '◫',  label: 'الطلبات والموافقات' },
@@ -3529,6 +3559,293 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, o
 // ═══════════════════════════════════════════
 //  AUDIT LOG (سجل التدقيق لكل الأحداث)
 // ═══════════════════════════════════════════
+// ═══════════════════════════════════════════
+//  RECEIVABLES / PAYABLES (الذمم)
+// ═══════════════════════════════════════════
+function ReceivableForm({ projectId, projects, members, onSave, onCancel }: {
+  projectId: string; projects: Project[]; members: Member[];
+  onSave: (r: Omit<Receivable, 'id'>) => void; onCancel: () => void;
+}) {
+  const [kind, setKind] = useState<ReceivableKind>('receivable');
+  const [targetProject, setTargetProject] = useState(projectId);
+  const [partyMode, setPartyMode] = useState<'external' | 'member'>('external');
+  const [party, setParty] = useState('');
+  const [memberId, setMemberId] = useState('');
+  const [amount, setAmount] = useState<number | ''>('');
+  const [dueDate, setDueDate] = useState('');
+  const [note, setNote] = useState('');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const projMembers = members.filter(m => m.projectId === targetProject);
+  const partyName = partyMode === 'member' ? (projMembers.find(m => m.id === memberId)?.name ?? '') : party.trim();
+  const valid = partyName.length > 0 && amount !== '' && Number(amount) > 0;
+
+  return (
+    <>
+      <Field label="نوع الذمة">
+        <TypePicker value={kind} onChange={v => setKind(v as ReceivableKind)} options={[
+          { v: 'receivable', l: 'ذمة مدينة (لنا)', icon: '📥' },
+          { v: 'payable', l: 'ذمة دائنة (علينا)', icon: '📤' },
+        ]} />
+      </Field>
+      <Field label="المشروع">
+        <Select value={targetProject} onChange={v => { setTargetProject(v); setMemberId(''); }} options={projects.map(p => ({ v: p.id, l: `${p.icon} ${p.name}` }))} />
+      </Field>
+      <Field label="نوع الطرف">
+        <TypePicker value={partyMode} onChange={v => setPartyMode(v as 'external' | 'member')} options={[
+          { v: 'external', l: 'جهة خارجية', icon: '🏢' },
+          { v: 'member', l: 'عضو داخلي', icon: '👤' },
+        ]} />
+      </Field>
+      {partyMode === 'external' ? (
+        <Field label="اسم الطرف">
+          <TextInput value={party} onChange={setParty} placeholder="مثال: عميل، مورد، جهة..." />
+        </Field>
+      ) : (
+        <Field label="العضو">
+          <Select value={memberId} onChange={setMemberId} options={[{ v: '', l: 'اختر عضواً' }, ...projMembers.map(m => ({ v: m.id, l: m.name }))]} />
+        </Field>
+      )}
+      <Field label="المبلغ (ر.س)">
+        <NumInput value={amount} onChange={setAmount} placeholder="0" />
+      </Field>
+      <Field label="تاريخ الاستحقاق (اختياري)">
+        <TextInput type="date" value={dueDate} onChange={setDueDate} />
+      </Field>
+      <Field label="ملاحظات (اختياري)">
+        <TextArea value={note} onChange={setNote} placeholder="تفاصيل الذمة..." />
+      </Field>
+      <Field label="المرفقات (صور / ملفات)">
+        <AttachmentPicker value={attachments} onChange={setAttachments} />
+      </Field>
+      <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#1d4ed8' }}>
+        ℹ️ الذمة لا تُحرّك الرصيد عند الإنشاء. عند التحصيل/السداد تتحول لعملية مالية فعلية تلقائياً.
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
+        <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
+          projectId: targetProject, kind, party: partyName, memberId: partyMode === 'member' ? memberId : undefined,
+          amount: amount === '' ? 0 : amount, dueDate: dueDate || undefined, date: today(),
+          status: 'open', payments: [], note, attachments, createdBy: CURRENT_USER,
+        })}>إضافة الذمة</Btn>
+      </div>
+    </>
+  );
+}
+
+function PaymentForm({ receivable, onSave, onCancel }: {
+  receivable: Receivable; onSave: (amount: number, note: string) => void; onCancel: () => void;
+}) {
+  const remaining = recvRemaining(receivable);
+  const [amount, setAmount] = useState<number | ''>(remaining);
+  const [note, setNote] = useState('');
+  const valid = amount !== '' && Number(amount) > 0 && Number(amount) <= remaining;
+  const isRecv = receivable.kind === 'receivable';
+
+  return (
+    <>
+      <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: 13, color: 'var(--text-3)' }}>{isRecv ? 'تحصيل من' : 'سداد إلى'}: <span style={{ fontWeight: 600, color: 'var(--text)' }}>{receivable.party}</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 13 }}>
+          <span style={{ color: 'var(--text-3)' }}>المبلغ الأصلي: <span style={{ color: 'var(--text-2)' }}>{fmtNum(receivable.amount)}</span></span>
+          <span style={{ color: 'var(--text-3)' }}>المتبقي: <span style={{ fontWeight: 700, color: isRecv ? '#15803d' : '#b91c1c' }}>{fmtNum(remaining)}</span></span>
+        </div>
+      </div>
+      <Field label={`مبلغ ${isRecv ? 'التحصيل' : 'السداد'} (ر.س)`}>
+        <NumInput value={amount} onChange={setAmount} placeholder="0" />
+      </Field>
+      {amount !== '' && Number(amount) > remaining && <div style={{ fontSize: 12, color: '#b91c1c', marginBottom: 12 }}>المبلغ أكبر من المتبقي ({fmtNum(remaining)}).</div>}
+      <Field label="ملاحظة (اختياري)">
+        <TextInput value={note} onChange={setNote} placeholder="مثال: دفعة نقدية، تحويل بنكي..." />
+      </Field>
+      <div style={{ background: isRecv ? '#f0fdf4' : '#fef2f2', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: isRecv ? '#15803d' : '#b91c1c' }}>
+        {isRecv ? '↓ سيُسجَّل تدفق وارد فعلي بالمبلغ في الإدارة المالية.' : '↑ سيُسجَّل تدفق صادر فعلي بالمبلغ في الإدارة المالية.'}
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
+        <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave(amount === '' ? 0 : amount, note)}>تأكيد {isRecv ? 'التحصيل' : 'السداد'}</Btn>
+      </div>
+    </>
+  );
+}
+
+function Receivables({ projectId, projects, receivables, members, onSave, onPay, onDelete, openCreate, onOpenCreate, onCloseCreate }: {
+  projectId: string; projects: Project[]; receivables: Receivable[]; members: Member[];
+  onSave: (r: Omit<Receivable, 'id'>) => void; onPay: (id: string, amount: number, note: string) => void; onDelete: (id: string) => void;
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void;
+}) {
+  const [kindTab, setKindTab] = useState<'all' | ReceivableKind>('all');
+  const [search, setSearch] = useState('');
+  const [fProject, setFProject] = useState('all');
+  const [fStatus, setFStatus] = useState('all');
+  const [sort, setSort] = useState('due');
+  const [sheet, setSheet] = useState<null | { mode: 'pay' | 'view'; r: Receivable }>(null);
+
+  const projName = (id: string) => projects.find(p => p.id === id)?.name ?? '—';
+  const all = receivables;
+  const filtered = all
+    .filter(r => kindTab === 'all' ? true : r.kind === kindTab)
+    .filter(r => fProject === 'all' ? true : r.projectId === fProject)
+    .filter(r => fStatus === 'all' ? true : r.status === fStatus)
+    .filter(r => search.trim() === '' ? true : (r.party + (r.note ?? '')).includes(search.trim()))
+    .sort((a, b) => sort === 'due' ? (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') : sort === 'amount' ? recvRemaining(b) - recvRemaining(a) : b.date.localeCompare(a.date));
+
+  const recvs = all.filter(r => r.kind === 'receivable');
+  const pays = all.filter(r => r.kind === 'payable');
+  const totalRecv = recvs.reduce((s, r) => s + recvRemaining(r), 0);
+  const totalPay = pays.reduce((s, r) => s + recvRemaining(r), 0);
+  const overdue = all.filter(r => r.status !== 'settled' && r.dueDate && r.dueDate < today()).length;
+
+  const clearFilters = () => { setSearch(''); setFProject('all'); setFStatus('all'); setSort('due'); };
+  const close = () => setSheet(null);
+  const statusInfo = (s: ReceivableStatus) => s === 'settled' ? { l: 'مسددة', c: '#15803d', bg: '#dcfce7' } : s === 'partial' ? { l: 'جزئية', c: '#a16207', bg: '#fef3c7' } : { l: 'مفتوحة', c: '#1d4ed8', bg: '#dbeafe' };
+
+  return (
+    <div style={{ padding: 24, maxWidth: 1000 }}>
+      <PageHeader title="الذمم" subtitle="المبالغ المستحقة لك أو عليك" action={<Btn size="sm" onClick={onOpenCreate}>+ ذمة جديدة</Btn>} />
+
+      <StatCards cards={[
+        { label: 'ذمم مدينة (لنا)', value: fmtNum(totalRecv), color: '#15803d', bg: '#f0fdf4', icon: '📥' },
+        { label: 'ذمم دائنة (علينا)', value: fmtNum(totalPay), color: '#b91c1c', bg: '#fef2f2', icon: '📤' },
+        { label: 'صافي الذمم', value: fmtNum(totalRecv - totalPay), color: '#1d4ed8', bg: '#eff6ff', icon: '⇄' },
+        { label: 'متأخرة السداد', value: overdue, color: '#c2410c', bg: '#fff7ed', icon: '⏰' },
+      ]} />
+
+      {/* kind tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'var(--surface-3)', padding: 4, borderRadius: 12, width: 'fit-content', flexWrap: 'wrap' }}>
+        {[['all', 'الكل'], ['receivable', '📥 مدينة (لنا)'], ['payable', '📤 دائنة (علينا)']].map(([v, l]) => (
+          <button key={v} onClick={() => setKindTab(v as any)} style={{
+            padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500,
+            background: kindTab === v ? 'var(--surface)' : 'transparent', color: kindTab === v ? 'var(--text)' : 'var(--text-3)',
+          }}>{l}</button>
+        ))}
+      </div>
+
+      <FilterBar
+        search={search} onSearch={setSearch} searchPlaceholder="🔍 بحث في الذمم..."
+        values={{ project: fProject, status: fStatus, sort }}
+        onChange={(k, v) => { if (k === 'project') setFProject(v); else if (k === 'status') setFStatus(v); else if (k === 'sort') setSort(v); }}
+        onClear={clearFilters}
+        filters={[
+          { key: 'project', placeholder: 'المشروع', options: [{ v: 'all', l: 'كل المشاريع' }, ...projects.map(p => ({ v: p.id, l: p.name }))] },
+          { key: 'status', placeholder: 'الحالة', options: [{ v: 'all', l: 'كل الحالات' }, { v: 'open', l: 'مفتوحة' }, { v: 'partial', l: 'جزئية' }, { v: 'settled', l: 'مسددة' }] },
+          { key: 'sort', placeholder: 'الترتيب', options: [{ v: 'due', l: 'الأقرب استحقاقاً' }, { v: 'amount', l: 'الأعلى مبلغاً' }, { v: 'newest', l: 'الأحدث' }] },
+        ]}
+      />
+
+      {filtered.length === 0 && (
+        <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>⇄</div>
+          <div style={{ fontSize: 14 }}>لا توجد ذمم مطابقة</div>
+        </Card>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {filtered.map(r => {
+          const remaining = recvRemaining(r);
+          const paid = recvPaid(r);
+          const isRecv = r.kind === 'receivable';
+          const si = statusInfo(r.status);
+          const isOverdue = r.status !== 'settled' && r.dueDate && r.dueDate < today();
+          const pct = r.amount > 0 ? Math.round((paid / r.amount) * 100) : 0;
+          return (
+            <Card key={r.id} style={{ padding: 16, borderRight: `3px solid ${isRecv ? '#22c55e' : '#f87171'}` }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <span style={{ fontSize: 22, flexShrink: 0 }}>{isRecv ? '📥' : '📤'}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{r.party}</span>
+                    <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: si.bg, color: si.c }}>{si.l}</span>
+                    {isOverdue && <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: '#fee2e2', color: '#b91c1c' }}>⏰ متأخرة</span>}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>
+                    {projName(r.projectId)}{r.note ? ` · ${r.note}` : ''}{r.dueDate ? ` · تستحق ${r.dueDate}` : ''}
+                  </div>
+                  {/* progress */}
+                  {paid > 0 && (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ height: 6, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: isRecv ? '#22c55e' : '#f87171' }} />
+                      </div>
+                      <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 3 }}>سُدّد {fmtNum(paid)} من {fmtNum(r.amount)} ({pct}%)</div>
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign: 'left', flexShrink: 0 }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: isRecv ? '#15803d' : '#b91c1c' }}>{fmtNum(remaining)}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-3)' }}>متبقٍ</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                {r.status !== 'settled' && (
+                  <button onClick={() => setSheet({ mode: 'pay', r })} style={{ background: isRecv ? '#15803d' : '#b91c1c', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 16px', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {isRecv ? '↓ تسجيل تحصيل' : '↑ تسجيل سداد'}
+                  </button>
+                )}
+                <button onClick={() => setSheet({ mode: 'view', r })} style={{ background: 'var(--surface-3)', color: 'var(--text-2)', border: 'none', borderRadius: 8, padding: '6px 16px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>التفاصيل</button>
+                <button onClick={() => onDelete(r.id)} style={{ background: 'none', color: 'var(--text-3)', border: 'none', borderRadius: 8, padding: '6px 10px', fontSize: 13, cursor: 'pointer', marginRight: 'auto' }}>🗑️</button>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* create */}
+      <Sheet open={openCreate} onClose={onCloseCreate} title="ذمة جديدة">
+        {openCreate && <ReceivableForm projectId={projectId} projects={projects} members={members} onSave={(r) => { onSave(r); onCloseCreate(); }} onCancel={onCloseCreate} />}
+      </Sheet>
+
+      {/* pay */}
+      <Sheet open={sheet?.mode === 'pay'} onClose={close} title={sheet?.r.kind === 'receivable' ? 'تسجيل تحصيل' : 'تسجيل سداد'}>
+        {sheet?.mode === 'pay' && <PaymentForm receivable={sheet.r} onSave={(amt, note) => { onPay(sheet.r.id, amt, note); close(); }} onCancel={close} />}
+      </Sheet>
+
+      {/* view */}
+      <Sheet open={sheet?.mode === 'view'} onClose={close} title="تفاصيل الذمة">
+        {sheet?.mode === 'view' && (() => {
+          const r = sheet.r;
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                ['النوع', r.kind === 'receivable' ? '📥 ذمة مدينة (لنا)' : '📤 ذمة دائنة (علينا)'],
+                ['الطرف', r.party], ['المشروع', projName(r.projectId)],
+                ['المبلغ الأصلي', fmt(r.amount)], ['المسدّد', fmt(recvPaid(r))], ['المتبقي', fmt(recvRemaining(r))],
+                ['تاريخ الإنشاء', r.date], ...(r.dueDate ? [['تاريخ الاستحقاق', r.dueDate] as [string, string]] : []),
+                ['الحالة', statusInfo(r.status).l], ['أضافها', r.createdBy ?? CURRENT_USER],
+                ...(r.note ? [['ملاحظات', r.note] as [string, string]] : []),
+              ].map(([k, v]) => (
+                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, paddingBottom: 10, borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+                  <span style={{ color: 'var(--text-3)' }}>{k}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text)', textAlign: 'left' }}>{v}</span>
+                </div>
+              ))}
+              {/* payment history */}
+              {r.payments.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8 }}>سجل الدفعات ({r.payments.length})</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {r.payments.map(p => (
+                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8, fontSize: 12.5 }}>
+                        <span style={{ color: 'var(--text-3)' }}>{p.date}{p.note ? ` · ${p.note}` : ''}</span>
+                        <span style={{ fontWeight: 600, color: r.kind === 'receivable' ? '#15803d' : '#b91c1c' }}>{fmtNum(p.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {r.attachments && r.attachments.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 6 }}>المرفقات ({r.attachments.length})</div>
+                  <AttachmentView items={r.attachments} />
+                </div>
+              )}
+            </div>
+          );
+        })()}
+      </Sheet>
+    </div>
+  );
+}
+
 function AuditLog({ audit, onNav }: { audit: AuditEntry[]; onNav: (p: Page) => void }) {
   const [search, setSearch] = useState('');
   const [fAction, setFAction] = useState('all');
@@ -3844,6 +4161,7 @@ export default function App() {
   const [notifs, setNotifs] = usePersist<Notif[]>('mz_notifs', INITIAL_NOTIFS);
   const [members, setMembers] = usePersist<Member[]>('mz_members', INITIAL_MEMBERS);
   const [memberTxns, setMemberTxns] = usePersist<MemberTxn[]>('mz_member_txns', INITIAL_MEMBER_TXNS);
+  const [receivables, setReceivables] = usePersist<Receivable[]>('mz_receivables', INITIAL_RECEIVABLES);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [prefs, setPrefs] = usePersist<UserPrefs>('mz_prefs', DEFAULT_PREFS);
   const [audit, setAudit] = usePersist<AuditEntry[]>('mz_audit', INITIAL_AUDIT);
@@ -3855,6 +4173,7 @@ export default function App() {
   const [createDoc, setCreateDoc] = useState(false);
   const [createTracking, setCreateTracking] = useState(false);
   const [createRequest, setCreateRequest] = useState(false);
+  const [createReceivable, setCreateReceivable] = useState(false);
   const [createProject, setCreateProject] = useState(false);
   const [trackingPreset, setTrackingPreset] = useState<{ name?: string; type?: string }>({});
 
@@ -3940,6 +4259,33 @@ export default function App() {
   };
   const deleteRequest = (id: string) => { const rq = requests.find(x => x.id === id); logAudit('حذف', 'طلب', rq?.title ?? ''); setRequests(l => l.filter(x => x.id !== id)); };
 
+  // ── receivables (الذمم) ──
+  const saveReceivable = (r: Omit<Receivable, 'id'>) => {
+    logAudit('إنشاء', r.kind === 'receivable' ? 'ذمة مدينة' : 'ذمة دائنة', `${r.party} — ${fmt(r.amount)}`);
+    setReceivables(list => [{ ...r, id: uid('rc') }, ...list]);
+  };
+  const deleteReceivable = (id: string) => { const rc = receivables.find(x => x.id === id); logAudit('حذف', 'ذمة', rc?.party ?? ''); setReceivables(l => l.filter(x => x.id !== id)); };
+  // record a payment/collection → updates the receivable AND creates a real cash-flow transaction
+  const payReceivable = (id: string, amount: number, note: string) => {
+    const r = receivables.find(x => x.id === id);
+    if (!r) return;
+    const payment: ReceivablePayment = { id: uid('pm'), amount, date: today(), note: note || undefined, createdBy: CURRENT_USER };
+    const newPaid = recvPaid(r) + amount;
+    const newStatus: ReceivableStatus = newPaid >= r.amount ? 'settled' : newPaid > 0 ? 'partial' : 'open';
+    setReceivables(list => list.map(x => x.id === id ? { ...x, payments: [...x.payments, payment], status: newStatus } : x));
+    // create the real financial transaction: receivable → income, payable → expense
+    const isRecv = r.kind === 'receivable';
+    const tx: Transaction = {
+      id: uid('t'), projectId: r.projectId, type: isRecv ? 'income' : 'expense',
+      description: `${isRecv ? 'تحصيل ذمة من' : 'سداد ذمة إلى'} ${r.party}`,
+      amount, category: 'ذمم', date: today(), hasDoc: false,
+      source: r.party, memberId: r.memberId, note: note || `${isRecv ? 'تحصيل' : 'سداد'} ذمة`, createdBy: CURRENT_USER,
+    };
+    setTransactions(list => [tx, ...list]);
+    logAudit(isRecv ? 'تحصيل' : 'سداد', 'ذمة', `${r.party} — ${fmt(amount)}`);
+    setNotifs(ns => [{ id: uid('n'), type: 'success', title: isRecv ? 'تم تحصيل ذمة' : 'تم سداد ذمة', body: `${isRecv ? 'تحصيل' : 'سداد'} ${fmt(amount)} ${isRecv ? 'من' : 'إلى'} ${r.party}.${newStatus === 'settled' ? ' (مسددة بالكامل)' : ''}`, time: 'الآن', read: false, link: 'receivables', projectId: r.projectId, section: 'finance', memberId: r.memberId, ts: nowStamp() }, ...ns]);
+  };
+
   const saveDoc = (d: Omit<DocItem, 'id'> & { id?: string }) =>
     setDocuments(list => d.id ? list.map(x => x.id === d.id ? { ...x, ...d } as DocItem : x) : [{ ...d, id: uid('d'), createdBy: CURRENT_USER }, ...list]);
   const deleteDoc = (id: string) => setDocuments(l => l.filter(x => x.id !== id));
@@ -3991,6 +4337,7 @@ export default function App() {
       case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} onBack={goBack} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} />;
+      case 'receivables': return <Receivables projectId={projectId} projects={projects} receivables={receivables} members={members} onSave={saveReceivable} onPay={payReceivable} onDelete={deleteReceivable} openCreate={createReceivable} onOpenCreate={() => setCreateReceivable(true)} onCloseCreate={() => setCreateReceivable(false)} />;
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} />;
       case 'trackings': return <Trackings projectId={projectId} projects={projects} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
       case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
