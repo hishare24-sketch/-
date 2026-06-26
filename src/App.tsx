@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 // ═══════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════
-type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail' | 'audit';
+type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail' | 'audit' | 'customize';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 // unified attachment (image/file) — preview kept in-session, real upload later via backend
@@ -68,7 +68,7 @@ type AuditEntry = { id: string; action: string; entity: string; detail: string; 
 //  CONSTANTS (type options per module)
 // ═══════════════════════════════════════════
 const PROJECT_ICONS = ['🏢', '🏠', '🍽️', '🏪', '🚗', '💼', '🏭', '⚙️', '📦', '🌿'];
-const PROJECT_TYPES = ['شركة', 'مؤسسة', 'مشروع منزلي', 'مشروع أسري', 'متجر إلكتروني', 'مطعم', 'أخرى'];
+const DEFAULT_PROJECT_TYPES = ['شركة', 'مؤسسة', 'مشروع منزلي', 'مشروع أسري', 'متجر إلكتروني', 'مطعم', 'أخرى'];
 
 // roles & permissions (نوع التمكين والصلاحيات)
 const ROLES: { id: MemberRole; label: string; desc: string; color: string }[] = [
@@ -117,7 +117,7 @@ const TX_TYPES: { id: TxType; label: string; icon: string }[] = [
   { id: 'expense', label: 'مصروف', icon: '📉' },
   { id: 'transfer', label: 'تحويل', icon: '🔄' },
 ];
-const TX_CATEGORIES = ['مبيعات', 'رواتب', 'إيجار', 'فواتير', 'قسط', 'صيانة', 'تسويق', 'أخرى'];
+const DEFAULT_TX_CATEGORIES = ['مبيعات', 'رواتب', 'إيجار', 'فواتير', 'قسط', 'صيانة', 'تسويق', 'أخرى'];
 
 const TRACKING_TYPES = [
   { id: 'ضمان', icon: '🛡️' },
@@ -130,7 +130,22 @@ const TRACKING_TYPES = [
 
 const REQUEST_TYPES = ['مصروف', 'تحويل', 'عهدة', 'صيانة', 'شراء'];
 
-const DOC_TYPES = ['فاتورة', 'عقد', 'كشف حساب', 'وثيقة رسمية', 'ملف عام'];
+const DEFAULT_DOC_TYPES = ['فاتورة', 'عقد', 'كشف حساب', 'وثيقة رسمية', 'ملف عام'];
+const DEFAULT_PARTY_TYPES = ['عميل', 'مورد', 'بنك', 'جهة حكومية', 'شريك', 'أخرى'];
+
+// user-customizable lists (managed from the التخصيص page)
+type CustomLists = {
+  txCategories: string[];
+  projectTypes: string[];
+  docTypes: string[];
+  partyTypes: string[];
+};
+const DEFAULT_LISTS: CustomLists = {
+  txCategories: DEFAULT_TX_CATEGORIES,
+  projectTypes: DEFAULT_PROJECT_TYPES,
+  docTypes: DEFAULT_DOC_TYPES,
+  partyTypes: DEFAULT_PARTY_TYPES,
+};
 
 // ═══════════════════════════════════════════
 //  MOCK DATA
@@ -767,6 +782,7 @@ const NAV = [
   { id: 'requests',      icon: '◫',  label: 'الطلبات والموافقات' },
   { id: 'notifications', icon: '◌',  label: 'الإشعارات' },
   { id: 'audit',         icon: '⊟',  label: 'سجل العمليات' },
+  { id: 'customize',     icon: '⚙',  label: 'التخصيص' },
   { id: 'settings',      icon: '◎',  label: 'الإعدادات' },
 ];
 
@@ -1126,14 +1142,14 @@ function Dashboard({ projectId, onNav, projects, transactions, trackings, reques
 // ═══════════════════════════════════════════
 //  PROJECTS  (create / view / edit)
 // ═══════════════════════════════════════════
-function ProjectForm({ initial, onSave, onCancel }: {
-  initial?: Project; onSave: (p: Omit<Project, 'id'> & { id?: string }) => void; onCancel: () => void;
+function ProjectForm({ initial, onSave, onCancel, projectTypes = DEFAULT_PROJECT_TYPES }: {
+  initial?: Project; onSave: (p: Omit<Project, 'id'> & { id?: string }) => void; onCancel: () => void; projectTypes?: string[];
 }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [icon, setIcon] = useState(initial?.icon ?? PROJECT_ICONS[0]);
   const [color, setColor] = useState(initial?.color ?? PROJECT_COLORS[0]);
   const [balance, setBalance] = useState<number | ''>(initial?.balance ?? '');
-  const [type, setType] = useState(initial?.type ?? PROJECT_TYPES[0]);
+  const [type, setType] = useState(initial?.type ?? projectTypes[0]);
   const [description, setDescription] = useState(initial?.description ?? '');
   const valid = name.trim().length > 0;
 
@@ -1143,7 +1159,7 @@ function ProjectForm({ initial, onSave, onCancel }: {
         <TextInput value={name} onChange={setName} placeholder="مثال: شركة النخيل" />
       </Field>
       <Field label="نوع المشروع">
-        <Select value={type} onChange={setType} options={PROJECT_TYPES.map(t => ({ v: t, l: t }))} />
+        <Select value={type} onChange={setType} options={projectTypes.map(t => ({ v: t, l: t }))} />
       </Field>
       <Field label="وصف المشروع (اختياري)">
         <TextArea value={description} onChange={setDescription} placeholder="نبذة قصيرة عن المشروع..." />
@@ -1181,12 +1197,12 @@ function ProjectForm({ initial, onSave, onCancel }: {
   );
 }
 
-function Projects({ projects, transactions, onOpen, onSave, onDelete, openCreate, onCloseCreate, prefs }: {
+function Projects({ projects, transactions, onOpen, onSave, onDelete, openCreate, onCloseCreate, prefs, projectTypes = DEFAULT_PROJECT_TYPES }: {
   projects: Project[]; transactions: Transaction[];
   onOpen: (id: string) => void;
   onSave: (p: Omit<Project, 'id'> & { id?: string }) => void;
   onDelete: (id: string) => void;
-  openCreate?: boolean; onCloseCreate?: () => void; prefs?: UserPrefs;
+  openCreate?: boolean; onCloseCreate?: () => void; prefs?: UserPrefs; projectTypes?: string[];
 }) {
   const [sheet, setSheet] = useState<null | { mode: 'create' } | { mode: 'edit' | 'view'; project: Project }>(null);
   const close = () => { setSheet(null); onCloseCreate?.(); };
@@ -1278,6 +1294,7 @@ function Projects({ projects, transactions, onOpen, onSave, onDelete, openCreate
         <ProjectForm
           key={sheet?.mode === 'edit' ? sheet.project.id : 'new'}
           initial={sheet?.mode === 'edit' ? sheet.project : undefined}
+          projectTypes={projectTypes}
           onSave={(p) => { onSave(p); close(); }}
           onCancel={close}
         />
@@ -1928,15 +1945,15 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
 // ═══════════════════════════════════════════
 //  FINANCE  (create / view / edit transaction by type)
 // ═══════════════════════════════════════════
-function TxForm({ initial, projectId, projects, onSave, onCancel }: {
+function TxForm({ initial, projectId, projects, onSave, onCancel, txCategories = DEFAULT_TX_CATEGORIES }: {
   initial?: Transaction; projectId: string; projects: Project[];
-  onSave: (t: Omit<Transaction, 'id'> & { id?: string }) => void; onCancel: () => void;
+  onSave: (t: Omit<Transaction, 'id'> & { id?: string }) => void; onCancel: () => void; txCategories?: string[];
 }) {
   const [type, setType] = useState<TxType>(initial?.type ?? 'expense');
   const [targetProject, setTargetProject] = useState(initial?.projectId ?? projectId);
   const [description, setDescription] = useState(initial?.description ?? '');
   const [amount, setAmount] = useState<number | ''>(initial?.amount ?? '');
-  const [category, setCategory] = useState(initial?.category ?? TX_CATEGORIES[0]);
+  const [category, setCategory] = useState(initial?.category ?? txCategories[0]);
   const [date, setDate] = useState(initial?.date ?? today());
   const [toProject, setToProject] = useState(initial?.toProject ?? projects.find(p => p.id !== projectId)?.id ?? '');
   const [source, setSource] = useState(initial?.source ?? '');
@@ -1964,7 +1981,7 @@ function TxForm({ initial, projectId, projects, onSave, onCancel }: {
         </Field>
       ) : (
         <Field label="التصنيف">
-          <Select value={category} onChange={setCategory} options={TX_CATEGORIES.map(c => ({ v: c, l: c }))} />
+          <Select value={category} onChange={setCategory} options={txCategories.map(c => ({ v: c, l: c }))} />
         </Field>
       )}
       <Field label="المصدر / الجهة (اختياري)">
@@ -1992,10 +2009,10 @@ function TxForm({ initial, projectId, projects, onSave, onCancel }: {
   );
 }
 
-function Finance({ projectId, projects, transactions, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate, onNav }: {
+function Finance({ projectId, projects, transactions, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate, onNav, txCategories = DEFAULT_TX_CATEGORIES }: {
   projectId: string; projects: Project[]; transactions: Transaction[];
   onSave: (t: Omit<Transaction, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
-  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; onNav: (p: Page) => void;
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; onNav: (p: Page) => void; txCategories?: string[];
 }) {
   const [tab, setTab] = useState<'all' | TxType>('all');
   const [search, setSearch] = useState('');
@@ -2140,13 +2157,13 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
 
       {/* Create */}
       <Sheet open={openCreate} onClose={onCloseCreate} title="عملية جديدة">
-        <TxForm projectId={projectId} projects={projects} onSave={(t) => { onSave(t); onCloseCreate(); }} onCancel={onCloseCreate} />
+        <TxForm projectId={projectId} projects={projects} txCategories={txCategories} onSave={(t) => { onSave(t); onCloseCreate(); }} onCancel={onCloseCreate} />
       </Sheet>
 
       {/* Edit */}
       <Sheet open={sheet?.mode === 'edit'} onClose={() => setSheet(null)} title="تعديل العملية">
         {sheet?.mode === 'edit' && (
-          <TxForm key={sheet.tx.id} initial={sheet.tx} projectId={projectId} projects={projects}
+          <TxForm key={sheet.tx.id} initial={sheet.tx} projectId={projectId} projects={projects} txCategories={txCategories}
             onSave={(t) => { onSave(t); setSheet(null); }} onCancel={() => setSheet(null)} />
         )}
       </Sheet>
@@ -2468,12 +2485,12 @@ function Ledger({ projects, transactions, members, memberTxns }: {
 // ═══════════════════════════════════════════
 //  DOCUMENTS  (upload by type / actions / view / edit)
 // ═══════════════════════════════════════════
-function DocForm({ initial, projectId, projects, onSave, onCancel }: {
+function DocForm({ initial, projectId, projects, onSave, onCancel, docTypes = DEFAULT_DOC_TYPES }: {
   initial?: DocItem; projectId: string; projects: Project[];
-  onSave: (d: Omit<DocItem, 'id'> & { id?: string }) => void; onCancel: () => void;
+  onSave: (d: Omit<DocItem, 'id'> & { id?: string }) => void; onCancel: () => void; docTypes?: string[];
 }) {
   const [name, setName] = useState(initial?.name ?? '');
-  const [type, setType] = useState(initial?.type ?? DOC_TYPES[0]);
+  const [type, setType] = useState(initial?.type ?? docTypes[0]);
   const [date, setDate] = useState(initial?.date ?? today());
   const [targetProject, setTargetProject] = useState(initial?.projectId ?? projectId);
   const [attachments, setAttachments] = useState<Attachment[]>(initial?.attachments ?? []);
@@ -2505,7 +2522,7 @@ function DocForm({ initial, projectId, projects, onSave, onCancel }: {
         </div>
       )}
       <Field label="نوع المستند">
-        <TypePicker value={type} onChange={setType} options={DOC_TYPES.map(t => ({ v: t, l: t }))} />
+        <TypePicker value={type} onChange={setType} options={docTypes.map(t => ({ v: t, l: t }))} />
       </Field>
       <Field label="المشروع">
         <Select value={targetProject} onChange={setTargetProject} options={projects.map(p => ({ v: p.id, l: `${p.icon} ${p.name}` }))} />
@@ -2548,11 +2565,11 @@ function aiExtract(doc: DocItem): [string, string][] {
   return [...base, ['المحتوى', 'تم تحليل المستند العام'], ['عدد الصفحات', '3']];
 }
 
-function Documents({ projectId, projects, documents, onSave, onDelete, onAction, openCreate, onOpenCreate, onCloseCreate }: {
+function Documents({ projectId, projects, documents, onSave, onDelete, onAction, openCreate, onOpenCreate, onCloseCreate, docTypes = DEFAULT_DOC_TYPES }: {
   projectId: string; projects: Project[]; documents: DocItem[];
   onSave: (d: Omit<DocItem, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
   onAction: (action: 'tx' | 'tracking', doc: DocItem) => void;
-  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void;
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; docTypes?: string[];
 }) {
   const [sheet, setSheet] = useState<null | { mode: 'view' | 'edit' | 'actions' | 'ai'; doc: DocItem }>(null);
   const [aiBusy, setAiBusy] = useState(false);
@@ -2668,12 +2685,12 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
 
       {/* Upload */}
       <Sheet open={openCreate} onClose={onCloseCreate} title="رفع مستند">
-        <DocForm projectId={projectId} projects={projects} onSave={(d) => { onSave(d); onCloseCreate(); }} onCancel={onCloseCreate} />
+        <DocForm projectId={projectId} projects={projects} docTypes={docTypes} onSave={(d) => { onSave(d); onCloseCreate(); }} onCancel={onCloseCreate} />
       </Sheet>
 
       {/* Edit */}
       <Sheet open={sheet?.mode === 'edit'} onClose={close} title="تعديل المستند">
-        {sheet?.mode === 'edit' && <DocForm key={sheet.doc.id} initial={sheet.doc} projectId={projectId} projects={projects} onSave={(d) => { onSave(d); close(); }} onCancel={close} />}
+        {sheet?.mode === 'edit' && <DocForm key={sheet.doc.id} initial={sheet.doc} projectId={projectId} projects={projects} docTypes={docTypes} onSave={(d) => { onSave(d); close(); }} onCancel={close} />}
       </Sheet>
 
       {/* View */}
@@ -3333,6 +3350,82 @@ function Notifications({ notifs, projects, members, onMarkRead, onMarkAll, onNav
 // ═══════════════════════════════════════════
 //  SETTINGS
 // ═══════════════════════════════════════════
+// ═══════════════════════════════════════════
+//  CUSTOMIZE (لوحة القوائم المخصّصة)
+// ═══════════════════════════════════════════
+function Customize({ lists, onChange }: { lists: CustomLists; onChange: (l: CustomLists) => void }) {
+  const sections: { key: keyof CustomLists; title: string; icon: string; desc: string; placeholder: string }[] = [
+    { key: 'txCategories', title: 'التصنيفات المالية', icon: '🏷️', desc: 'تصنيفات الإيرادات والمصروفات في الإدارة المالية', placeholder: 'مثال: تبرعات' },
+    { key: 'projectTypes', title: 'أنواع المشاريع', icon: '⬡', desc: 'الأنواع المتاحة عند إنشاء مشروع جديد', placeholder: 'مثال: عيادة' },
+    { key: 'docTypes', title: 'أنواع المستندات', icon: '◻', desc: 'الأنواع المتاحة عند رفع مستند', placeholder: 'مثال: شهادة' },
+    { key: 'partyTypes', title: 'فئات الأطراف (الذمم)', icon: '⇄', desc: 'فئات تصنيف أطراف الذمم (للتنظيم)', placeholder: 'مثال: مقاول' },
+  ];
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  const addItem = (key: keyof CustomLists) => {
+    const val = (drafts[key] ?? '').trim();
+    if (!val || lists[key].includes(val)) { setDrafts(d => ({ ...d, [key]: '' })); return; }
+    onChange({ ...lists, [key]: [...lists[key], val] });
+    setDrafts(d => ({ ...d, [key]: '' }));
+  };
+  const removeItem = (key: keyof CustomLists, item: string) => {
+    onChange({ ...lists, [key]: lists[key].filter(x => x !== item) });
+  };
+  const resetSection = (key: keyof CustomLists) => {
+    onChange({ ...lists, [key]: DEFAULT_LISTS[key] });
+  };
+
+  return (
+    <div style={{ padding: 24, maxWidth: 760 }}>
+      <PageHeader title="التخصيص" subtitle="إدارة القوائم المخصّصة المستخدمة في كل الأقسام" />
+
+      <Card style={{ marginBottom: 16, background: '#eff6ff', border: '1px solid #bfdbfe' }}>
+        <div style={{ fontSize: 13, color: '#1d4ed8', lineHeight: 1.8 }}>
+          ℹ️ العناصر التي تضيفها هنا تظهر مباشرةً في قوائم الاختيار عبر النظام — عند إنشاء عملية مالية، مشروع، مستند، أو ذمة. حذف عنصر لا يؤثر على البيانات القديمة المرتبطة به.
+        </div>
+      </Card>
+
+      {sections.map(s => (
+        <Card key={s.key} style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>{s.icon}</span>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{s.title}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{s.desc}</div>
+              </div>
+            </div>
+            <button onClick={() => resetSection(s.key)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px', fontSize: 11.5, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>استعادة الافتراضي</button>
+          </div>
+
+          {/* chips */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '14px 0' }}>
+            {lists[s.key].length === 0 && <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>لا توجد عناصر — أضف واحداً بالأسفل.</span>}
+            {lists[s.key].map(item => (
+              <span key={item} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--surface-3)', borderRadius: 99, padding: '5px 8px 5px 12px', fontSize: 12.5, color: 'var(--text-2)' }}>
+                {item}
+                <button onClick={() => removeItem(s.key, item)} style={{ background: 'var(--surface)', border: 'none', borderRadius: 99, width: 18, height: 18, cursor: 'pointer', fontSize: 11, color: 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              </span>
+            ))}
+          </div>
+
+          {/* add */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              value={drafts[s.key] ?? ''}
+              onChange={e => setDrafts(d => ({ ...d, [s.key]: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter') addItem(s.key); }}
+              placeholder={s.placeholder}
+              style={{ flex: 1, padding: '9px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, background: 'var(--surface)', color: 'var(--text)' }}
+            />
+            <Btn size="sm" onClick={() => addItem(s.key)}>+ إضافة</Btn>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 function Settings({ theme, onToggleTheme, onNav, onLogout, prefs, onPrefs }: { theme: 'light' | 'dark'; onToggleTheme: () => void; onNav: (p: Page) => void; onLogout: () => void; prefs: UserPrefs; onPrefs: (p: UserPrefs) => void }) {
   const toggle = (k: keyof UserPrefs) => onPrefs({ ...prefs, [k]: !prefs[k] });
   const Switch = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
@@ -4498,6 +4591,7 @@ export default function App() {
   const [commitments, setCommitments] = usePersist<Commitment[]>('mz_commitments', INITIAL_COMMITMENTS);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [prefs, setPrefs] = usePersist<UserPrefs>('mz_prefs', DEFAULT_PREFS);
+  const [lists, setLists] = usePersist<CustomLists>('mz_lists', DEFAULT_LISTS);
   const [audit, setAudit] = usePersist<AuditEntry[]>('mz_audit', INITIAL_AUDIT);
   const logAudit = (action: string, entity: string, detail: string) =>
     setAudit(list => [{ id: uid('a'), action, entity, detail, user: 'محمد العمري', ts: new Date().toISOString().slice(0, 16).replace('T', ' ') }, ...list].slice(0, 200));
@@ -4699,18 +4793,19 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} prefs={prefs} />;
-      case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} openCreate={createProject} onCloseCreate={() => setCreateProject(false)} prefs={prefs} />;
+      case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} openCreate={createProject} onCloseCreate={() => setCreateProject(false)} prefs={prefs} projectTypes={lists.projectTypes} />;
       case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} onQuickAction={fabAction} prefs={prefs} />;
       case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} onBack={goBack} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
-      case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} />;
+      case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} txCategories={lists.txCategories} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} />;
       case 'receivables': return <Receivables projectId={projectId} projects={projects} receivables={receivables} members={members} onSave={saveReceivable} onPay={payReceivable} onDelete={deleteReceivable} openCreate={createReceivable} onOpenCreate={() => setCreateReceivable(true)} onCloseCreate={() => setCreateReceivable(false)} />;
       case 'commitments': return <Commitments projectId={projectId} projects={projects} commitments={commitments} members={members} onSave={saveCommitment} onPay={payCommitment} onToggle={toggleCommitment} onDelete={deleteCommitment} openCreate={createCommitment} onOpenCreate={() => setCreateCommitment(true)} onCloseCreate={() => setCreateCommitment(false)} />;
-      case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} />;
+      case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} docTypes={lists.docTypes} />;
       case 'trackings': return <Trackings projectId={projectId} projects={projects} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
       case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
       case 'notifications': return <Notifications notifs={notifs} projects={projects} members={members} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} />;
       case 'audit': return <AuditLog audit={audit} onNav={setPage} />;
+      case 'customize': return <Customize lists={lists} onChange={setLists} />;
       case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => { logAudit('تسجيل خروج', 'النظام', 'تم تسجيل الخروج'); setAuthed(false); }} prefs={prefs} onPrefs={setPrefs} />;
       case 'subscription': return <Subscription current={plan} onChoose={setPlan} />;
       default: return null;
@@ -4769,10 +4864,10 @@ export default function App() {
 
         {/* global quick-create: navigates only on save, cancel stays put */}
         <Sheet open={quickCreate === 'tx'} onClose={() => setQuickCreate(null)} title="عملية مالية جديدة">
-          {quickCreate === 'tx' && <TxForm projectId={projectId} projects={projects} onSave={(t) => { saveTx(t); setQuickCreate(null); setProjectId(t.projectId); setPage('finance'); }} onCancel={() => setQuickCreate(null)} />}
+          {quickCreate === 'tx' && <TxForm projectId={projectId} projects={projects} txCategories={lists.txCategories} onSave={(t) => { saveTx(t); setQuickCreate(null); setProjectId(t.projectId); setPage('finance'); }} onCancel={() => setQuickCreate(null)} />}
         </Sheet>
         <Sheet open={quickCreate === 'doc'} onClose={() => setQuickCreate(null)} title="رفع مستند جديد">
-          {quickCreate === 'doc' && <DocForm projectId={projectId} projects={projects} onSave={(d) => { saveDoc(d); setQuickCreate(null); setProjectId(d.projectId); setPage('documents'); }} onCancel={() => setQuickCreate(null)} />}
+          {quickCreate === 'doc' && <DocForm projectId={projectId} projects={projects} docTypes={lists.docTypes} onSave={(d) => { saveDoc(d); setQuickCreate(null); setProjectId(d.projectId); setPage('documents'); }} onCancel={() => setQuickCreate(null)} />}
         </Sheet>
         <Sheet open={quickCreate === 'tracking'} onClose={() => setQuickCreate(null)} title="متابعة جديدة">
           {quickCreate === 'tracking' && <TrackingForm projectId={projectId} projects={projects} members={members} onSave={(t) => { saveTracking(t); setQuickCreate(null); setProjectId(t.projectId); setPage('trackings'); }} onCancel={() => setQuickCreate(null)} />}
@@ -4781,7 +4876,7 @@ export default function App() {
           {quickCreate === 'request' && <RequestForm projectId={projectId} projects={projects} members={members} onSave={(r) => { saveRequest(r); setQuickCreate(null); setProjectId(r.projectId); setPage('requests'); }} onCancel={() => setQuickCreate(null)} />}
         </Sheet>
         <Sheet open={quickCreate === 'project'} onClose={() => setQuickCreate(null)} title="مشروع جديد">
-          {quickCreate === 'project' && <ProjectForm onSave={(p) => { saveProject(p); setQuickCreate(null); setPage('projects'); }} onCancel={() => setQuickCreate(null)} />}
+          {quickCreate === 'project' && <ProjectForm projectTypes={lists.projectTypes} onSave={(p) => { saveProject(p); setQuickCreate(null); setPage('projects'); }} onCancel={() => setQuickCreate(null)} />}
         </Sheet>
       </div>
     </>
