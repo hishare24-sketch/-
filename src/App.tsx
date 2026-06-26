@@ -1783,6 +1783,49 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
         ))}
       </div>
 
+      {/* financial charts: expense-by-category donut + monthly flow bars */}
+      {txns.length > 0 && (() => {
+        const expByCat: Record<string, number> = {};
+        txns.filter(t => t.type === 'expense').forEach(t => { expByCat[t.category] = (expByCat[t.category] ?? 0) + t.amount; });
+        const palette = ['#dc2626', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d', '#2563eb', '#059669'];
+        const catSegs = Object.entries(expByCat).sort((a, b) => b[1] - a[1]).map(([k, v], i) => ({ value: Math.round(v), color: palette[i % palette.length], label: k }));
+        // monthly net flow
+        const byMonth: Record<string, { in: number; out: number }> = {};
+        txns.forEach(t => {
+          const m = t.date.slice(0, 7);
+          if (!byMonth[m]) byMonth[m] = { in: 0, out: 0 };
+          if (t.type === 'income' || (t.type === 'transfer' && t.transferDir === 'in')) byMonth[m].in += t.amount;
+          else byMonth[m].out += t.amount;
+        });
+        const months = Object.keys(byMonth).sort().slice(-6);
+        const monthBars = months.map(m => ({ label: m, value: Math.round(byMonth[m].in - byMonth[m].out) }));
+        const maxAbs = Math.max(...monthBars.map(b => Math.abs(b.value)), 1);
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px,1fr))', gap: 16, marginBottom: 24 }}>
+            <Card>
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>توزيع المصروفات حسب التصنيف</div>
+              {catSegs.length > 0 ? <Donut segments={catSegs} label="تصنيف" /> : <div style={{ color: 'var(--text-3)', fontSize: 13, textAlign: 'center', padding: 20 }}>لا توجد مصروفات بعد</div>}
+            </Card>
+            <Card>
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>صافي التدفق الشهري</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {monthBars.map(b => (
+                  <div key={b.label}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
+                      <span style={{ color: 'var(--text-2)' }}>{b.label}</span>
+                      <span style={{ fontWeight: 700, color: b.value >= 0 ? '#15803d' : '#b91c1c' }}>{b.value >= 0 ? '+' : ''}{fmtNum(b.value)}</span>
+                    </div>
+                    <div style={{ height: 10, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${(Math.abs(b.value) / maxAbs) * 100}%`, background: b.value >= 0 ? '#22c55e' : '#f87171', borderRadius: 99, transition: 'width .4s ease' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        );
+      })()}
+
       <Card style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ display: 'flex', gap: 4, padding: 16, background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
           {[['all', 'الكل'], ['income', 'إيرادات'], ['expense', 'مصروفات'], ['transfer', 'تحويلات']].map(([val, label]) => (
@@ -2082,6 +2125,23 @@ function Ledger({ projects, transactions, members, memberTxns }: {
       {/* FLOWS view */}
       {view === 'flows' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px,1fr))', gap: 16 }}>
+          <Card>
+            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14 }}>نسبة الوارد إلى الصادر</div>
+            <Donut segments={[
+              { value: Math.round(totalIn), color: '#22c55e', label: 'وارد' },
+              { value: Math.round(totalOut), color: '#ef4444', label: 'صادر' },
+            ]} label="ر.س" />
+          </Card>
+          <Card>
+            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14 }}>العمليات حسب النوع</div>
+            {(() => {
+              const byKind: Record<string, number> = {};
+              filtered.forEach(r => { byKind[r.kind] = (byKind[r.kind] ?? 0) + 1; });
+              const palette = ['#2563eb', '#dc2626', '#d97706', '#7c3aed', '#0891b2', '#059669'];
+              const segs = Object.entries(byKind).map(([k, v], i) => ({ value: v, color: palette[i % palette.length], label: k }));
+              return segs.length > 0 ? <Donut segments={segs} label="عملية" /> : <div style={{ color: 'var(--text-3)', fontSize: 13, padding: 12, textAlign: 'center' }}>لا توجد بيانات</div>;
+            })()}
+          </Card>
           <Card>
             <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14 }}>التدفقات حسب المشروع</div>
             {byProject.length === 0 && <div style={{ color: 'var(--text-3)', fontSize: 13, padding: 12, textAlign: 'center' }}>لا توجد بيانات</div>}
