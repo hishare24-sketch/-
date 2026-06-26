@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 // ═══════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════
-type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription';
+type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 // unified attachment (image/file) — preview kept in-session, real upload later via backend
@@ -459,6 +459,7 @@ const NAV = [
   { id: 'dashboard',     icon: '◉',  label: 'الرئيسية' },
   { id: 'projects',      icon: '⬡',  label: 'المشاريع' },
   { id: 'finance',       icon: '◈',  label: 'الإدارة المالية' },
+  { id: 'ledger',        icon: '⛃',  label: 'السجل المالي' },
   { id: 'documents',     icon: '◻',  label: 'المستندات' },
   { id: 'trackings',     icon: '◷',  label: 'المتابعات والضمانات' },
   { id: 'requests',      icon: '◫',  label: 'الطلبات والموافقات' },
@@ -1621,6 +1622,261 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
   );
 }
 // ═══════════════════════════════════════════
+//  FINANCIAL LEDGER (سجل العمليات + تحليل التدفقات)
+// ═══════════════════════════════════════════
+function Ledger({ projects, transactions, members, memberTxns }: {
+  projects: Project[]; transactions: Transaction[]; members: Member[]; memberTxns: MemberTxn[];
+}) {
+  const [view, setView] = useState<'log' | 'flows'>('log');
+  const [fType, setFType] = useState('all');
+  const [fProject, setFProject] = useState('all');
+  const [fMember, setFMember] = useState('all');
+  const [fPeriod, setFPeriod] = useState('all');
+  const [search, setSearch] = useState('');
+  const [detail, setDetail] = useState<null | any>(null);
+
+  // unify project transactions + member movements into one ledger model
+  type Row = {
+    id: string; num: string; kind: string; nature: string; projectId: string;
+    memberId?: string; source?: string; amount: number; dir: 'in' | 'out';
+    date: string; status: string; parties: string[];
+  };
+
+  const projName = (id: string) => projects.find(p => p.id === id)?.name ?? '—';
+  const memName = (id?: string) => id ? (members.find(m => m.id === id)?.name ?? '—') : '—';
+
+  const rows: Row[] = [];
+  // project transactions
+  transactions.forEach((t, i) => {
+    rows.push({
+      id: t.id, num: 'TX-' + (1000 + i), kind: t.type === 'income' ? 'إيراد' : t.type === 'expense' ? 'مصروف' : 'تحويل',
+      nature: t.category, projectId: t.projectId, memberId: t.memberId, source: t.source,
+      amount: t.amount, dir: t.type === 'income' || (t.type === 'transfer' && t.transferDir === 'in') ? 'in' : 'out',
+      date: t.date, status: 'منفّذة',
+      parties: [projName(t.projectId), t.source, t.memberId ? memName(t.memberId) : null, t.toProject ? projName(t.toProject) : null].filter(Boolean) as string[],
+    });
+  });
+  // member movements
+  memberTxns.forEach((mt, i) => {
+    const ti = MEMBER_TXN_TYPES.find(x => x.id === mt.type);
+    rows.push({
+      id: mt.id, num: 'MV-' + (2000 + i), kind: ti?.label ?? 'حركة عضو', nature: 'عُهد/تسوية',
+      projectId: mt.projectId, memberId: mt.memberId, amount: mt.amount,
+      dir: mt.direction === 'to_member' ? 'out' : 'in', date: mt.date,
+      status: mt.status === 'accepted' ? 'مقبولة' : mt.status === 'rejected' ? 'مرفوضة' : 'معلّقة',
+      parties: [projName(mt.projectId), memName(mt.memberId)].filter(Boolean) as string[],
+    });
+  });
+  rows.sort((a, b) => b.date.localeCompare(a.date));
+
+  // period filter
+  const inPeriod = (date: string) => {
+    if (fPeriod === 'all') return true;
+    const d = new Date(date); const now = new Date('2025-06-30');
+    const diffDays = (now.getTime() - d.getTime()) / 86400000;
+    if (fPeriod === 'month') return diffDays <= 31;
+    if (fPeriod === 'quarter') return diffDays <= 92;
+    if (fPeriod === 'half') return diffDays <= 183;
+    if (fPeriod === 'year') return diffDays <= 366;
+    return true;
+  };
+
+  const filtered = rows
+    .filter(r => fType === 'all' ? true : (fType === 'in' ? r.dir === 'in' : fType === 'out' ? r.dir === 'out' : r.kind === fType))
+    .filter(r => fProject === 'all' ? true : r.projectId === fProject)
+    .filter(r => fMember === 'all' ? true : r.memberId === fMember)
+    .filter(r => inPeriod(r.date))
+    .filter(r => search.trim() === '' ? true : (r.kind + r.nature + r.parties.join(' ') + r.num).includes(search.trim()));
+
+  // running balance per row (project-scoped, computed over filtered set chronologically)
+  const chrono = [...filtered].sort((a, b) => a.date.localeCompare(b.date));
+  const balBefore: Record<string, number> = {};
+  const running: Record<string, number> = {};
+  chrono.forEach(r => {
+    const cur = running[r.projectId] ?? 0;
+    balBefore[r.id] = cur;
+    running[r.projectId] = cur + (r.dir === 'in' ? r.amount : -r.amount);
+  });
+
+  const totalIn = filtered.filter(r => r.dir === 'in').reduce((s, r) => s + r.amount, 0);
+  const totalOut = filtered.filter(r => r.dir === 'out').reduce((s, r) => s + r.amount, 0);
+
+  const clearFilters = () => { setFType('all'); setFProject('all'); setFMember('all'); setFPeriod('all'); setSearch(''); };
+  const hasFilter = fType !== 'all' || fProject !== 'all' || fMember !== 'all' || fPeriod !== 'all' || search !== '';
+
+  // flow aggregations
+  const byProject = projects.map(p => {
+    const rs = filtered.filter(r => r.projectId === p.id);
+    return { name: p.name, icon: p.icon, in: rs.filter(r => r.dir === 'in').reduce((s, r) => s + r.amount, 0), out: rs.filter(r => r.dir === 'out').reduce((s, r) => s + r.amount, 0) };
+  }).filter(x => x.in > 0 || x.out > 0);
+  const byMember = members.map(m => {
+    const rs = filtered.filter(r => r.memberId === m.id);
+    return { name: m.name, in: rs.filter(r => r.dir === 'in').reduce((s, r) => s + r.amount, 0), out: rs.filter(r => r.dir === 'out').reduce((s, r) => s + r.amount, 0) };
+  }).filter(x => x.in > 0 || x.out > 0);
+
+  const selStyle: React.CSSProperties = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', background: 'var(--surface)', color: 'var(--text)' };
+
+  return (
+    <div style={{ padding: 24, maxWidth: 1200 }}>
+      <PageHeader title="السجل المالي" subtitle="سجل موحّد لكل العمليات والتدفقات عبر المشاريع والأعضاء" />
+
+      {/* view switch */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 18, background: 'var(--surface-3)', padding: 4, borderRadius: 12, width: 'fit-content' }}>
+        {[['log', '📋 سجل العمليات'], ['flows', '📊 تحليل التدفقات']].map(([v, l]) => (
+          <button key={v} onClick={() => setView(v as any)} style={{
+            padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500,
+            background: view === v ? 'var(--surface)' : 'transparent', color: view === v ? 'var(--text)' : 'var(--text-3)',
+          }}>{l}</button>
+        ))}
+      </div>
+
+      {/* summary cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 14, marginBottom: 20 }}>
+        {[
+          { l: 'إجمالي الوارد', v: totalIn, c: '#15803d', bg: '#f0fdf4', i: '↓' },
+          { l: 'إجمالي الصادر', v: totalOut, c: '#b91c1c', bg: '#fef2f2', i: '↑' },
+          { l: 'صافي التدفق', v: totalIn - totalOut, c: '#1d4ed8', bg: '#eff6ff', i: '⇄' },
+          { l: 'عدد العمليات', v: filtered.length, c: '#7c3aed', bg: '#faf5ff', i: '#', raw: true },
+        ].map(s => (
+          <div key={s.l} style={{ background: s.bg, borderRadius: 14, padding: 16 }}>
+            <div style={{ fontSize: 18, marginBottom: 4 }}>{s.i}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: s.c }}>{s.raw ? s.v : fmt(s.v)}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* filters */}
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 بحث (رقم، نوع، طرف...)" style={{ ...selStyle, flex: 1, minWidth: 150 }} />
+          <select value={fType} onChange={e => setFType(e.target.value)} style={selStyle}>
+            <option value="all">كل الأنواع</option><option value="in">وارد</option><option value="out">صادر</option>
+            <option value="إيراد">إيراد</option><option value="مصروف">مصروف</option><option value="تحويل">تحويل</option>
+          </select>
+          <select value={fProject} onChange={e => setFProject(e.target.value)} style={selStyle}>
+            <option value="all">كل المشاريع</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <select value={fMember} onChange={e => setFMember(e.target.value)} style={selStyle}>
+            <option value="all">كل الأعضاء</option>
+            {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+          <select value={fPeriod} onChange={e => setFPeriod(e.target.value)} style={selStyle}>
+            <option value="all">كل الفترات</option><option value="month">آخر شهر</option><option value="quarter">آخر ربع</option><option value="half">آخر نصف سنة</option><option value="year">آخر سنة</option>
+          </select>
+          {hasFilter && <button onClick={clearFilters} style={{ ...selStyle, color: 'var(--text-3)' }}>مسح الفلترة</button>}
+        </div>
+      </Card>
+
+      {/* LOG view */}
+      {view === 'log' && (
+        <Card style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 820 }}>
+              <thead>
+                <tr style={{ background: 'var(--surface-2)' }}>
+                  {['رقم', 'النوع', 'الطبيعة', 'المشروع', 'العضو/المصدر', 'المبلغ', 'قبل', 'بعد', 'التاريخ', 'الحالة'].map(h => (
+                    <th key={h} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500, color: 'var(--text-3)', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 && <tr><td colSpan={10} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-3)' }}>لا توجد عمليات مطابقة للفلترة</td></tr>}
+                {filtered.map(r => {
+                  const before = balBefore[r.id] ?? 0;
+                  const after = before + (r.dir === 'in' ? r.amount : -r.amount);
+                  return (
+                    <tr key={r.id} onClick={() => setDetail({ ...r, before, after })} style={{ cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-3)', fontFamily: 'monospace', fontSize: 11 }}>{r.num}</td>
+                      <td style={{ padding: '10px 12px' }}><span style={{ color: r.dir === 'in' ? '#15803d' : '#b91c1c', fontWeight: 600 }}>{r.dir === 'in' ? '↓' : '↑'} {r.kind}</span></td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-3)' }}>{r.nature}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-2)' }}>{projName(r.projectId)}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-3)' }}>{r.memberId ? memName(r.memberId) : (r.source ?? '—')}</td>
+                      <td style={{ padding: '10px 12px', fontWeight: 600, color: r.dir === 'in' ? '#15803d' : '#b91c1c', whiteSpace: 'nowrap' }}>{r.dir === 'in' ? '+' : '−'}{fmtNum(r.amount)}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmtNum(before)}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-2)', fontWeight: 500, whiteSpace: 'nowrap' }}>{fmtNum(after)}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{r.date}</td>
+                      <td style={{ padding: '10px 12px' }}><span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: r.status === 'معلّقة' ? '#fef3c7' : r.status === 'مرفوضة' ? '#fee2e2' : '#dcfce7', color: r.status === 'معلّقة' ? '#a16207' : r.status === 'مرفوضة' ? '#b91c1c' : '#15803d' }}>{r.status}</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* FLOWS view */}
+      {view === 'flows' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px,1fr))', gap: 16 }}>
+          <Card>
+            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14 }}>التدفقات حسب المشروع</div>
+            {byProject.length === 0 && <div style={{ color: 'var(--text-3)', fontSize: 13, padding: 12, textAlign: 'center' }}>لا توجد بيانات</div>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {byProject.map(p => (
+                <div key={p.name}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 5 }}>
+                    <span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{p.icon} {p.name}</span>
+                    <span style={{ color: p.in - p.out >= 0 ? '#15803d' : '#b91c1c', fontWeight: 600 }}>صافي {fmtNum(p.in - p.out)}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 3 }}>
+                    <span style={{ fontSize: 10, color: '#15803d', width: 36 }}>وارد</span>
+                    <div style={{ flex: 1, height: 12, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}><div style={{ height: '100%', width: `${Math.min(100, (p.in / Math.max(p.in, p.out, 1)) * 100)}%`, background: '#22c55e' }} /></div>
+                    <span style={{ fontSize: 11, color: '#15803d', width: 64, textAlign: 'left' }}>{fmtNum(p.in)}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <span style={{ fontSize: 10, color: '#b91c1c', width: 36 }}>صادر</span>
+                    <div style={{ flex: 1, height: 12, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}><div style={{ height: '100%', width: `${Math.min(100, (p.out / Math.max(p.in, p.out, 1)) * 100)}%`, background: '#f87171' }} /></div>
+                    <span style={{ fontSize: 11, color: '#b91c1c', width: 64, textAlign: 'left' }}>{fmtNum(p.out)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card>
+            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14 }}>التدفقات حسب العضو</div>
+            {byMember.length === 0 && <div style={{ color: 'var(--text-3)', fontSize: 13, padding: 12, textAlign: 'center' }}>لا توجد بيانات</div>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {byMember.map(m => (
+                <div key={m.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--surface-2)', borderRadius: 10 }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>{m.name}</span>
+                  <div style={{ display: 'flex', gap: 14, fontSize: 12 }}>
+                    <span style={{ color: '#15803d' }}>وارد {fmtNum(m.in)}</span>
+                    <span style={{ color: '#b91c1c' }}>صادر {fmtNum(m.out)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* operation detail sheet */}
+      <Sheet open={!!detail} onClose={() => setDetail(null)} title={`تفاصيل العملية ${detail?.num ?? ''}`}>
+        {detail && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {[
+              ['رقم العملية', detail.num], ['النوع', detail.kind], ['الطبيعة', detail.nature],
+              ['المشروع', projName(detail.projectId)], ['العضو', detail.memberId ? memName(detail.memberId) : '—'],
+              ['المصدر/الجهة', detail.source ?? '—'], ['المبلغ', `${detail.dir === 'in' ? '+' : '−'}${fmt(detail.amount)}`],
+              ['الرصيد قبل', fmt(detail.before)], ['الرصيد بعد', fmt(detail.after)],
+              ['التاريخ', detail.date], ['الحالة', detail.status], ['الأطراف', detail.parties.join('، ')],
+            ].map(([k, v]) => (
+              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '11px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+                <span style={{ color: 'var(--text-3)' }}>{k}</span>
+                <span style={{ fontWeight: 600, color: 'var(--text)', textAlign: 'left' }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Sheet>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
 //  DOCUMENTS  (upload by type / actions / view / edit)
 // ═══════════════════════════════════════════
 function DocForm({ initial, projectId, projects, onSave, onCancel }: {
@@ -2669,6 +2925,7 @@ export default function App() {
       case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} />;
       case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} />;
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} />;
+      case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} />;
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} />;
       case 'trackings': return <Trackings projectId={projectId} trackings={trackings} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
       case 'requests': return <Requests projectId={projectId} requests={requests} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
