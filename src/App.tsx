@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 // ═══════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════
-type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'receivables' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail' | 'audit';
+type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail' | 'audit';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 // unified attachment (image/file) — preview kept in-session, real upload later via backend
@@ -36,6 +36,24 @@ type Receivable = {
   date: string;             // تاريخ الإنشاء
   status: ReceivableStatus;
   payments: ReceivablePayment[]; // دفعات السداد/التحصيل (جزئي أو كلي)
+  note?: string; attachments?: Attachment[]; createdBy?: string;
+};
+// recurring commitments (الالتزامات الدورية): installments, recurring obligations, subscriptions
+type CommitmentKind = 'installment' | 'obligation' | 'subscription'; // قسط | التزام دوري | اشتراك
+type CommitmentFreq = 'monthly' | 'quarterly' | 'yearly' | 'weekly';
+type CommitmentDir = 'out' | 'in'; // صادر (ندفع) | وارد (نستلم)
+type CommitmentPayment = { id: string; amount: number; date: string; dueLabel: string; createdBy?: string };
+type Commitment = {
+  id: string; projectId: string; kind: CommitmentKind; direction: CommitmentDir;
+  name: string; party?: string; memberId?: string;
+  amount: number;                // مبلغ الدفعة الواحدة
+  freq: CommitmentFreq;          // التكرار
+  startDate: string;             // تاريخ البداية / أول استحقاق
+  totalCount?: number;           // عدد الدفعات الكلي (للأقساط) — undefined = مفتوح/مستمر
+  paidCount: number;             // عدد الدفعات المسددة
+  nextDue: string;               // تاريخ الاستحقاق القادم
+  active: boolean;               // نشط أو موقوف
+  payments: CommitmentPayment[];
   note?: string; attachments?: Attachment[]; createdBy?: string;
 };
 type Transaction = { id: string; projectId: string; type: TxType; description: string; amount: number; category: string; date: string; hasDoc: boolean; note?: string; toProject?: string; transferDir?: 'out' | 'in'; linkId?: string; source?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
@@ -256,6 +274,20 @@ const INITIAL_RECEIVABLES: Receivable[] = [
   { id: 'rc6', projectId: 'p5', kind: 'payable', memberId: 'm11', party: 'عبدالله الشمري (مندوب مشتريات)', amount: 2400, dueDate: '2025-07-08', date: '2025-06-18', status: 'open', payments: [], note: 'مبالغ صرفها المندوب تُستحق له', createdBy: 'د. ليلى الحربي' },
 ];
 
+const INITIAL_COMMITMENTS: Commitment[] = [
+  // أقساط
+  { id: 'cm1', projectId: 'p2', kind: 'installment', direction: 'out', name: 'قسط السيارة', party: 'بنك التمويل', amount: 2200, freq: 'monthly', startDate: '2025-01-05', totalCount: 36, paidCount: 5, nextDue: '2025-07-05', active: true, payments: [], note: 'قسط شهري لمدة 3 سنوات', createdBy: 'محمد العمري' },
+  { id: 'cm2', projectId: 'p1', kind: 'installment', direction: 'out', name: 'قسط معدات الإنتاج', party: 'شركة المعدات', amount: 4500, freq: 'monthly', startDate: '2025-03-10', totalCount: 12, paidCount: 3, nextDue: '2025-07-10', active: true, payments: [], createdBy: 'محمد العمري' },
+  // التزامات دورية
+  { id: 'cm3', projectId: 'p1', kind: 'obligation', direction: 'out', name: 'إيجار المكتب', party: 'مالك العقار', amount: 8500, freq: 'monthly', startDate: '2025-01-01', paidCount: 5, nextDue: '2025-07-01', active: true, note: 'إيجار شهري', createdBy: 'محمد العمري' },
+  { id: 'cm4', projectId: 'p5', kind: 'obligation', direction: 'out', name: 'رواتب الكادر الطبي', party: 'الموظفون', amount: 42000, freq: 'monthly', startDate: '2025-01-28', paidCount: 5, nextDue: '2025-06-28', active: true, createdBy: 'د. ليلى الحربي' },
+  { id: 'cm5', projectId: 'p4', kind: 'obligation', direction: 'in', name: 'عقد توريد شهري', party: 'عميل الجملة', amount: 12000, freq: 'monthly', startDate: '2025-02-15', paidCount: 4, nextDue: '2025-07-15', active: true, note: 'دخل دوري من عقد', createdBy: 'نورة القحطاني' },
+  // اشتراكات
+  { id: 'cm6', projectId: 'p1', kind: 'subscription', direction: 'out', name: 'اشتراك Adobe', party: 'Adobe', amount: 240, freq: 'monthly', startDate: '2025-01-08', paidCount: 5, nextDue: '2025-07-08', active: true, createdBy: 'أحمد العلي' },
+  { id: 'cm7', projectId: 'p4', kind: 'subscription', direction: 'out', name: 'اشتراك منصة سلة', party: 'سلة', amount: 1200, freq: 'monthly', startDate: '2025-01-10', paidCount: 5, nextDue: '2025-07-10', active: true, createdBy: 'فهد الدوسري' },
+  { id: 'cm8', projectId: 'p5', kind: 'subscription', direction: 'out', name: 'نظام الحجوزات', party: 'مزوّد النظام', amount: 800, freq: 'yearly', startDate: '2024-10-24', paidCount: 1, nextDue: '2025-10-24', active: true, createdBy: 'عبدالله الشمري' },
+];
+
 // ═══════════════════════════════════════════
 //  HELPERS
 // ═══════════════════════════════════════════
@@ -264,6 +296,18 @@ const fmtNum = (n: number) => n.toLocaleString('ar-SA');
 // remaining balance on a receivable (original − payments)
 const recvPaid = (r: Receivable) => r.payments.reduce((s, p) => s + p.amount, 0);
 const recvRemaining = (r: Receivable) => Math.max(0, r.amount - recvPaid(r));
+// commitment helpers: advance a due date by frequency
+const FREQ_DAYS: Record<CommitmentFreq, number> = { weekly: 7, monthly: 30, quarterly: 91, yearly: 365 };
+const FREQ_LABEL: Record<CommitmentFreq, string> = { weekly: 'أسبوعي', monthly: 'شهري', quarterly: 'ربع سنوي', yearly: 'سنوي' };
+const advanceDate = (iso: string, freq: CommitmentFreq): string => {
+  const d = new Date(iso);
+  if (freq === 'weekly') d.setDate(d.getDate() + 7);
+  else if (freq === 'monthly') d.setMonth(d.getMonth() + 1);
+  else if (freq === 'quarterly') d.setMonth(d.getMonth() + 3);
+  else if (freq === 'yearly') d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+};
+const commitmentDone = (c: Commitment) => c.totalCount != null && c.paidCount >= c.totalCount;
 const today = () => new Date().toISOString().slice(0, 10);
 const nowStamp = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
 const uid = (p: string) => p + Math.random().toString(36).slice(2, 8);
@@ -273,7 +317,7 @@ const statusFromDays = (d: number): TrackingStatus => d < 0 ? 'expired' : d <= 3
 // ── localStorage-backed state (replaceable by a real DB later) ──
 // data version: bump this whenever seed/initial data changes,
 // so stale localStorage from older versions is cleared automatically (one-time).
-const DATA_VERSION = '4';
+const DATA_VERSION = '5';
 (() => {
   try {
     const stored = localStorage.getItem('mz_data_version');
@@ -717,6 +761,7 @@ const NAV = [
   { id: 'finance',       icon: '◈',  label: 'الإدارة المالية' },
   { id: 'ledger',        icon: '⛃',  label: 'السجل المالي' },
   { id: 'receivables',   icon: '⇄',  label: 'الذمم' },
+  { id: 'commitments',   icon: '↻',  label: 'الالتزامات الدورية' },
   { id: 'documents',     icon: '◻',  label: 'المستندات' },
   { id: 'trackings',     icon: '◷',  label: 'المتابعات والضمانات' },
   { id: 'requests',      icon: '◫',  label: 'الطلبات والموافقات' },
@@ -3846,6 +3891,277 @@ function Receivables({ projectId, projects, receivables, members, onSave, onPay,
   );
 }
 
+// ═══════════════════════════════════════════
+//  COMMITMENTS (الالتزامات الدورية: أقساط/التزامات/اشتراكات)
+// ═══════════════════════════════════════════
+const COMMITMENT_KINDS: { id: CommitmentKind; label: string; icon: string }[] = [
+  { id: 'installment', label: 'قسط', icon: '🏦' },
+  { id: 'obligation', label: 'التزام دوري', icon: '🔁' },
+  { id: 'subscription', label: 'اشتراك', icon: '💳' },
+];
+function CommitmentForm({ projectId, projects, members, onSave, onCancel }: {
+  projectId: string; projects: Project[]; members: Member[];
+  onSave: (c: Omit<Commitment, 'id'>) => void; onCancel: () => void;
+}) {
+  const [kind, setKind] = useState<CommitmentKind>('installment');
+  const [direction, setDirection] = useState<CommitmentDir>('out');
+  const [targetProject, setTargetProject] = useState(projectId);
+  const [name, setName] = useState('');
+  const [party, setParty] = useState('');
+  const [amount, setAmount] = useState<number | ''>('');
+  const [freq, setFreq] = useState<CommitmentFreq>('monthly');
+  const [startDate, setStartDate] = useState(today());
+  const [hasCount, setHasCount] = useState(true);
+  const [totalCount, setTotalCount] = useState<number | ''>(12);
+  const [note, setNote] = useState('');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const valid = name.trim().length > 0 && amount !== '' && Number(amount) > 0;
+
+  return (
+    <>
+      <Field label="نوع الالتزام">
+        <TypePicker value={kind} onChange={v => { setKind(v as CommitmentKind); if (v !== 'installment') setHasCount(false); else setHasCount(true); }} options={COMMITMENT_KINDS.map(k => ({ v: k.id, l: k.label, icon: k.icon }))} />
+      </Field>
+      <Field label="الاتجاه">
+        <TypePicker value={direction} onChange={v => setDirection(v as CommitmentDir)} options={[
+          { v: 'out', l: 'صادر (ندفع)', icon: '↑' },
+          { v: 'in', l: 'وارد (نستلم)', icon: '↓' },
+        ]} />
+      </Field>
+      <Field label="المشروع">
+        <Select value={targetProject} onChange={setTargetProject} options={projects.map(p => ({ v: p.id, l: `${p.icon} ${p.name}` }))} />
+      </Field>
+      <Field label="الاسم">
+        <TextInput value={name} onChange={setName} placeholder="مثال: قسط السيارة، إيجار، اشتراك Adobe" />
+      </Field>
+      <Field label="الطرف (اختياري)">
+        <TextInput value={party} onChange={setParty} placeholder="مثال: بنك، مالك العقار، مزوّد..." />
+      </Field>
+      <Field label="مبلغ الدفعة الواحدة (ر.س)">
+        <NumInput value={amount} onChange={setAmount} placeholder="0" />
+      </Field>
+      <Field label="التكرار">
+        <Select value={freq} onChange={v => setFreq(v as CommitmentFreq)} options={[
+          { v: 'weekly', l: 'أسبوعي' }, { v: 'monthly', l: 'شهري' }, { v: 'quarterly', l: 'ربع سنوي' }, { v: 'yearly', l: 'سنوي' },
+        ]} />
+      </Field>
+      <Field label="تاريخ أول استحقاق">
+        <TextInput type="date" value={startDate} onChange={setStartDate} />
+      </Field>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0 12px' }}>
+        <div style={{ fontSize: 13, color: 'var(--text-2)' }}>عدد دفعات محدّد؟</div>
+        <button onClick={() => setHasCount(!hasCount)} style={{ width: 48, height: 26, borderRadius: 99, border: 'none', background: hasCount ? '#2563eb' : '#cbd5e1', position: 'relative', cursor: 'pointer' }}>
+          <span style={{ position: 'absolute', top: 3, [hasCount ? 'left' : 'right']: 3, width: 20, height: 20, borderRadius: 99, background: '#fff' } as React.CSSProperties} />
+        </button>
+      </div>
+      {hasCount && (
+        <Field label="إجمالي عدد الدفعات">
+          <NumInput value={totalCount} onChange={setTotalCount} placeholder="12" />
+        </Field>
+      )}
+      <Field label="ملاحظات (اختياري)">
+        <TextArea value={note} onChange={setNote} placeholder="تفاصيل الالتزام..." />
+      </Field>
+      <Field label="المرفقات (صور / ملفات)">
+        <AttachmentPicker value={attachments} onChange={setAttachments} />
+      </Field>
+      <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#1d4ed8' }}>
+        ℹ️ عند تسجيل دفعة، تتحول لعملية مالية فعلية ويتقدّم الاستحقاق للموعد التالي تلقائياً.
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
+        <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
+          projectId: targetProject, kind, direction, name: name.trim(), party: party.trim() || undefined,
+          amount: amount === '' ? 0 : amount, freq, startDate,
+          totalCount: hasCount ? (totalCount === '' ? undefined : Number(totalCount)) : undefined,
+          paidCount: 0, nextDue: startDate, active: true, payments: [], note, attachments, createdBy: CURRENT_USER,
+        })}>إضافة الالتزام</Btn>
+      </div>
+    </>
+  );
+}
+
+function Commitments({ projectId, projects, commitments, members, onSave, onPay, onToggle, onDelete, openCreate, onOpenCreate, onCloseCreate }: {
+  projectId: string; projects: Project[]; commitments: Commitment[]; members: Member[];
+  onSave: (c: Omit<Commitment, 'id'>) => void; onPay: (id: string) => void; onToggle: (id: string) => void; onDelete: (id: string) => void;
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void;
+}) {
+  const [kindTab, setKindTab] = useState<'all' | CommitmentKind>('all');
+  const [search, setSearch] = useState('');
+  const [fProject, setFProject] = useState('all');
+  const [fStatus, setFStatus] = useState('all');
+  const [sort, setSort] = useState('due');
+  const [viewC, setViewC] = useState<Commitment | null>(null);
+
+  const projName = (id: string) => projects.find(p => p.id === id)?.name ?? '—';
+  const filtered = commitments
+    .filter(c => kindTab === 'all' ? true : c.kind === kindTab)
+    .filter(c => fProject === 'all' ? true : c.projectId === fProject)
+    .filter(c => fStatus === 'all' ? true : fStatus === 'active' ? (c.active && !commitmentDone(c)) : fStatus === 'paused' ? !c.active : commitmentDone(c))
+    .filter(c => search.trim() === '' ? true : (c.name + (c.party ?? '') + (c.note ?? '')).includes(search.trim()))
+    .sort((a, b) => sort === 'due' ? a.nextDue.localeCompare(b.nextDue) : sort === 'amount' ? b.amount - a.amount : b.startDate.localeCompare(a.startDate));
+
+  // monthly-normalized cash impact (to compare across frequencies)
+  const monthlyImpact = (c: Commitment) => {
+    if (!c.active || commitmentDone(c)) return 0;
+    const perMonth = c.freq === 'weekly' ? c.amount * 4.33 : c.freq === 'monthly' ? c.amount : c.freq === 'quarterly' ? c.amount / 3 : c.amount / 12;
+    return c.direction === 'out' ? -perMonth : perMonth;
+  };
+  const activeCs = commitments.filter(c => c.active && !commitmentDone(c));
+  const monthlyOut = activeCs.filter(c => c.direction === 'out').reduce((s, c) => s + Math.abs(monthlyImpact(c)), 0);
+  const monthlyIn = activeCs.filter(c => c.direction === 'in').reduce((s, c) => s + Math.abs(monthlyImpact(c)), 0);
+  const dueSoon = activeCs.filter(c => c.nextDue <= advanceDate(today(), 'weekly')).length;
+
+  const clearFilters = () => { setSearch(''); setFProject('all'); setFStatus('all'); setSort('due'); };
+  const kindInfo = (k: CommitmentKind) => COMMITMENT_KINDS.find(x => x.id === k)!;
+
+  return (
+    <div style={{ padding: 24, maxWidth: 1000 }}>
+      <PageHeader title="الالتزامات الدورية" subtitle="الأقساط والالتزامات والاشتراكات المتكررة" action={<Btn size="sm" onClick={onOpenCreate}>+ التزام جديد</Btn>} />
+
+      <StatCards cards={[
+        { label: 'صادر شهرياً (تقديري)', value: fmtNum(Math.round(monthlyOut)), color: '#b91c1c', bg: '#fef2f2', icon: '↑' },
+        { label: 'وارد شهرياً (تقديري)', value: fmtNum(Math.round(monthlyIn)), color: '#15803d', bg: '#f0fdf4', icon: '↓' },
+        { label: 'صافي شهري', value: fmtNum(Math.round(monthlyIn - monthlyOut)), color: '#1d4ed8', bg: '#eff6ff', icon: '⇄' },
+        { label: 'تستحق هذا الأسبوع', value: dueSoon, color: '#c2410c', bg: '#fff7ed', icon: '⏰' },
+      ]} />
+
+      {/* kind tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'var(--surface-3)', padding: 4, borderRadius: 12, width: 'fit-content', flexWrap: 'wrap' }}>
+        {[['all', 'الكل'], ['installment', '🏦 أقساط'], ['obligation', '🔁 التزامات'], ['subscription', '💳 اشتراكات']].map(([v, l]) => (
+          <button key={v} onClick={() => setKindTab(v as any)} style={{
+            padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500,
+            background: kindTab === v ? 'var(--surface)' : 'transparent', color: kindTab === v ? 'var(--text)' : 'var(--text-3)',
+          }}>{l}</button>
+        ))}
+      </div>
+
+      <FilterBar
+        search={search} onSearch={setSearch} searchPlaceholder="🔍 بحث في الالتزامات..."
+        values={{ project: fProject, status: fStatus, sort }}
+        onChange={(k, v) => { if (k === 'project') setFProject(v); else if (k === 'status') setFStatus(v); else if (k === 'sort') setSort(v); }}
+        onClear={clearFilters}
+        filters={[
+          { key: 'project', placeholder: 'المشروع', options: [{ v: 'all', l: 'كل المشاريع' }, ...projects.map(p => ({ v: p.id, l: p.name }))] },
+          { key: 'status', placeholder: 'الحالة', options: [{ v: 'all', l: 'كل الحالات' }, { v: 'active', l: 'نشطة' }, { v: 'paused', l: 'موقوفة' }, { v: 'done', l: 'مكتملة' }] },
+          { key: 'sort', placeholder: 'الترتيب', options: [{ v: 'due', l: 'الأقرب استحقاقاً' }, { v: 'amount', l: 'الأعلى مبلغاً' }, { v: 'newest', l: 'الأحدث' }] },
+        ]}
+      />
+
+      {filtered.length === 0 && (
+        <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>↻</div>
+          <div style={{ fontSize: 14 }}>لا توجد التزامات مطابقة</div>
+        </Card>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {filtered.map(c => {
+          const ki = kindInfo(c.kind);
+          const done = commitmentDone(c);
+          const isOut = c.direction === 'out';
+          const overdue = c.active && !done && c.nextDue < today();
+          const pct = c.totalCount ? Math.round((c.paidCount / c.totalCount) * 100) : 0;
+          return (
+            <Card key={c.id} style={{ padding: 16, opacity: c.active && !done ? 1 : 0.65, borderRight: `3px solid ${isOut ? '#f87171' : '#22c55e'}` }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <span style={{ fontSize: 22, flexShrink: 0 }}>{ki.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{c.name}</span>
+                    <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: 'var(--surface-3)', color: 'var(--text-3)' }}>{ki.label} · {FREQ_LABEL[c.freq]}</span>
+                    {done && <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: '#dcfce7', color: '#15803d' }}>مكتمل</span>}
+                    {!c.active && !done && <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: '#f1f5f9', color: '#64748b' }}>موقوف</span>}
+                    {overdue && <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: '#fee2e2', color: '#b91c1c' }}>⏰ متأخر</span>}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>
+                    {projName(c.projectId)}{c.party ? ` · ${c.party}` : ''}{!done ? ` · يستحق ${c.nextDue}` : ''}
+                  </div>
+                  {c.totalCount && (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ height: 6, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: isOut ? '#f87171' : '#22c55e' }} />
+                      </div>
+                      <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 3 }}>دُفع {c.paidCount} من {c.totalCount} دفعة ({pct}%)</div>
+                    </div>
+                  )}
+                  {!c.totalCount && c.paidCount > 0 && <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 6 }}>دُفع {c.paidCount} دفعة (مستمر)</div>}
+                </div>
+                <div style={{ textAlign: 'left', flexShrink: 0 }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: isOut ? '#b91c1c' : '#15803d' }}>{isOut ? '−' : '+'}{fmtNum(c.amount)}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-3)' }}>/ {FREQ_LABEL[c.freq]}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                {c.active && !done && (
+                  <button onClick={() => onPay(c.id)} style={{ background: isOut ? '#b91c1c' : '#15803d', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 16px', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {isOut ? '↑ تسجيل دفعة' : '↓ تسجيل استلام'}
+                  </button>
+                )}
+                <button onClick={() => setViewC(c)} style={{ background: 'var(--surface-3)', color: 'var(--text-2)', border: 'none', borderRadius: 8, padding: '6px 16px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>التفاصيل</button>
+                {!done && <button onClick={() => onToggle(c.id)} style={{ background: 'var(--surface-3)', color: 'var(--text-3)', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>{c.active ? '⏸ إيقاف' : '▶ تفعيل'}</button>}
+                <button onClick={() => onDelete(c.id)} style={{ background: 'none', color: 'var(--text-3)', border: 'none', borderRadius: 8, padding: '6px 10px', fontSize: 13, cursor: 'pointer', marginRight: 'auto' }}>🗑️</button>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* create */}
+      <Sheet open={openCreate} onClose={onCloseCreate} title="التزام دوري جديد">
+        {openCreate && <CommitmentForm projectId={projectId} projects={projects} members={members} onSave={(c) => { onSave(c); onCloseCreate(); }} onCancel={onCloseCreate} />}
+      </Sheet>
+
+      {/* view */}
+      <Sheet open={!!viewC} onClose={() => setViewC(null)} title="تفاصيل الالتزام">
+        {viewC && (() => {
+          const c = viewC;
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                ['النوع', `${kindInfo(c.kind).icon} ${kindInfo(c.kind).label}`],
+                ['الاتجاه', c.direction === 'out' ? '↑ صادر (ندفع)' : '↓ وارد (نستلم)'],
+                ['الاسم', c.name], ...(c.party ? [['الطرف', c.party] as [string, string]] : []),
+                ['المشروع', projName(c.projectId)],
+                ['مبلغ الدفعة', fmt(c.amount)], ['التكرار', FREQ_LABEL[c.freq]],
+                ['تاريخ البداية', c.startDate], ['الاستحقاق القادم', commitmentDone(c) ? 'مكتمل' : c.nextDue],
+                ['الدفعات', c.totalCount ? `${c.paidCount} من ${c.totalCount}` : `${c.paidCount} (مستمر)`],
+                ['الحالة', commitmentDone(c) ? 'مكتمل' : c.active ? 'نشط' : 'موقوف'],
+                ['أضافها', c.createdBy ?? CURRENT_USER],
+                ...(c.note ? [['ملاحظات', c.note] as [string, string]] : []),
+              ].map(([k, v]) => (
+                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, paddingBottom: 10, borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+                  <span style={{ color: 'var(--text-3)' }}>{k}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text)', textAlign: 'left' }}>{v}</span>
+                </div>
+              ))}
+              {c.payments.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8 }}>سجل الدفعات ({c.payments.length})</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {[...c.payments].reverse().map(p => (
+                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8, fontSize: 12.5 }}>
+                        <span style={{ color: 'var(--text-3)' }}>{p.date} · {p.dueLabel}</span>
+                        <span style={{ fontWeight: 600, color: c.direction === 'out' ? '#b91c1c' : '#15803d' }}>{fmtNum(p.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {c.attachments && c.attachments.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 6 }}>المرفقات ({c.attachments.length})</div>
+                  <AttachmentView items={c.attachments} />
+                </div>
+              )}
+            </div>
+          );
+        })()}
+      </Sheet>
+    </div>
+  );
+}
+
 function AuditLog({ audit, onNav }: { audit: AuditEntry[]; onNav: (p: Page) => void }) {
   const [search, setSearch] = useState('');
   const [fAction, setFAction] = useState('all');
@@ -4162,6 +4478,7 @@ export default function App() {
   const [members, setMembers] = usePersist<Member[]>('mz_members', INITIAL_MEMBERS);
   const [memberTxns, setMemberTxns] = usePersist<MemberTxn[]>('mz_member_txns', INITIAL_MEMBER_TXNS);
   const [receivables, setReceivables] = usePersist<Receivable[]>('mz_receivables', INITIAL_RECEIVABLES);
+  const [commitments, setCommitments] = usePersist<Commitment[]>('mz_commitments', INITIAL_COMMITMENTS);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [prefs, setPrefs] = usePersist<UserPrefs>('mz_prefs', DEFAULT_PREFS);
   const [audit, setAudit] = usePersist<AuditEntry[]>('mz_audit', INITIAL_AUDIT);
@@ -4174,6 +4491,7 @@ export default function App() {
   const [createTracking, setCreateTracking] = useState(false);
   const [createRequest, setCreateRequest] = useState(false);
   const [createReceivable, setCreateReceivable] = useState(false);
+  const [createCommitment, setCreateCommitment] = useState(false);
   const [createProject, setCreateProject] = useState(false);
   const [trackingPreset, setTrackingPreset] = useState<{ name?: string; type?: string }>({});
 
@@ -4286,9 +4604,38 @@ export default function App() {
     setNotifs(ns => [{ id: uid('n'), type: 'success', title: isRecv ? 'تم تحصيل ذمة' : 'تم سداد ذمة', body: `${isRecv ? 'تحصيل' : 'سداد'} ${fmt(amount)} ${isRecv ? 'من' : 'إلى'} ${r.party}.${newStatus === 'settled' ? ' (مسددة بالكامل)' : ''}`, time: 'الآن', read: false, link: 'receivables', projectId: r.projectId, section: 'finance', memberId: r.memberId, ts: nowStamp() }, ...ns]);
   };
 
-  const saveDoc = (d: Omit<DocItem, 'id'> & { id?: string }) =>
-    setDocuments(list => d.id ? list.map(x => x.id === d.id ? { ...x, ...d } as DocItem : x) : [{ ...d, id: uid('d'), createdBy: CURRENT_USER }, ...list]);
-  const deleteDoc = (id: string) => setDocuments(l => l.filter(x => x.id !== id));
+  // ── commitments (الالتزامات الدورية) ──
+  const saveCommitment = (c: Omit<Commitment, 'id'>) => {
+    logAudit('إنشاء', 'التزام دوري', `${c.name} — ${fmt(c.amount)} ${FREQ_LABEL[c.freq]}`);
+    setCommitments(list => [{ ...c, id: uid('cm') }, ...list]);
+  };
+  const deleteCommitment = (id: string) => { const c = commitments.find(x => x.id === id); logAudit('حذف', 'التزام دوري', c?.name ?? ''); setCommitments(l => l.filter(x => x.id !== id)); };
+  const toggleCommitment = (id: string) => setCommitments(list => list.map(c => c.id === id ? { ...c, active: !c.active } : c));
+  // record an installment payment → creates a real transaction AND advances next due date
+  const payCommitment = (id: string) => {
+    const c = commitments.find(x => x.id === id);
+    if (!c) return;
+    const isOut = c.direction === 'out';
+    const payment: CommitmentPayment = { id: uid('cp'), amount: c.amount, date: today(), dueLabel: `دفعة ${c.paidCount + 1}${c.totalCount ? `/${c.totalCount}` : ''}`, createdBy: CURRENT_USER };
+    const newPaidCount = c.paidCount + 1;
+    const reachedEnd = c.totalCount != null && newPaidCount >= c.totalCount;
+    setCommitments(list => list.map(x => x.id === id ? {
+      ...x, paidCount: newPaidCount, payments: [...x.payments, payment],
+      nextDue: reachedEnd ? x.nextDue : advanceDate(x.nextDue, x.freq),
+      active: reachedEnd ? false : x.active,
+    } : x));
+    // create the real cash-flow transaction
+    const tx: Transaction = {
+      id: uid('t'), projectId: c.projectId, type: isOut ? 'expense' : 'income',
+      description: `${c.name} (${COMMITMENT_KINDS.find(k => k.id === c.kind)?.label} - ${payment.dueLabel})`,
+      amount: c.amount, category: c.kind === 'subscription' ? 'اشتراكات' : c.kind === 'installment' ? 'أقساط' : 'التزامات',
+      date: today(), hasDoc: false, source: c.party, memberId: c.memberId, note: `دفعة ${FREQ_LABEL[c.freq]}`, createdBy: CURRENT_USER,
+    };
+    setTransactions(list => [tx, ...list]);
+    logAudit(isOut ? 'دفع' : 'استلام', 'التزام دوري', `${c.name} — ${fmt(c.amount)}`);
+    setNotifs(ns => [{ id: uid('n'), type: 'success', title: isOut ? 'تم دفع التزام' : 'تم استلام دفعة', body: `${c.name}: ${fmt(c.amount)}.${reachedEnd ? ' (اكتملت كل الدفعات)' : ` الاستحقاق القادم بعد التقدّم.`}`, time: 'الآن', read: false, link: 'commitments', projectId: c.projectId, section: 'finance', memberId: c.memberId, ts: nowStamp() }, ...ns]);
+  };
+
 
   const saveMember = (m: Omit<Member, 'id'> & { id?: string }) =>
     setMembers(list => m.id ? list.map(x => x.id === m.id ? { ...x, ...m } as Member : x) : [...list, { ...m, id: uid('m') }]);
@@ -4338,6 +4685,7 @@ export default function App() {
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} />;
       case 'receivables': return <Receivables projectId={projectId} projects={projects} receivables={receivables} members={members} onSave={saveReceivable} onPay={payReceivable} onDelete={deleteReceivable} openCreate={createReceivable} onOpenCreate={() => setCreateReceivable(true)} onCloseCreate={() => setCreateReceivable(false)} />;
+      case 'commitments': return <Commitments projectId={projectId} projects={projects} commitments={commitments} members={members} onSave={saveCommitment} onPay={payCommitment} onToggle={toggleCommitment} onDelete={deleteCommitment} openCreate={createCommitment} onOpenCreate={() => setCreateCommitment(true)} onCloseCreate={() => setCreateCommitment(false)} />;
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} />;
       case 'trackings': return <Trackings projectId={projectId} projects={projects} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
       case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
