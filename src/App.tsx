@@ -5875,6 +5875,84 @@ const KEYFRAMES = `
 .mz-mobile > div { padding: 16px !important; max-width: 100% !important; padding-bottom: 80px !important; }
 input, select, textarea { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }`;
 
+// ═══════════════════════════════════════════
+//  GLOBAL SEARCH (البحث الشامل)
+// ═══════════════════════════════════════════
+type SearchResult = { id: string; icon: string; title: string; subtitle: string; group: string; page: Page; projectId?: string };
+function GlobalSearch({ projects, transactions, documents, receivables, commitments, assets, trackings, requests, members, onClose, onGo }: {
+  projects: Project[]; transactions: Transaction[]; documents: DocItem[]; receivables: Receivable[];
+  commitments: Commitment[]; assets: Asset[]; trackings: Tracking[]; requests: RequestItem[]; members: Member[];
+  onClose: () => void; onGo: (page: Page, projectId?: string) => void;
+}) {
+  const [q, setQ] = useState('');
+  const projName = (id: string) => projects.find(p => p.id === id)?.name ?? '';
+  const term = q.trim();
+
+  const results: SearchResult[] = (() => {
+    if (term.length < 1) return [];
+    const m = (s?: string) => (s ?? '').toLowerCase().includes(term.toLowerCase());
+    const out: SearchResult[] = [];
+    projects.filter(p => m(p.name) || m(p.type)).forEach(p => out.push({ id: p.id, icon: p.icon, title: p.name, subtitle: `مشروع · ${p.type}`, group: 'المشاريع', page: 'projectDetail', projectId: p.id }));
+    transactions.filter(t => m(t.description) || m(t.category) || m(t.source)).slice(0, 8).forEach(t => out.push({ id: t.id, icon: t.type === 'income' ? '↓' : t.type === 'expense' ? '↑' : '⇄', title: t.description, subtitle: `عملية · ${fmtNum(t.amount)} · ${projName(t.projectId)}`, group: 'العمليات المالية', page: 'finance', projectId: t.projectId }));
+    documents.filter(d => m(d.name) || m(d.type)).slice(0, 6).forEach(d => out.push({ id: d.id, icon: '◻', title: d.name, subtitle: `مستند · ${d.type} · ${projName(d.projectId)}`, group: 'المستندات', page: 'documents', projectId: d.projectId }));
+    receivables.filter(r => m(r.party) || m(r.note)).slice(0, 6).forEach(r => out.push({ id: r.id, icon: '⇄', title: r.party, subtitle: `ذمة ${r.kind === 'receivable' ? 'مدينة' : 'دائنة'} · ${fmtNum(recvRemaining(r))} · ${projName(r.projectId)}`, group: 'الذمم', page: 'receivables', projectId: r.projectId }));
+    commitments.filter(c => m(c.name) || m(c.party)).slice(0, 6).forEach(c => out.push({ id: c.id, icon: '↻', title: c.name, subtitle: `التزام · ${fmtNum(c.amount)} ${FREQ_LABEL[c.freq]} · ${projName(c.projectId)}`, group: 'الالتزامات', page: 'commitments', projectId: c.projectId }));
+    assets.filter(a => m(a.name) || m(a.serial) || m(a.supplier)).slice(0, 6).forEach(a => out.push({ id: a.id, icon: ASSET_CATEGORIES.find(x => x.id === a.category)?.icon ?? '⬚', title: a.name, subtitle: `أصل · ${fmtNum(a.purchaseValue)} · ${projName(a.projectId)}`, group: 'الأصول', page: 'assets', projectId: a.projectId }));
+    trackings.filter(t => m(t.name) || m(t.type)).slice(0, 6).forEach(t => out.push({ id: t.id, icon: t.icon, title: t.name, subtitle: `متابعة · ${t.type} · ${projName(t.projectId)}`, group: 'المتابعات', page: 'trackings', projectId: t.projectId }));
+    requests.filter(r => m(r.title) || m(r.type) || m(r.requestedBy)).slice(0, 6).forEach(r => out.push({ id: r.id, icon: '◫', title: r.title, subtitle: `طلب · ${r.type} · ${projName(r.projectId)}`, group: 'الطلبات', page: 'requests', projectId: r.projectId }));
+    members.filter(mm => m(mm.name) || m(mm.email)).slice(0, 6).forEach(mm => out.push({ id: mm.id, icon: '👤', title: mm.name, subtitle: `عضو · ${projName(mm.projectId)}`, group: 'الأعضاء', page: 'projectDetail', projectId: mm.projectId }));
+    return out;
+  })();
+
+  const groups = Array.from(new Set(results.map(r => r.group)));
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,17,23,.5)', zIndex: 1200, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '8vh 16px 16px', animation: 'mzFade .15s ease' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 60px rgba(0,0,0,.3)', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+          <span style={{ fontSize: 18, color: 'var(--text-3)' }}>🔍</span>
+          <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="ابحث في كل شيء: مشاريع، عمليات، مستندات، ذمم، أصول..." style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 15, color: 'var(--text)' }} />
+          <button onClick={onClose} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 8, padding: '4px 10px', fontSize: 12, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit' }}>إغلاق</button>
+        </div>
+        <div style={{ overflowY: 'auto', padding: term.length < 1 ? 0 : 8 }}>
+          {term.length < 1 && (
+            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-3)' }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div>
+              <div style={{ fontSize: 14 }}>اكتب للبحث عبر كل أقسام موازين</div>
+            </div>
+          )}
+          {term.length >= 1 && results.length === 0 && (
+            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-3)' }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>🤷</div>
+              <div style={{ fontSize: 14 }}>لا نتائج لـ «{term}»</div>
+            </div>
+          )}
+          {groups.map(g => (
+            <div key={g} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', padding: '8px 12px 4px' }}>{g}</div>
+              {results.filter(r => r.group === g).map(r => (
+                <button key={r.group + r.id} onClick={() => { onGo(r.page, r.projectId); onClose(); }} style={{
+                  display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 12px', borderRadius: 10,
+                  border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'right', fontFamily: 'inherit',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>{r.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.title}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{r.subtitle}</div>
+                  </div>
+                  <span style={{ color: '#d1d5db', flexShrink: 0 }}>‹</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [page, setPageRaw] = useState<Page>('overview');
   const [history, setHistory] = useState<Page[]>([]);
@@ -5885,6 +5963,7 @@ export default function App() {
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [fabSheet, setFabSheet] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [theme, setTheme] = usePersist<'light' | 'dark'>('mz_theme', 'light');
   const [authed, setAuthed] = usePersist<boolean>('mz_authed', false);
   const [plan, setPlan] = usePersist<string>('mz_plan', 'free');
@@ -6189,6 +6268,7 @@ export default function App() {
                 <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>موازين</div>
                 {currentProject && <div style={{ color: 'var(--text-3)', fontSize: 11 }}>{currentProject.icon} {currentProject.name}</div>}
               </div>
+              <button onClick={() => setSearchOpen(true)} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 16 }}>🔍</button>
               <button onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 16 }}>{theme === 'dark' ? '☀️' : '🌙'}</button>
               <button onClick={() => setPage('notifications')} style={{ background: 'var(--sidebar-2)', border: 'none', color: '#fff', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', fontSize: 16, position: 'relative' }}>
                 🔔
@@ -6196,11 +6276,16 @@ export default function App() {
               </button>
             </div>
           )}
-          {/* desktop back arrow */}
-          {!isMobile && canGoBack && (
-            <div style={{ padding: '12px 24px 0' }}>
-              <button onClick={goBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-2)', borderRadius: 10, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>
-                › رجوع
+          {/* desktop top actions */}
+          {!isMobile && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 24px 0' }}>
+              {canGoBack && (
+                <button onClick={goBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-2)', borderRadius: 10, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>
+                  › رجوع
+                </button>
+              )}
+              <button onClick={() => setSearchOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-3)', borderRadius: 10, padding: '7px 16px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, marginRight: canGoBack ? 0 : 'auto', minWidth: 220 }}>
+                <span>🔍</span><span>بحث شامل...</span>
               </button>
             </div>
           )}
@@ -6211,6 +6296,7 @@ export default function App() {
         {!isMobile && <ActionCenter unread={unread} onAction={fabAction} onNav={setPage} />}
         {isMobile && <BottomBar page={page} onNav={setPage} onFab={() => setFabSheet(true)} unread={unread} />}
         {isMobile && fabSheet && <MobileFabSheet onClose={() => setFabSheet(false)} onAction={(a) => { setFabSheet(false); fabAction(a); }} />}
+        {searchOpen && <GlobalSearch projects={projects} transactions={transactions} documents={documents} receivables={receivables} commitments={commitments} assets={assets} trackings={trackings} requests={requests} members={members} onClose={() => setSearchOpen(false)} onGo={(pg, pid) => { if (pid) setProjectId(pid); setPage(pg); }} />}
 
         {/* global quick-create: navigates only on save, cancel stays put */}
         <Sheet open={quickCreate === 'tx'} onClose={() => setQuickCreate(null)} title="عملية مالية جديدة">
