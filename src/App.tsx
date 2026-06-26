@@ -279,13 +279,13 @@ const INITIAL_COMMITMENTS: Commitment[] = [
   { id: 'cm1', projectId: 'p2', kind: 'installment', direction: 'out', name: 'قسط السيارة', party: 'بنك التمويل', amount: 2200, freq: 'monthly', startDate: '2025-01-05', totalCount: 36, paidCount: 5, nextDue: '2025-07-05', active: true, payments: [], note: 'قسط شهري لمدة 3 سنوات', createdBy: 'محمد العمري' },
   { id: 'cm2', projectId: 'p1', kind: 'installment', direction: 'out', name: 'قسط معدات الإنتاج', party: 'شركة المعدات', amount: 4500, freq: 'monthly', startDate: '2025-03-10', totalCount: 12, paidCount: 3, nextDue: '2025-07-10', active: true, payments: [], createdBy: 'محمد العمري' },
   // التزامات دورية
-  { id: 'cm3', projectId: 'p1', kind: 'obligation', direction: 'out', name: 'إيجار المكتب', party: 'مالك العقار', amount: 8500, freq: 'monthly', startDate: '2025-01-01', paidCount: 5, nextDue: '2025-07-01', active: true, note: 'إيجار شهري', createdBy: 'محمد العمري' },
-  { id: 'cm4', projectId: 'p5', kind: 'obligation', direction: 'out', name: 'رواتب الكادر الطبي', party: 'الموظفون', amount: 42000, freq: 'monthly', startDate: '2025-01-28', paidCount: 5, nextDue: '2025-06-28', active: true, createdBy: 'د. ليلى الحربي' },
-  { id: 'cm5', projectId: 'p4', kind: 'obligation', direction: 'in', name: 'عقد توريد شهري', party: 'عميل الجملة', amount: 12000, freq: 'monthly', startDate: '2025-02-15', paidCount: 4, nextDue: '2025-07-15', active: true, note: 'دخل دوري من عقد', createdBy: 'نورة القحطاني' },
+  { id: 'cm3', projectId: 'p1', kind: 'obligation', direction: 'out', name: 'إيجار المكتب', party: 'مالك العقار', amount: 8500, freq: 'monthly', startDate: '2025-01-01', paidCount: 5, nextDue: '2025-07-01', active: true, payments: [], note: 'إيجار شهري', createdBy: 'محمد العمري' },
+  { id: 'cm4', projectId: 'p5', kind: 'obligation', direction: 'out', name: 'رواتب الكادر الطبي', party: 'الموظفون', amount: 42000, freq: 'monthly', startDate: '2025-01-28', paidCount: 5, nextDue: '2025-06-28', active: true, payments: [], createdBy: 'د. ليلى الحربي' },
+  { id: 'cm5', projectId: 'p4', kind: 'obligation', direction: 'in', name: 'عقد توريد شهري', party: 'عميل الجملة', amount: 12000, freq: 'monthly', startDate: '2025-02-15', paidCount: 4, nextDue: '2025-07-15', active: true, payments: [], note: 'دخل دوري من عقد', createdBy: 'نورة القحطاني' },
   // اشتراكات
-  { id: 'cm6', projectId: 'p1', kind: 'subscription', direction: 'out', name: 'اشتراك Adobe', party: 'Adobe', amount: 240, freq: 'monthly', startDate: '2025-01-08', paidCount: 5, nextDue: '2025-07-08', active: true, createdBy: 'أحمد العلي' },
-  { id: 'cm7', projectId: 'p4', kind: 'subscription', direction: 'out', name: 'اشتراك منصة سلة', party: 'سلة', amount: 1200, freq: 'monthly', startDate: '2025-01-10', paidCount: 5, nextDue: '2025-07-10', active: true, createdBy: 'فهد الدوسري' },
-  { id: 'cm8', projectId: 'p5', kind: 'subscription', direction: 'out', name: 'نظام الحجوزات', party: 'مزوّد النظام', amount: 800, freq: 'yearly', startDate: '2024-10-24', paidCount: 1, nextDue: '2025-10-24', active: true, createdBy: 'عبدالله الشمري' },
+  { id: 'cm6', projectId: 'p1', kind: 'subscription', direction: 'out', name: 'اشتراك Adobe', party: 'Adobe', amount: 240, freq: 'monthly', startDate: '2025-01-08', paidCount: 5, nextDue: '2025-07-08', active: true, payments: [], createdBy: 'أحمد العلي' },
+  { id: 'cm7', projectId: 'p4', kind: 'subscription', direction: 'out', name: 'اشتراك منصة سلة', party: 'سلة', amount: 1200, freq: 'monthly', startDate: '2025-01-10', paidCount: 5, nextDue: '2025-07-10', active: true, payments: [], createdBy: 'فهد الدوسري' },
+  { id: 'cm8', projectId: 'p5', kind: 'subscription', direction: 'out', name: 'نظام الحجوزات', party: 'مزوّد النظام', amount: 800, freq: 'yearly', startDate: '2024-10-24', paidCount: 1, nextDue: '2025-10-24', active: true, payments: [], createdBy: 'عبدالله الشمري' },
 ];
 
 // ═══════════════════════════════════════════
@@ -4636,6 +4636,9 @@ export default function App() {
     setNotifs(ns => [{ id: uid('n'), type: 'success', title: isOut ? 'تم دفع التزام' : 'تم استلام دفعة', body: `${c.name}: ${fmt(c.amount)}.${reachedEnd ? ' (اكتملت كل الدفعات)' : ` الاستحقاق القادم بعد التقدّم.`}`, time: 'الآن', read: false, link: 'commitments', projectId: c.projectId, section: 'finance', memberId: c.memberId, ts: nowStamp() }, ...ns]);
   };
 
+  const saveDoc = (d: Omit<DocItem, 'id'> & { id?: string }) =>
+    setDocuments(list => d.id ? list.map(x => x.id === d.id ? { ...x, ...d } as DocItem : x) : [{ ...d, id: uid('d'), createdBy: CURRENT_USER }, ...list]);
+  const deleteDoc = (id: string) => setDocuments(l => l.filter(x => x.id !== id));
 
   const saveMember = (m: Omit<Member, 'id'> & { id?: string }) =>
     setMembers(list => m.id ? list.map(x => x.id === m.id ? { ...x, ...m } as Member : x) : [...list, { ...m, id: uid('m') }]);
