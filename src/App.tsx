@@ -21,11 +21,12 @@ type MemberTxn = {
   id: string; projectId: string; memberId: string; type: MemberTxnType;
   amount: number; note?: string; date: string; status: MemberTxnStatus;
   direction: 'to_member' | 'from_member'; // money flow relative to member
+  attachments?: Attachment[]; createdBy?: string;
 };
-type Transaction = { id: string; projectId: string; type: TxType; description: string; amount: number; category: string; date: string; hasDoc: boolean; note?: string; toProject?: string; transferDir?: 'out' | 'in'; linkId?: string; source?: string; memberId?: string; attachments?: Attachment[] };
-type Tracking = { id: string; name: string; type: string; icon: string; status: TrackingStatus; daysLeft: number; expiryDate: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[] };
-type RequestItem = { id: string; title: string; amount: number; requestedBy: string; status: RequestStatus; date: string; type: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[] };
-type DocItem = { id: string; name: string; type: string; date: string; size: string; status: string; projectId: string; aiRead: boolean; attachments?: Attachment[] };
+type Transaction = { id: string; projectId: string; type: TxType; description: string; amount: number; category: string; date: string; hasDoc: boolean; note?: string; toProject?: string; transferDir?: 'out' | 'in'; linkId?: string; source?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
+type Tracking = { id: string; name: string; type: string; icon: string; status: TrackingStatus; daysLeft: number; expiryDate: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
+type RequestItem = { id: string; title: string; amount: number; requestedBy: string; status: RequestStatus; date: string; type: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
+type DocItem = { id: string; name: string; type: string; date: string; size: string; status: string; projectId: string; aiRead: boolean; attachments?: Attachment[]; createdBy?: string };
 type Notif = { id: string; type: string; title: string; body: string; time: string; read: boolean };
 // audit log entry — records every important event in the app
 type AuditEntry = { id: string; action: string; entity: string; detail: string; user: string; ts: string };
@@ -50,14 +51,21 @@ const PERMISSIONS: { id: string; label: string }[] = [
   { id: 'tracking_manage',label: 'إدارة المتابعات' },
   { id: 'requests_approve',label: 'اعتماد الطلبات' },
   { id: 'members_manage', label: 'إدارة الأعضاء' },
+  { id: 'project_edit',   label: 'تعديل المشروع' },
+  { id: 'project_delete', label: 'حذف المشروع' },
+  { id: 'member_txn',     label: 'حركات رصيد الأعضاء' },
+  { id: 'audit_view',     label: 'عرض سجل العمليات' },
+  { id: 'reports_export', label: 'تصدير التقارير' },
 ];
 // default permissions per role
 const ROLE_PERMS: Record<MemberRole, string[]> = {
   owner:   PERMISSIONS.map(p => p.id),
-  manager: ['finance_view', 'finance_edit', 'docs_manage', 'tracking_manage', 'requests_approve'],
+  manager: ['finance_view', 'finance_edit', 'docs_manage', 'tracking_manage', 'requests_approve', 'member_txn', 'audit_view', 'reports_export', 'project_edit'],
   member:  ['finance_view', 'finance_edit', 'docs_manage', 'tracking_manage'],
   viewer:  ['finance_view'],
 };
+// current logged-in user (simulated until backend auth)
+const CURRENT_USER = 'محمد العمري';
 const PROJECT_COLORS = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#dc2626', '#0891b2'];
 
 const TX_TYPES: { id: TxType; label: string; icon: string }[] = [
@@ -501,7 +509,7 @@ const NAV = [
   { id: 'trackings',     icon: '◷',  label: 'المتابعات والضمانات' },
   { id: 'requests',      icon: '◫',  label: 'الطلبات والموافقات' },
   { id: 'notifications', icon: '◌',  label: 'الإشعارات' },
-  { id: 'audit',         icon: '⊟',  label: 'سجل التدقيق' },
+  { id: 'audit',         icon: '⊟',  label: 'سجل العمليات' },
   { id: 'settings',      icon: '◎',  label: 'الإعدادات' },
 ];
 
@@ -1075,6 +1083,7 @@ function MemberTxnForm({ projectId, members, onSave, onCancel }: {
   const [type, setType] = useState<MemberTxnType>('custody');
   const [amount, setAmount] = useState<number | ''>('');
   const [note, setNote] = useState('');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const typeInfo = MEMBER_TXN_TYPES.find(t => t.id === type)!;
   const valid = memberId && amount !== '' && Number(amount) > 0;
 
@@ -1109,6 +1118,9 @@ function MemberTxnForm({ projectId, members, onSave, onCancel }: {
       <Field label="ملاحظات (اختياري)">
         <TextArea value={note} onChange={setNote} placeholder="سبب الحركة..." />
       </Field>
+      <Field label="المرفقات (صور / ملفات)">
+        <AttachmentPicker value={attachments} onChange={setAttachments} />
+      </Field>
       <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#1d4ed8' }}>
         ℹ️ ستُرسل الحركة للعضو بانتظار {typeInfo.direction === 'to_member' ? 'قبوله الاستلام' : 'موافقته على الخصم'}.
       </div>
@@ -1116,7 +1128,7 @@ function MemberTxnForm({ projectId, members, onSave, onCancel }: {
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
         <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
           projectId, memberId, type, amount: amount === '' ? 0 : amount, note, date: today(),
-          status: 'pending', direction: typeInfo.direction,
+          status: 'pending', direction: typeInfo.direction, attachments,
         })}>إرسال الحركة</Btn>
       </div>
     </>
@@ -1644,6 +1656,7 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
             ...(t.source ? [['المصدر/الجهة', t.source] as [string, string]] : []),
             ['التاريخ', t.date],
             ...(t.toProject ? [['إلى مشروع', projects.find(p => p.id === t.toProject)?.name ?? '—'] as [string, string]] : []),
+            ['أضافها', t.createdBy ?? CURRENT_USER],
             ...(t.note ? [['ملاحظات', t.note] as [string, string]] : []),
           ];
           return (
@@ -1768,7 +1781,7 @@ function Ledger({ projects, transactions, members, memberTxns }: {
 
       {/* view switch */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 18, background: 'var(--surface-3)', padding: 4, borderRadius: 12, width: 'fit-content' }}>
-        {[['log', '📋 سجل العمليات'], ['flows', '📊 تحليل التدفقات']].map(([v, l]) => (
+        {[['log', '📋 العمليات'], ['flows', '📊 تحليل التدفقات']].map(([v, l]) => (
           <button key={v} onClick={() => setView(v as any)} style={{
             padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500,
             background: view === v ? 'var(--surface)' : 'transparent', color: view === v ? 'var(--text)' : 'var(--text-3)',
@@ -2089,7 +2102,7 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
                 <div style={{ fontWeight: 600, marginTop: 8 }}>{d.name}</div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[['النوع', d.type], ['التاريخ', d.date], ['الحجم', d.size], ['الحالة', d.status === 'processed' ? 'تمت المعالجة' : 'قيد الانتظار'], ['قراءة AI', d.aiRead ? 'تمت ✅' : 'لم تتم ❌']].map(([k, v]) => (
+                {[['النوع', d.type], ['التاريخ', d.date], ['الحجم', d.size], ['أضافها', d.createdBy ?? CURRENT_USER], ['الحالة', d.status === 'processed' ? 'تمت المعالجة' : 'قيد الانتظار'], ['قراءة AI', d.aiRead ? 'تمت ✅' : 'لم تتم ❌']].map(([k, v]) => (
                   <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, paddingBottom: 9, borderBottom: '1px solid var(--border)' }}>
                     <span style={{ color: 'var(--text-3)' }}>{k}</span><span style={{ fontWeight: 500, color: 'var(--text-2)' }}>{v}</span>
                   </div>
@@ -2341,7 +2354,7 @@ function Trackings({ projectId, trackings, members, onSave, onDelete, openCreate
                 <div style={{ marginRight: 'auto' }}><StatusBadge status={t.status} /></div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[['تاريخ الانتهاء', t.expiryDate], ['المتبقي', t.status === 'expired' ? `منتهي منذ ${Math.abs(t.daysLeft)} يوم` : `${t.daysLeft} يوم`], ...(t.note ? [['ملاحظات', t.note]] : [])].map(([k, v]) => (
+                {[['تاريخ الانتهاء', t.expiryDate], ['المتبقي', t.status === 'expired' ? `منتهي منذ ${Math.abs(t.daysLeft)} يوم` : `${t.daysLeft} يوم`], ['أضافها', t.createdBy ?? CURRENT_USER], ...(t.note ? [['ملاحظات', t.note]] : [])].map(([k, v]) => (
                   <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, paddingBottom: 9, borderBottom: '1px solid var(--border)' }}>
                     <span style={{ color: 'var(--text-3)', flexShrink: 0 }}>{k}</span><span style={{ fontWeight: 500, color: 'var(--text-2)', textAlign: 'left' }}>{v}</span>
                   </div>
@@ -2501,7 +2514,7 @@ function Requests({ projectId, requests, members, onDecide, onSave, onDelete, op
               <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{r.title}</div>
               <div style={{ fontSize: 24, fontWeight: 800, color: '#1d4ed8', marginBottom: 16 }}>{fmt(r.amount)}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[['مقدّم الطلب', r.requestedBy], ['التاريخ', r.date], ...(r.note ? [['ملاحظات', r.note]] : [])].map(([k, v]) => (
+                {[['مقدّم الطلب', r.requestedBy], ['التاريخ', r.date], ['أضافها', r.createdBy ?? CURRENT_USER], ...(r.note ? [['ملاحظات', r.note]] : [])].map(([k, v]) => (
                   <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, paddingBottom: 9, borderBottom: '1px solid var(--border)' }}>
                     <span style={{ color: 'var(--text-3)', flexShrink: 0 }}>{k}</span><span style={{ fontWeight: 500, color: 'var(--text-2)', textAlign: 'left' }}>{v}</span>
                   </div>
@@ -2797,13 +2810,19 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, o
 // ═══════════════════════════════════════════
 //  AUDIT LOG (سجل التدقيق لكل الأحداث)
 // ═══════════════════════════════════════════
-function AuditLog({ audit }: { audit: AuditEntry[] }) {
+function AuditLog({ audit, onNav }: { audit: AuditEntry[]; onNav: (p: Page) => void }) {
   const [search, setSearch] = useState('');
   const [fAction, setFAction] = useState('all');
   const actions = Array.from(new Set(audit.map(a => a.action)));
   const filtered = audit
     .filter(a => fAction === 'all' ? true : a.action === fAction)
     .filter(a => search.trim() === '' ? true : (a.action + a.entity + a.detail + a.user).includes(search.trim()));
+
+  // map entity → destination page (clickable navigation)
+  const entityNav: Record<string, Page> = {
+    'عملية مالية': 'finance', 'طلب': 'requests', 'متابعة': 'trackings',
+    'مستند': 'documents', 'مشروع': 'projects',
+  };
 
   const actionColor = (action: string) =>
     action.includes('حذف') ? '#b91c1c' : action.includes('إنشاء') ? '#15803d'
@@ -2814,7 +2833,7 @@ function AuditLog({ audit }: { audit: AuditEntry[] }) {
 
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
-      <PageHeader title="سجل التدقيق" subtitle="تتبّع كل الأحداث المهمة داخل النظام" />
+      <PageHeader title="سجل العمليات" subtitle="تتبّع كل الأحداث المهمة داخل النظام" />
 
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
@@ -2829,19 +2848,23 @@ function AuditLog({ audit }: { audit: AuditEntry[] }) {
       <Card style={{ padding: 0, overflow: 'hidden' }}>
         {filtered.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>لا توجد سجلات مطابقة</div>}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {filtered.map(a => (
-            <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-              <span style={{ width: 8, height: 8, borderRadius: 99, background: actionColor(a.action), marginTop: 6, flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: actionColor(a.action) }}>{a.action}</span>
-                  <span style={{ fontSize: 11, background: 'var(--surface-3)', color: 'var(--text-3)', padding: '2px 8px', borderRadius: 99 }}>{a.entity}</span>
+          {filtered.map(a => {
+            const dest = entityNav[a.entity];
+            return (
+              <div key={a.id} onClick={() => dest && onNav(dest)} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid var(--border)', cursor: dest ? 'pointer' : 'default' }}>
+                <span style={{ width: 8, height: 8, borderRadius: 99, background: actionColor(a.action), marginTop: 6, flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: actionColor(a.action) }}>{a.action}</span>
+                    <span style={{ fontSize: 11, background: 'var(--surface-3)', color: 'var(--text-3)', padding: '2px 8px', borderRadius: 99 }}>{a.entity}</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 3 }}>{a.detail}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>👤 {a.user} · 🕐 {a.ts}</div>
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 3 }}>{a.detail}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>👤 {a.user} · 🕐 {a.ts}</div>
+                {dest && <span style={{ color: 'var(--text-3)', fontSize: 16, alignSelf: 'center' }}>‹</span>}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Card>
       <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 12, textAlign: 'center' }}>
@@ -3137,12 +3160,12 @@ export default function App() {
     // New transfer → create two linked records (out from source, in to target)
     if (t.type === 'transfer' && t.toProject) {
       const link = uid('lnk');
-      const outTx: Transaction = { ...t, id: uid('t'), type: 'transfer', transferDir: 'out', linkId: link };
+      const outTx: Transaction = { ...t, id: uid('t'), type: 'transfer', transferDir: 'out', linkId: link, createdBy: CURRENT_USER };
       const targetName = projects.find(p => p.id === t.toProject)?.name ?? '';
       const sourceName = projects.find(p => p.id === t.projectId)?.name ?? '';
       const inTx: Transaction = {
         ...t, id: uid('t'), projectId: t.toProject, toProject: t.projectId,
-        type: 'transfer', transferDir: 'in', linkId: link,
+        type: 'transfer', transferDir: 'in', linkId: link, createdBy: CURRENT_USER,
         description: `تحويل وارد من ${sourceName}`,
       };
       outTx.description = t.description || `تحويل صادر إلى ${targetName}`;
@@ -3150,7 +3173,7 @@ export default function App() {
       return;
     }
     // Normal income/expense
-    setTransactions(list => [{ ...t, id: uid('t') }, ...list]);
+    setTransactions(list => [{ ...t, id: uid('t'), createdBy: t.createdBy ?? CURRENT_USER }, ...list]);
   };
   const deleteTx = (id: string) => setTransactions(list => {
     const tx = list.find(x => x.id === id);
@@ -3161,25 +3184,25 @@ export default function App() {
 
   const saveTracking = (t: Omit<Tracking, 'id'> & { id?: string }) => {
     logAudit(t.id ? 'تعديل' : 'إنشاء', 'متابعة', t.name);
-    setTrackings(list => t.id ? list.map(x => x.id === t.id ? { ...x, ...t } as Tracking : x) : [{ ...t, id: uid('tr') }, ...list]);
+    setTrackings(list => t.id ? list.map(x => x.id === t.id ? { ...x, ...t } as Tracking : x) : [{ ...t, id: uid('tr'), createdBy: CURRENT_USER }, ...list]);
   };
   const deleteTracking = (id: string) => { const tr = trackings.find(x => x.id === id); logAudit('حذف', 'متابعة', tr?.name ?? ''); setTrackings(l => l.filter(x => x.id !== id)); };
 
   const saveRequest = (r: Omit<RequestItem, 'id'> & { id?: string }) => {
     logAudit(r.id ? 'تعديل' : 'إنشاء', 'طلب', r.title);
-    setRequests(list => r.id ? list.map(x => x.id === r.id ? { ...x, ...r } as RequestItem : x) : [{ ...r, id: uid('r') }, ...list]);
+    setRequests(list => r.id ? list.map(x => x.id === r.id ? { ...x, ...r } as RequestItem : x) : [{ ...r, id: uid('r'), createdBy: CURRENT_USER }, ...list]);
   };
   const deleteRequest = (id: string) => { const rq = requests.find(x => x.id === id); logAudit('حذف', 'طلب', rq?.title ?? ''); setRequests(l => l.filter(x => x.id !== id)); };
 
   const saveDoc = (d: Omit<DocItem, 'id'> & { id?: string }) =>
-    setDocuments(list => d.id ? list.map(x => x.id === d.id ? { ...x, ...d } as DocItem : x) : [{ ...d, id: uid('d') }, ...list]);
+    setDocuments(list => d.id ? list.map(x => x.id === d.id ? { ...x, ...d } as DocItem : x) : [{ ...d, id: uid('d'), createdBy: CURRENT_USER }, ...list]);
   const deleteDoc = (id: string) => setDocuments(l => l.filter(x => x.id !== id));
 
   const saveMember = (m: Omit<Member, 'id'> & { id?: string }) =>
     setMembers(list => m.id ? list.map(x => x.id === m.id ? { ...x, ...m } as Member : x) : [...list, { ...m, id: uid('m') }]);
   const deleteMember = (id: string) => setMembers(l => l.filter(x => x.id !== id));
 
-  const saveMemberTxn = (t: Omit<MemberTxn, 'id'>) => setMemberTxns(list => [{ ...t, id: uid('mt') }, ...list]);
+  const saveMemberTxn = (t: Omit<MemberTxn, 'id'>) => setMemberTxns(list => [{ ...t, id: uid('mt'), createdBy: CURRENT_USER }, ...list]);
   const decideMemberTxn = (id: string, status: MemberTxnStatus) => {
     const txn = memberTxns.find(t => t.id === id);
     setMemberTxns(list => list.map(t => t.id === id ? { ...t, status } : t));
@@ -3229,7 +3252,7 @@ export default function App() {
       case 'trackings': return <Trackings projectId={projectId} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
       case 'requests': return <Requests projectId={projectId} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
       case 'notifications': return <Notifications notifs={notifs} onMarkRead={markRead} onMarkAll={markAll} />;
-      case 'audit': return <AuditLog audit={audit} />;
+      case 'audit': return <AuditLog audit={audit} onNav={setPage} />;
       case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => { logAudit('تسجيل خروج', 'النظام', 'تم تسجيل الخروج'); setAuthed(false); }} />;
       case 'subscription': return <Subscription current={plan} onChoose={setPlan} />;
       default: return null;
