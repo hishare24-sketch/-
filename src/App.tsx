@@ -147,6 +147,24 @@ const DEFAULT_LISTS: CustomLists = {
   partyTypes: DEFAULT_PARTY_TYPES,
 };
 
+// ── contextual help (شرح نموذج العمل لكل قسم) ──
+// editable + toggleable from the التخصيص page
+type HelpKey = 'dashboard' | 'projects' | 'finance' | 'ledger' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'requests' | 'members';
+type HelpEntry = { title: string; body: string; show: boolean };
+type HelpTexts = Record<HelpKey, HelpEntry>;
+const DEFAULT_HELP: HelpTexts = {
+  dashboard: { show: true, title: 'لوحة التحكم', body: 'نقطة البداية لكل مشروع. تعرض ملخصاً حياً للوضع المالي (الرصيد، الإيرادات، المصروفات، الصافي) خلال فترة تختارها، إضافةً للطلبات المعلّقة والمتابعات العاجلة. الأرقام تُحسب تلقائياً من العمليات الفعلية — كل عملية تضيفها في أي قسم تنعكس هنا فوراً.' },
+  projects: { show: true, title: 'المشاريع', body: 'المشروع هو الوحدة التنظيمية الأساسية في موازين. كل عملية ومستند وذمة والتزام وعضو يرتبط بمشروع. هذا يتيح فصل الحسابات (شركة، منزل، متجر...) وإدارة الصلاحيات والتقارير لكل مشروع على حدة. ابدأ بإنشاء مشروع، ثم أضف إليه باقي العناصر.' },
+  finance: { show: true, title: 'الإدارة المالية', body: 'المحرّك المالي للمشروع. تُدار هنا الإيرادات (أموال داخلة)، المصروفات (أموال خارجة)، والتحويلات بين المشاريع. كل عملية تُحدّث رصيد المشروع تلقائياً. العمليات الناتجة عن الذمم والالتزامات والعهد تظهر هنا أيضاً لتكوين صورة مالية موحّدة.' },
+  ledger: { show: true, title: 'السجل المالي', body: 'عرض موحّد لكل التدفقات النقدية عبر جميع المشاريع والأعضاء في مكان واحد. يساعدك على رؤية الصورة الكاملة وتحليل أين تذهب الأموال ومن أين تأتي، دون الحاجة للتنقل بين المشاريع.' },
+  receivables: { show: true, title: 'الذمم', body: 'الذمم هي التزامات مالية مستقبلية مع طرف (عميل، مورد، أو عضو). الذمة المدينة = مبلغ لك على الغير، والدائنة = مبلغ عليك للغير.\n\nالمنطق المهم: الذمة لا تُحرّك رصيدك عند إنشائها (لأن المال لم يُقبض/يُدفع بعد). عند تسجيل تحصيل أو سداد (كلي أو جزئي)، تتحول تلقائياً لعملية مالية فعلية تظهر في الإدارة المالية وتُحدّث الرصيد.' },
+  commitments: { show: true, title: 'الالتزامات الدورية', body: 'الأقساط والالتزامات المتكررة والاشتراكات — أي مبلغ يتكرر بجدول زمني (شهري، ربع سنوي، سنوي...).\n\nكل التزام له استحقاق قادم. عند تسجيل دفعة، تتحول لعملية مالية فعلية ويتقدّم تاريخ الاستحقاق للموعد التالي تلقائياً. البطاقات العلوية تعرض الأثر الشهري التقديري (مُوحّداً) لمساعدتك على التخطيط للتدفق النقدي.' },
+  documents: { show: true, title: 'المستندات', body: 'بوابة إدخال البيانات. المستند (فاتورة، عقد، وثيقة) ليس مجرد ملف يُحفظ، بل مصدر بيانات يمكن تحويله إلى عملية مالية أو متابعة. ارفع المستند، وسيساعدك النظام على ربطه بالمشروع المناسب واستخراج إجراءات منه.' },
+  trackings: { show: true, title: 'المتابعات والضمانات', body: 'إدارة كل ما يحتاج متابعة زمنية: الضمانات، العقود، التراخيص، الوثائق الرسمية، والاشتراكات. لكل عنصر تاريخ انتهاء، والنظام ينبّهك قبل الاستحقاق حتى لا يفوتك تجديد أو ينتهي ضمان دون علمك.' },
+  requests: { show: true, title: 'الطلبات والموافقات', body: 'محرّك سير العمل والحوكمة. تُنشأ الطلبات (صرف، تحويل، تعزيز عهدة...) وتمرّ بدورة اعتماد: إنشاء ← مراجعة ← اعتماد/رفض. عند اعتماد طلب مالي، يتحول تلقائياً إلى عملية مالية فعلية. هذا يطبّق الرقابة قبل الصرف.' },
+  members: { show: true, title: 'الأعضاء والصلاحيات', body: 'طبقة التحكم في الوصول. لكل عضو دور (مالك، مدير، عضو، مشاهد) وصلاحيات محددة. كما يُدار رصيد العضو عبر حركات العهد (صرف عهدة، تسوية، خصم) بنظام قبول/رفض. هذا منفصل عن الذمم لتجنّب ازدواج الحسابات.' },
+};
+
 // ═══════════════════════════════════════════
 //  MOCK DATA
 // ═══════════════════════════════════════════
@@ -411,11 +429,44 @@ function Card({ children, style = {} }: { children: React.ReactNode; style?: Rea
   );
 }
 
-function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
+// contextual help icon + popup (شرح القسم)
+function HelpButton({ entry }: { entry?: HelpEntry }) {
+  const [open, setOpen] = useState(false);
+  if (!entry || !entry.show) return null;
+  return (
+    <>
+      <button onClick={() => setOpen(true)} title="ما هذا القسم؟" style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 24, height: 24, borderRadius: 99, border: '1px solid var(--border)',
+        background: 'var(--surface-2)', color: 'var(--text-3)', cursor: 'pointer',
+        fontSize: 13, fontWeight: 700, flexShrink: 0, lineHeight: 1,
+      }}>ⓘ</button>
+      {open && (
+        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,17,23,.45)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, animation: 'mzFade .2s ease' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: 18, maxWidth: 440, width: '100%', maxHeight: '80vh', boxShadow: '0 12px 48px rgba(0,0,0,.2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>💡</span>
+                <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{entry.title}</span>
+              </div>
+              <button onClick={() => setOpen(false)} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', fontSize: 15, color: 'var(--text-3)' }}>✕</button>
+            </div>
+            <div style={{ padding: 20, fontSize: 13.5, lineHeight: 2, color: 'var(--text-2)', whiteSpace: 'pre-line', overflowY: 'auto', maxHeight: '60vh' }}>{entry.body}</div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function PageHeader({ title, subtitle, action, help }: { title: string; subtitle?: string; action?: React.ReactNode; help?: HelpEntry }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{title}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{title}</h1>
+          <HelpButton entry={help} />
+        </div>
         {subtitle && <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 2 }}>{subtitle}</p>}
       </div>
       {action}
@@ -961,10 +1012,10 @@ function ActionCenter({ unread, onAction, onNav }: {
 // ═══════════════════════════════════════════
 //  DASHBOARD
 // ═══════════════════════════════════════════
-function Dashboard({ projectId, onNav, projects, transactions, trackings, requests, onDecide, prefs }: {
+function Dashboard({ projectId, onNav, projects, transactions, trackings, requests, onDecide, prefs, helpEntry }: {
   projectId: string; onNav: (p: Page) => void;
   projects: Project[]; transactions: Transaction[]; trackings: Tracking[];
-  requests: RequestItem[]; onDecide: (id: string, status: RequestStatus) => void; prefs: UserPrefs;
+  requests: RequestItem[]; onDecide: (id: string, status: RequestStatus) => void; prefs: UserPrefs; helpEntry?: HelpEntry;
 }) {
   const project = projects.find(p => p.id === projectId)!;
   const [period, setPeriod] = useState(prefs.defaultPeriod ?? '1m');
@@ -1022,7 +1073,7 @@ function Dashboard({ projectId, onNav, projects, transactions, trackings, reques
 
   return (
     <div style={{ padding: 24, maxWidth: 1200 }}>
-      <PageHeader title="لوحة التحكم" subtitle={`${project.name} — يونيو 2025`}
+      <PageHeader help={helpEntry} title="لوحة التحكم" subtitle={`${project.name} — يونيو 2025`}
         action={
           <select value={period} onChange={e => setPeriod(e.target.value)} style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', background: 'var(--surface)', color: 'var(--text)', fontWeight: 500 }}>
             {PERIODS.map(p => <option key={p.v} value={p.v}>{p.l}</option>)}
@@ -1197,12 +1248,12 @@ function ProjectForm({ initial, onSave, onCancel, projectTypes = DEFAULT_PROJECT
   );
 }
 
-function Projects({ projects, transactions, onOpen, onSave, onDelete, openCreate, onCloseCreate, prefs, projectTypes = DEFAULT_PROJECT_TYPES }: {
+function Projects({ projects, transactions, onOpen, onSave, onDelete, openCreate, onCloseCreate, prefs, projectTypes = DEFAULT_PROJECT_TYPES, helpEntry }: {
   projects: Project[]; transactions: Transaction[];
   onOpen: (id: string) => void;
   onSave: (p: Omit<Project, 'id'> & { id?: string }) => void;
   onDelete: (id: string) => void;
-  openCreate?: boolean; onCloseCreate?: () => void; prefs?: UserPrefs; projectTypes?: string[];
+  openCreate?: boolean; onCloseCreate?: () => void; prefs?: UserPrefs; projectTypes?: string[]; helpEntry?: HelpEntry;
 }) {
   const [sheet, setSheet] = useState<null | { mode: 'create' } | { mode: 'edit' | 'view'; project: Project }>(null);
   const close = () => { setSheet(null); onCloseCreate?.(); };
@@ -1223,7 +1274,7 @@ function Projects({ projects, transactions, onOpen, onSave, onDelete, openCreate
 
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
-      <PageHeader title="المشاريع" action={<Btn size="sm" onClick={() => setSheet({ mode: 'create' })}>+ مشروع جديد</Btn>} />
+      <PageHeader help={helpEntry} title="المشاريع" action={<Btn size="sm" onClick={() => setSheet({ mode: 'create' })}>+ مشروع جديد</Btn>} />
 
       {/* section statistics */}
       {projects.length > 0 && (prefs?.showStats ?? true) && (
@@ -2009,10 +2060,10 @@ function TxForm({ initial, projectId, projects, onSave, onCancel, txCategories =
   );
 }
 
-function Finance({ projectId, projects, transactions, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate, onNav, txCategories = DEFAULT_TX_CATEGORIES }: {
+function Finance({ projectId, projects, transactions, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate, onNav, txCategories = DEFAULT_TX_CATEGORIES, helpEntry }: {
   projectId: string; projects: Project[]; transactions: Transaction[];
   onSave: (t: Omit<Transaction, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
-  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; onNav: (p: Page) => void; txCategories?: string[];
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; onNav: (p: Page) => void; txCategories?: string[]; helpEntry?: HelpEntry;
 }) {
   const [tab, setTab] = useState<'all' | TxType>('all');
   const [search, setSearch] = useState('');
@@ -2034,7 +2085,7 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
-      <PageHeader title="الإدارة المالية" subtitle={project.name}
+      <PageHeader help={helpEntry} title="الإدارة المالية" subtitle={project.name}
         action={<div style={{ display: 'flex', gap: 8 }}><Btn variant="outline" size="sm" onClick={() => onNav('projectDetail')}>👥 تحويل لعضو</Btn><Btn size="sm" onClick={onOpenCreate}>+ عملية جديدة</Btn></div>}
       />
 
@@ -2213,8 +2264,8 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
 // ═══════════════════════════════════════════
 //  FINANCIAL LEDGER (سجل العمليات + تحليل التدفقات)
 // ═══════════════════════════════════════════
-function Ledger({ projects, transactions, members, memberTxns }: {
-  projects: Project[]; transactions: Transaction[]; members: Member[]; memberTxns: MemberTxn[];
+function Ledger({ projects, transactions, members, memberTxns, helpEntry }: {
+  projects: Project[]; transactions: Transaction[]; members: Member[]; memberTxns: MemberTxn[]; helpEntry?: HelpEntry;
 }) {
   const [view, setView] = useState<'log' | 'flows'>('log');
   const [fType, setFType] = useState('all');
@@ -2307,7 +2358,7 @@ function Ledger({ projects, transactions, members, memberTxns }: {
 
   return (
     <div style={{ padding: 24, maxWidth: 1200 }}>
-      <PageHeader title="السجل المالي" subtitle="سجل موحّد لكل العمليات والتدفقات عبر المشاريع والأعضاء" />
+      <PageHeader help={helpEntry} title="السجل المالي" subtitle="سجل موحّد لكل العمليات والتدفقات عبر المشاريع والأعضاء" />
 
       {/* view switch */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 18, background: 'var(--surface-3)', padding: 4, borderRadius: 12, width: 'fit-content' }}>
@@ -2565,11 +2616,11 @@ function aiExtract(doc: DocItem): [string, string][] {
   return [...base, ['المحتوى', 'تم تحليل المستند العام'], ['عدد الصفحات', '3']];
 }
 
-function Documents({ projectId, projects, documents, onSave, onDelete, onAction, openCreate, onOpenCreate, onCloseCreate, docTypeOptions = DEFAULT_DOC_TYPES }: {
+function Documents({ projectId, projects, documents, onSave, onDelete, onAction, openCreate, onOpenCreate, onCloseCreate, docTypeOptions = DEFAULT_DOC_TYPES, helpEntry }: {
   projectId: string; projects: Project[]; documents: DocItem[];
   onSave: (d: Omit<DocItem, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
   onAction: (action: 'tx' | 'tracking', doc: DocItem) => void;
-  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; docTypeOptions?: string[];
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; docTypeOptions?: string[]; helpEntry?: HelpEntry;
 }) {
   const [sheet, setSheet] = useState<null | { mode: 'view' | 'edit' | 'actions' | 'ai'; doc: DocItem }>(null);
   const [aiBusy, setAiBusy] = useState(false);
@@ -2589,7 +2640,7 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
-      <PageHeader title="المستندات" subtitle="رفع وإدارة المستندات" action={<Btn size="sm" onClick={onOpenCreate}>+ رفع مستند</Btn>} />
+      <PageHeader help={helpEntry} title="المستندات" subtitle="رفع وإدارة المستندات" action={<Btn size="sm" onClick={onOpenCreate}>+ رفع مستند</Btn>} />
 
       <div onClick={onOpenCreate} style={{ border: '2px dashed #e5e7eb', borderRadius: 16, padding: '32px 20px', textAlign: 'center', marginBottom: 24, background: 'var(--surface-2)', cursor: 'pointer' }}>
         <div style={{ fontSize: 32, marginBottom: 8 }}>☁️</div>
@@ -2857,10 +2908,10 @@ function TrackingForm({ initial, projectId, projects, members, onSave, onCancel 
   );
 }
 
-function Trackings({ projectId, projects, trackings, members, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate, presetName, presetType }: {
+function Trackings({ projectId, projects, trackings, members, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate, presetName, presetType, helpEntry }: {
   projectId: string; projects: Project[]; trackings: Tracking[]; members: Member[];
   onSave: (t: Omit<Tracking, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
-  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; presetName?: string; presetType?: string;
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; presetName?: string; presetType?: string; helpEntry?: HelpEntry;
 }) {
   const [filter, setFilter] = useState<'all' | TrackingStatus>('all');
   const [search, setSearch] = useState('');
@@ -2888,7 +2939,7 @@ function Trackings({ projectId, projects, trackings, members, onSave, onDelete, 
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
-      <PageHeader title="المتابعات والضمانات" subtitle="إدارة العقود والأصول والوثائق" action={<Btn size="sm" onClick={onOpenCreate}>+ إضافة متابعة</Btn>} />
+      <PageHeader help={helpEntry} title="المتابعات والضمانات" subtitle="إدارة العقود والأصول والوثائق" action={<Btn size="sm" onClick={onOpenCreate}>+ إضافة متابعة</Btn>} />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 14, marginBottom: 24 }}>
         {[
@@ -3066,11 +3117,11 @@ function RequestForm({ initial, projectId, projects, members, onSave, onCancel }
   );
 }
 
-function Requests({ projectId, projects, requests, members, onDecide, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate }: {
+function Requests({ projectId, projects, requests, members, onDecide, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate, helpEntry }: {
   projectId: string; projects: Project[]; requests: RequestItem[]; members: Member[];
   onDecide: (id: string, status: RequestStatus) => void;
   onSave: (r: Omit<RequestItem, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
-  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void;
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; helpEntry?: HelpEntry;
 }) {
   const [filter, setFilter] = useState<'all' | RequestStatus>('all');
   const [search, setSearch] = useState('');
@@ -3092,7 +3143,7 @@ function Requests({ projectId, projects, requests, members, onDecide, onSave, on
 
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
-      <PageHeader title="الطلبات والموافقات" subtitle="إدارة دورة الاعتماد" action={<Btn size="sm" onClick={onOpenCreate}>+ طلب جديد</Btn>} />
+      <PageHeader help={helpEntry} title="الطلبات والموافقات" subtitle="إدارة دورة الاعتماد" action={<Btn size="sm" onClick={onOpenCreate}>+ طلب جديد</Btn>} />
 
       {reqs.length > 0 && (() => {
         const pending = reqs.filter(r => r.status === 'pending');
@@ -3353,7 +3404,7 @@ function Notifications({ notifs, projects, members, onMarkRead, onMarkAll, onNav
 // ═══════════════════════════════════════════
 //  CUSTOMIZE (لوحة القوائم المخصّصة)
 // ═══════════════════════════════════════════
-function Customize({ lists, onChange }: { lists: CustomLists; onChange: (l: CustomLists) => void }) {
+function Customize({ lists, onChange, help, onHelpChange }: { lists: CustomLists; onChange: (l: CustomLists) => void; help: HelpTexts; onHelpChange: (h: HelpTexts) => void }) {
   const sections: { key: keyof CustomLists; title: string; icon: string; desc: string; placeholder: string }[] = [
     { key: 'txCategories', title: 'التصنيفات المالية', icon: '🏷️', desc: 'تصنيفات الإيرادات والمصروفات في الإدارة المالية', placeholder: 'مثال: تبرعات' },
     { key: 'projectTypes', title: 'أنواع المشاريع', icon: '⬡', desc: 'الأنواع المتاحة عند إنشاء مشروع جديد', placeholder: 'مثال: عيادة' },
@@ -3422,6 +3473,47 @@ function Customize({ lists, onChange }: { lists: CustomLists; onChange: (l: Cust
           </div>
         </Card>
       ))}
+
+      {/* ── help texts management (شرح الأقسام) ── */}
+      <div style={{ marginTop: 32, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 20 }}>💡</span>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>شروحات الأقسام</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>عدّل نص الشرح الذي يظهر عند نقر أيقونة (ⓘ) بجانب عنوان كل قسم، أو أخفِه</div>
+        </div>
+      </div>
+
+      {(Object.keys(help) as HelpKey[]).map(key => {
+        const entry = help[key];
+        return (
+          <Card key={key} style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 10 }}>
+              <input
+                value={entry.title}
+                onChange={e => onHelpChange({ ...help, [key]: { ...entry, title: e.target.value } })}
+                style={{ flex: 1, fontWeight: 700, fontSize: 14, color: 'var(--text)', background: 'transparent', border: 'none', borderBottom: '1px solid transparent', fontFamily: 'inherit', padding: '2px 0' }}
+                onFocus={e => e.target.style.borderBottomColor = 'var(--border)'}
+                onBlur={e => e.target.style.borderBottomColor = 'transparent'}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{entry.show ? 'ظاهر' : 'مخفي'}</span>
+                <button onClick={() => onHelpChange({ ...help, [key]: { ...entry, show: !entry.show } })} style={{ width: 44, height: 24, borderRadius: 99, border: 'none', background: entry.show ? '#2563eb' : '#cbd5e1', position: 'relative', cursor: 'pointer' }}>
+                  <span style={{ position: 'absolute', top: 3, [entry.show ? 'left' : 'right']: 3, width: 18, height: 18, borderRadius: 99, background: '#fff' } as React.CSSProperties} />
+                </button>
+              </div>
+            </div>
+            <textarea
+              value={entry.body}
+              onChange={e => onHelpChange({ ...help, [key]: { ...entry, body: e.target.value } })}
+              rows={4}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 12.5, lineHeight: 1.8, background: 'var(--surface-2)', color: 'var(--text-2)', resize: 'vertical', boxSizing: 'border-box' }}
+            />
+            <div style={{ marginTop: 8, textAlign: 'left' }}>
+              <button onClick={() => onHelpChange({ ...help, [key]: DEFAULT_HELP[key] })} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 10px', fontSize: 11, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit' }}>استعادة النص الافتراضي</button>
+            </div>
+          </Card>
+        );
+      })}
     </div>
   );
 }
@@ -3806,10 +3898,10 @@ function PaymentForm({ receivable, onSave, onCancel }: {
   );
 }
 
-function Receivables({ projectId, projects, receivables, members, onSave, onPay, onDelete, openCreate, onOpenCreate, onCloseCreate }: {
+function Receivables({ projectId, projects, receivables, members, onSave, onPay, onDelete, openCreate, onOpenCreate, onCloseCreate, helpEntry }: {
   projectId: string; projects: Project[]; receivables: Receivable[]; members: Member[];
   onSave: (r: Omit<Receivable, 'id'>) => void; onPay: (id: string, amount: number, note: string) => void; onDelete: (id: string) => void;
-  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void;
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; helpEntry?: HelpEntry;
 }) {
   const [kindTab, setKindTab] = useState<'all' | ReceivableKind>('all');
   const [search, setSearch] = useState('');
@@ -3845,7 +3937,7 @@ function Receivables({ projectId, projects, receivables, members, onSave, onPay,
 
   return (
     <div style={{ padding: 24, maxWidth: 1000 }}>
-      <PageHeader title="الذمم" subtitle="المبالغ المستحقة لك أو عليك" action={<Btn size="sm" onClick={onOpenCreate}>+ ذمة جديدة</Btn>} />
+      <PageHeader help={helpEntry} title="الذمم" subtitle="المبالغ المستحقة لك أو عليك" action={<Btn size="sm" onClick={onOpenCreate}>+ ذمة جديدة</Btn>} />
 
       <StatCards cards={[
         { label: 'ذمم مدينة (لنا)', value: fmtNum(totalRecv), color: '#15803d', bg: '#f0fdf4', icon: '📥' },
@@ -4085,10 +4177,10 @@ function CommitmentForm({ projectId, projects, members, onSave, onCancel }: {
   );
 }
 
-function Commitments({ projectId, projects, commitments, members, onSave, onPay, onToggle, onDelete, openCreate, onOpenCreate, onCloseCreate }: {
+function Commitments({ projectId, projects, commitments, members, onSave, onPay, onToggle, onDelete, openCreate, onOpenCreate, onCloseCreate, helpEntry }: {
   projectId: string; projects: Project[]; commitments: Commitment[]; members: Member[];
   onSave: (c: Omit<Commitment, 'id'>) => void; onPay: (id: string) => void; onToggle: (id: string) => void; onDelete: (id: string) => void;
-  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void;
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; helpEntry?: HelpEntry;
 }) {
   const [kindTab, setKindTab] = useState<'all' | CommitmentKind>('all');
   const [search, setSearch] = useState('');
@@ -4126,7 +4218,7 @@ function Commitments({ projectId, projects, commitments, members, onSave, onPay,
 
   return (
     <div style={{ padding: 24, maxWidth: 1000 }}>
-      <PageHeader title="الالتزامات الدورية" subtitle="الأقساط والالتزامات والاشتراكات المتكررة" action={<Btn size="sm" onClick={onOpenCreate}>+ التزام جديد</Btn>} />
+      <PageHeader help={helpEntry} title="الالتزامات الدورية" subtitle="الأقساط والالتزامات والاشتراكات المتكررة" action={<Btn size="sm" onClick={onOpenCreate}>+ التزام جديد</Btn>} />
 
       <StatCards cards={[
         { label: 'صادر شهرياً (تقديري)', value: fmtNum(Math.round(monthlyOut)), color: '#b91c1c', bg: '#fef2f2', icon: '↑' },
@@ -4592,6 +4684,7 @@ export default function App() {
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [prefs, setPrefs] = usePersist<UserPrefs>('mz_prefs', DEFAULT_PREFS);
   const [lists, setLists] = usePersist<CustomLists>('mz_lists', DEFAULT_LISTS);
+  const [help, setHelp] = usePersist<HelpTexts>('mz_help', DEFAULT_HELP);
   const [audit, setAudit] = usePersist<AuditEntry[]>('mz_audit', INITIAL_AUDIT);
   const logAudit = (action: string, entity: string, detail: string) =>
     setAudit(list => [{ id: uid('a'), action, entity, detail, user: 'محمد العمري', ts: new Date().toISOString().slice(0, 16).replace('T', ' ') }, ...list].slice(0, 200));
@@ -4792,20 +4885,20 @@ export default function App() {
 
   const renderPage = () => {
     switch (page) {
-      case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} prefs={prefs} />;
-      case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} openCreate={createProject} onCloseCreate={() => setCreateProject(false)} prefs={prefs} projectTypes={lists.projectTypes} />;
+      case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} prefs={prefs} helpEntry={help.dashboard} />;
+      case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} openCreate={createProject} onCloseCreate={() => setCreateProject(false)} prefs={prefs} projectTypes={lists.projectTypes} helpEntry={help.projects} />;
       case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} onQuickAction={fabAction} prefs={prefs} />;
       case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} onBack={goBack} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
-      case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} txCategories={lists.txCategories} />;
-      case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} />;
-      case 'receivables': return <Receivables projectId={projectId} projects={projects} receivables={receivables} members={members} onSave={saveReceivable} onPay={payReceivable} onDelete={deleteReceivable} openCreate={createReceivable} onOpenCreate={() => setCreateReceivable(true)} onCloseCreate={() => setCreateReceivable(false)} />;
-      case 'commitments': return <Commitments projectId={projectId} projects={projects} commitments={commitments} members={members} onSave={saveCommitment} onPay={payCommitment} onToggle={toggleCommitment} onDelete={deleteCommitment} openCreate={createCommitment} onOpenCreate={() => setCreateCommitment(true)} onCloseCreate={() => setCreateCommitment(false)} />;
-      case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} docTypeOptions={lists.docTypes} />;
-      case 'trackings': return <Trackings projectId={projectId} projects={projects} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
-      case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
+      case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} txCategories={lists.txCategories} helpEntry={help.finance} />;
+      case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} helpEntry={help.ledger} />;
+      case 'receivables': return <Receivables projectId={projectId} projects={projects} receivables={receivables} members={members} onSave={saveReceivable} onPay={payReceivable} onDelete={deleteReceivable} openCreate={createReceivable} onOpenCreate={() => setCreateReceivable(true)} onCloseCreate={() => setCreateReceivable(false)} helpEntry={help.receivables} />;
+      case 'commitments': return <Commitments projectId={projectId} projects={projects} commitments={commitments} members={members} onSave={saveCommitment} onPay={payCommitment} onToggle={toggleCommitment} onDelete={deleteCommitment} openCreate={createCommitment} onOpenCreate={() => setCreateCommitment(true)} onCloseCreate={() => setCreateCommitment(false)} helpEntry={help.commitments} />;
+      case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} docTypeOptions={lists.docTypes} helpEntry={help.documents} />;
+      case 'trackings': return <Trackings projectId={projectId} projects={projects} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} helpEntry={help.trackings} />;
+      case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} helpEntry={help.requests} />;
       case 'notifications': return <Notifications notifs={notifs} projects={projects} members={members} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} />;
       case 'audit': return <AuditLog audit={audit} onNav={setPage} />;
-      case 'customize': return <Customize lists={lists} onChange={setLists} />;
+      case 'customize': return <Customize lists={lists} onChange={setLists} help={help} onHelpChange={setHelp} />;
       case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => { logAudit('تسجيل خروج', 'النظام', 'تم تسجيل الخروج'); setAuthed(false); }} prefs={prefs} onPrefs={setPrefs} />;
       case 'subscription': return <Subscription current={plan} onChoose={setPlan} />;
       default: return null;
