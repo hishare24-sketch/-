@@ -66,6 +66,17 @@ const ROLE_PERMS: Record<MemberRole, string[]> = {
 };
 // current logged-in user (simulated until backend auth)
 const CURRENT_USER = 'محمد العمري';
+
+// per-subscriber preferences controlling display across all sections
+type UserPrefs = {
+  showStats: boolean;
+  showCharts: boolean;
+  defaultPeriod: string;
+  compactCards: boolean;
+  showQuickActions: boolean;
+  confirmDelete: boolean;
+};
+const DEFAULT_PREFS: UserPrefs = { showStats: true, showCharts: true, defaultPeriod: '1m', compactCards: false, showQuickActions: true, confirmDelete: true };
 const PROJECT_COLORS = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#dc2626', '#0891b2'];
 
 const TX_TYPES: { id: TxType; label: string; icon: string }[] = [
@@ -859,44 +870,73 @@ function ActionCenter({ unread, onAction, onNav }: {
 // ═══════════════════════════════════════════
 //  DASHBOARD
 // ═══════════════════════════════════════════
-function Dashboard({ projectId, onNav, projects, transactions, trackings, requests, onDecide }: {
+function Dashboard({ projectId, onNav, projects, transactions, trackings, requests, onDecide, prefs }: {
   projectId: string; onNav: (p: Page) => void;
   projects: Project[]; transactions: Transaction[]; trackings: Tracking[];
-  requests: RequestItem[]; onDecide: (id: string, status: RequestStatus) => void;
+  requests: RequestItem[]; onDecide: (id: string, status: RequestStatus) => void; prefs: UserPrefs;
 }) {
   const project = projects.find(p => p.id === projectId)!;
-  const txns = transactions.filter(t => t.projectId === projectId);
+  const [period, setPeriod] = useState(prefs.defaultPeriod ?? '1m');
+  const PERIODS: { v: string; l: string; days: number }[] = [
+    { v: '1d', l: 'آخر يوم', days: 1 },
+    { v: '1w', l: 'آخر أسبوع', days: 7 },
+    { v: '1m', l: 'آخر شهر', days: 31 },
+    { v: '6m', l: 'آخر 6 أشهر', days: 183 },
+    { v: '9m', l: 'آخر 9 أشهر', days: 274 },
+    { v: '12m', l: 'آخر 12 شهر', days: 366 },
+    { v: '18m', l: 'آخر 18 شهر', days: 548 },
+    { v: '24m', l: 'آخر 24 شهر', days: 731 },
+  ];
+  const periodDays = PERIODS.find(p => p.v === period)?.days ?? 31;
+  const periodLabel = PERIODS.find(p => p.v === period)?.l ?? '';
+  const NOW = new Date('2025-06-26T23:59');
+  const inPeriod = (date: string) => {
+    const d = new Date(date); const diff = (NOW.getTime() - d.getTime()) / 86400000;
+    return diff >= 0 && diff <= periodDays;
+  };
+  const allTxns = transactions.filter(t => t.projectId === projectId);
+  const txns = allTxns.filter(t => inPeriod(t.date));
   const income = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const expense = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const urgentTrackings = trackings.filter(t => t.projectId === projectId && (t.status === 'expiring' || t.status === 'expired'));
   const pendingReqs = requests.filter(r => r.projectId === projectId && r.status === 'pending');
 
   const stats = [
-    { label: 'الرصيد الكلي', value: fmt(computeBalance(project, transactions)), icon: '💰', bg: '#eff6ff', color: '#1d4ed8', trend: '+8%' },
-    { label: 'إيرادات الشهر', value: fmt(income), icon: '📈', bg: '#f0fdf4', color: '#15803d', trend: '+12%' },
-    { label: 'مصروفات الشهر', value: fmt(expense), icon: '📉', bg: '#fef2f2', color: '#b91c1c', trend: '-3%' },
-    { label: 'صافي الشهر', value: fmt(income - expense), icon: '📊', bg: '#faf5ff', color: '#7e22ce', trend: '+22%' },
+    { label: 'الرصيد الكلي', value: fmt(computeBalance(project, transactions)), icon: '💰', bg: '#eff6ff', color: '#1d4ed8' },
+    { label: `إيرادات ${periodLabel}`, value: fmt(income), icon: '📈', bg: '#f0fdf4', color: '#15803d' },
+    { label: `مصروفات ${periodLabel}`, value: fmt(expense), icon: '📉', bg: '#fef2f2', color: '#b91c1c' },
+    { label: `صافي ${periodLabel}`, value: fmt(income - expense), icon: '📊', bg: '#faf5ff', color: '#7e22ce' },
     { label: 'طلبات معلقة', value: String(pendingReqs.length), icon: '⏳', bg: '#fffbeb', color: '#a16207' },
     { label: 'تنبيهات متابعات', value: String(urgentTrackings.length), icon: '⚠️', bg: '#fff7ed', color: '#c2410c' },
   ];
 
-  const monthlyData = [
-    { month: 'يناير', income: 38000, expense: 24000 },
-    { month: 'فبراير', income: 42000, expense: 27000 },
-    { month: 'مارس', income: 35000, expense: 22000 },
-    { month: 'أبريل', income: 51000, expense: 31000 },
-    { month: 'مايو', income: 47000, expense: 29000 },
-    { month: 'يونيو', income, expense },
-  ];
+  // build monthly series from real transactions over the selected period
+  const monthCount = Math.max(1, Math.min(12, Math.round(periodDays / 30)));
+  const monthlyData = (() => {
+    const arr: { month: string; income: number; expense: number }[] = [];
+    const names = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    for (let i = monthCount - 1; i >= 0; i--) {
+      const d = new Date(NOW.getFullYear(), NOW.getMonth() - i, 1);
+      const key = d.toISOString().slice(0, 7);
+      const mt = allTxns.filter(t => t.date.slice(0, 7) === key);
+      arr.push({
+        month: names[d.getMonth()],
+        income: mt.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+        expense: mt.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+      });
+    }
+    return arr;
+  })();
   const maxVal = Math.max(...monthlyData.map(d => Math.max(d.income, d.expense)), 1);
 
   return (
     <div style={{ padding: 24, maxWidth: 1200 }}>
       <PageHeader title="لوحة التحكم" subtitle={`${project.name} — يونيو 2025`}
-        action={<div style={{ display: 'flex', gap: 8 }}>
-          <Btn variant="outline" size="sm" onClick={() => onNav('documents')}>+ رفع مستند</Btn>
-          <Btn size="sm">📊 تقرير شهري</Btn>
-        </div>}
+        action={
+          <select value={period} onChange={e => setPeriod(e.target.value)} style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', background: 'var(--surface)', color: 'var(--text)', fontWeight: 500 }}>
+            {PERIODS.map(p => <option key={p.v} value={p.v}>{p.l}</option>)}
+          </select>
+        }
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
@@ -1067,12 +1107,12 @@ function ProjectForm({ initial, onSave, onCancel }: {
   );
 }
 
-function Projects({ projects, transactions, onOpen, onSave, onDelete, openCreate, onCloseCreate }: {
+function Projects({ projects, transactions, onOpen, onSave, onDelete, openCreate, onCloseCreate, prefs }: {
   projects: Project[]; transactions: Transaction[];
   onOpen: (id: string) => void;
   onSave: (p: Omit<Project, 'id'> & { id?: string }) => void;
   onDelete: (id: string) => void;
-  openCreate?: boolean; onCloseCreate?: () => void;
+  openCreate?: boolean; onCloseCreate?: () => void; prefs?: UserPrefs;
 }) {
   const [sheet, setSheet] = useState<null | { mode: 'create' } | { mode: 'edit' | 'view'; project: Project }>(null);
   const close = () => { setSheet(null); onCloseCreate?.(); };
@@ -1096,7 +1136,7 @@ function Projects({ projects, transactions, onOpen, onSave, onDelete, openCreate
       <PageHeader title="المشاريع" action={<Btn size="sm" onClick={() => setSheet({ mode: 'create' })}>+ مشروع جديد</Btn>} />
 
       {/* section statistics */}
-      {projects.length > 0 && (
+      {projects.length > 0 && (prefs?.showStats ?? true) && (
         <>
           <StatCards cards={[
             { label: 'عدد المشاريع', value: projects.length, color: '#1d4ed8', bg: '#eff6ff', icon: '⬡' },
@@ -1104,16 +1144,18 @@ function Projects({ projects, transactions, onOpen, onSave, onDelete, openCreate
             { label: 'إجمالي الإيرادات', value: fmtNum(totalIncome), color: '#15803d', bg: '#f0fdf4', icon: '↓' },
             { label: 'إجمالي المصروفات', value: fmtNum(totalExpense), color: '#b91c1c', bg: '#fef2f2', icon: '↑' },
           ]} />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px,1fr))', gap: 16, marginBottom: 22 }}>
-            <Card>
-              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>توزيع الأرصدة على المشاريع</div>
-              <Donut segments={balanceSegments} label="مشروع" />
-            </Card>
-            <Card>
-              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>صافي كل مشروع</div>
-              <StatBars bars={netBars} />
-            </Card>
-          </div>
+          {(prefs?.showCharts ?? true) && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px,1fr))', gap: 16, marginBottom: 22 }}>
+              <Card>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>توزيع الأرصدة على المشاريع</div>
+                <Donut segments={balanceSegments} label="مشروع" />
+              </Card>
+              <Card>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>صافي كل مشروع</div>
+                <StatBars bars={netBars} />
+              </Card>
+            </div>
+          )}
         </>
       )}
 
@@ -1387,7 +1429,7 @@ function InviteForm({ projectId, onInvite, onCancel }: {
   );
 }
 
-function ProjectDetail({ projectId, projects, transactions, trackings, requests, documents, members, memberTxns, notifs, onNav, onSaveMember, onDeleteMember, onSaveMemberTxn, onDecideMemberTxn, onOpenMember, onSaveProject, onDeleteProject, onViewTx, onViewDoc, onViewTracking, onQuickAction }: {
+function ProjectDetail({ projectId, projects, transactions, trackings, requests, documents, members, memberTxns, notifs, onNav, onSaveMember, onDeleteMember, onSaveMemberTxn, onDecideMemberTxn, onOpenMember, onSaveProject, onDeleteProject, onViewTx, onViewDoc, onViewTracking, onQuickAction, prefs }: {
   projectId: string; projects: Project[]; transactions: Transaction[]; trackings: Tracking[];
   requests: RequestItem[]; documents: DocItem[]; members: Member[]; memberTxns: MemberTxn[]; notifs: Notif[];
   onNav: (p: Page) => void;
@@ -1397,6 +1439,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
   onSaveProject: (p: Omit<Project, 'id'> & { id?: string }) => void; onDeleteProject: (id: string) => void;
   onViewTx: (t: Transaction) => void; onViewDoc: (d: DocItem) => void; onViewTracking: (t: Tracking) => void;
   onQuickAction: (a: 'tx' | 'doc' | 'tracking' | 'request') => void;
+  prefs: UserPrefs;
 }) {
   const [tab, setTab] = useState<'overview' | 'members' | 'cashflow'>('overview');
   const [sheet, setSheet] = useState<null | { mode: 'add' } | { mode: 'edit'; member: Member } | { mode: 'txn' } | { mode: 'invite' } | { mode: 'editProject' } | { mode: 'deleteProject' }>(null);
@@ -1467,6 +1510,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
       </div>
 
       {/* quick actions: add any item directly within the project */}
+      {prefs.showQuickActions && (
       <Card style={{ marginBottom: 20, padding: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginLeft: 4 }}>إجراء سريع:</span>
@@ -1485,6 +1529,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
           ))}
         </div>
       </Card>
+      )}
 
       {/* OVERVIEW */}
       {tab === 'overview' && (
@@ -3214,7 +3259,20 @@ function Notifications({ notifs, projects, members, onMarkRead, onMarkAll, onNav
 // ═══════════════════════════════════════════
 //  SETTINGS
 // ═══════════════════════════════════════════
-function Settings({ theme, onToggleTheme, onNav, onLogout }: { theme: 'light' | 'dark'; onToggleTheme: () => void; onNav: (p: Page) => void; onLogout: () => void }) {
+function Settings({ theme, onToggleTheme, onNav, onLogout, prefs, onPrefs }: { theme: 'light' | 'dark'; onToggleTheme: () => void; onNav: (p: Page) => void; onLogout: () => void; prefs: UserPrefs; onPrefs: (p: UserPrefs) => void }) {
+  const toggle = (k: keyof UserPrefs) => onPrefs({ ...prefs, [k]: !prefs[k] });
+  const Switch = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
+    <button onClick={onClick} style={{ width: 52, height: 28, borderRadius: 99, border: 'none', background: on ? '#2563eb' : '#cbd5e1', position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
+      <span style={{ position: 'absolute', top: 3, [on ? 'left' : 'right']: 3, width: 22, height: 22, borderRadius: 99, background: '#fff' } as React.CSSProperties} />
+    </button>
+  );
+  const Row = ({ title, desc, k }: { title: string; desc: string; k: keyof UserPrefs }) => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)', gap: 12 }}>
+      <div><div style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>{title}</div><div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{desc}</div></div>
+      <Switch on={prefs[k] as boolean} onClick={() => toggle(k)} />
+    </div>
+  );
+  const PERIOD_OPTS = [['1d', 'آخر يوم'], ['1w', 'آخر أسبوع'], ['1m', 'آخر شهر'], ['6m', 'آخر 6 أشهر'], ['9m', 'آخر 9 أشهر'], ['12m', 'آخر 12 شهر'], ['18m', 'آخر 18 شهر'], ['24m', 'آخر 24 شهر']];
   return (
     <div style={{ padding: 24, maxWidth: 700 }}>
       <PageHeader title="الإعدادات" />
@@ -3230,6 +3288,22 @@ function Settings({ theme, onToggleTheme, onNav, onLogout }: { theme: 'light' | 
           <button onClick={onToggleTheme} style={{ width: 52, height: 28, borderRadius: 99, border: 'none', background: theme === 'dark' ? '#2563eb' : '#cbd5e1', position: 'relative', cursor: 'pointer' }}>
             <span style={{ position: 'absolute', top: 3, [theme === 'dark' ? 'left' : 'right']: 3, width: 22, height: 22, borderRadius: 99, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 } as React.CSSProperties}>{theme === 'dark' ? '🌙' : '☀️'}</span>
           </button>
+        </div>
+      </Card>
+
+      {/* Display preferences — control how data appears across all sections */}
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>تفضيلات العرض (تطبّق على كل الأقسام)</div>
+        <Row title="إظهار البطاقات الإحصائية" desc="بطاقات الأرقام أعلى الأقسام" k="showStats" />
+        <Row title="إظهار الرسوم البيانية" desc="الحلقات والأعمدة في الأقسام" k="showCharts" />
+        <Row title="إظهار شريط الإجراء السريع" desc="أزرار الإضافة داخل المشروع" k="showQuickActions" />
+        <Row title="بطاقات مدمجة" desc="تقليل المسافات لعرض أكثف" k="compactCards" />
+        <Row title="تأكيد قبل الحذف" desc="طلب تأكيد عند حذف أي عنصر" k="confirmDelete" />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0 4px', gap: 12 }}>
+          <div><div style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>الفترة الافتراضية للوحة التحكم</div><div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>تُطبّق عند فتح الرئيسية</div></div>
+          <select value={prefs.defaultPeriod} onChange={e => onPrefs({ ...prefs, defaultPeriod: e.target.value })} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', background: 'var(--surface)', color: 'var(--text)' }}>
+            {PERIOD_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
         </div>
       </Card>
 
@@ -3772,6 +3846,7 @@ export default function App() {
   const [members, setMembers] = usePersist<Member[]>('mz_members', INITIAL_MEMBERS);
   const [memberTxns, setMemberTxns] = usePersist<MemberTxn[]>('mz_member_txns', INITIAL_MEMBER_TXNS);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
+  const [prefs, setPrefs] = usePersist<UserPrefs>('mz_prefs', DEFAULT_PREFS);
   const [audit, setAudit] = usePersist<AuditEntry[]>('mz_audit', INITIAL_AUDIT);
   const logAudit = (action: string, entity: string, detail: string) =>
     setAudit(list => [{ id: uid('a'), action, entity, detail, user: 'محمد العمري', ts: new Date().toISOString().slice(0, 16).replace('T', ' ') }, ...list].slice(0, 200));
@@ -3904,19 +3979,16 @@ export default function App() {
   };
 
   // FAB dispatcher
-  const fabAction = (a: 'tx' | 'doc' | 'tracking' | 'request' | 'project') => {
-    if (a === 'tx') { setPage('finance'); setCreateTx(true); }
-    if (a === 'doc') { setPage('documents'); setCreateDoc(true); }
-    if (a === 'tracking') { setTrackingPreset({}); setPage('trackings'); setCreateTracking(true); }
-    if (a === 'request') { setPage('requests'); setCreateRequest(true); }
-    if (a === 'project') { setPage('projects'); setCreateProject(true); }
-  };
+  // global quick-create overlay: opens a creation sheet ON TOP of the current page.
+  // navigation happens only on actual save; cancel keeps the user where they were.
+  const [quickCreate, setQuickCreate] = useState<null | 'tx' | 'doc' | 'tracking' | 'request' | 'project'>(null);
+  const fabAction = (a: 'tx' | 'doc' | 'tracking' | 'request' | 'project') => setQuickCreate(a);
 
   const renderPage = () => {
     switch (page) {
-      case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} />;
-      case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} openCreate={createProject} onCloseCreate={() => setCreateProject(false)} />;
-      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} onQuickAction={fabAction} />;
+      case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} prefs={prefs} />;
+      case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} openCreate={createProject} onCloseCreate={() => setCreateProject(false)} prefs={prefs} />;
+      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} onQuickAction={fabAction} prefs={prefs} />;
       case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} onBack={goBack} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} />;
@@ -3925,7 +3997,7 @@ export default function App() {
       case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
       case 'notifications': return <Notifications notifs={notifs} projects={projects} members={members} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} />;
       case 'audit': return <AuditLog audit={audit} onNav={setPage} />;
-      case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => { logAudit('تسجيل خروج', 'النظام', 'تم تسجيل الخروج'); setAuthed(false); }} />;
+      case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => { logAudit('تسجيل خروج', 'النظام', 'تم تسجيل الخروج'); setAuthed(false); }} prefs={prefs} onPrefs={setPrefs} />;
       case 'subscription': return <Subscription current={plan} onChoose={setPlan} />;
       default: return null;
     }
@@ -3980,6 +4052,23 @@ export default function App() {
         {!isMobile && <ActionCenter unread={unread} onAction={fabAction} onNav={setPage} />}
         {isMobile && <BottomBar page={page} onNav={setPage} onFab={() => setFabSheet(true)} unread={unread} />}
         {isMobile && fabSheet && <MobileFabSheet onClose={() => setFabSheet(false)} onAction={(a) => { setFabSheet(false); fabAction(a); }} />}
+
+        {/* global quick-create: navigates only on save, cancel stays put */}
+        <Sheet open={quickCreate === 'tx'} onClose={() => setQuickCreate(null)} title="عملية مالية جديدة">
+          {quickCreate === 'tx' && <TxForm projectId={projectId} projects={projects} onSave={(t) => { saveTx(t); setQuickCreate(null); setProjectId(t.projectId); setPage('finance'); }} onCancel={() => setQuickCreate(null)} />}
+        </Sheet>
+        <Sheet open={quickCreate === 'doc'} onClose={() => setQuickCreate(null)} title="رفع مستند جديد">
+          {quickCreate === 'doc' && <DocForm projectId={projectId} projects={projects} onSave={(d) => { saveDoc(d); setQuickCreate(null); setProjectId(d.projectId); setPage('documents'); }} onCancel={() => setQuickCreate(null)} />}
+        </Sheet>
+        <Sheet open={quickCreate === 'tracking'} onClose={() => setQuickCreate(null)} title="متابعة جديدة">
+          {quickCreate === 'tracking' && <TrackingForm projectId={projectId} projects={projects} members={members} onSave={(t) => { saveTracking(t); setQuickCreate(null); setProjectId(t.projectId); setPage('trackings'); }} onCancel={() => setQuickCreate(null)} />}
+        </Sheet>
+        <Sheet open={quickCreate === 'request'} onClose={() => setQuickCreate(null)} title="طلب جديد">
+          {quickCreate === 'request' && <RequestForm projectId={projectId} projects={projects} members={members} onSave={(r) => { saveRequest(r); setQuickCreate(null); setProjectId(r.projectId); setPage('requests'); }} onCancel={() => setQuickCreate(null)} />}
+        </Sheet>
+        <Sheet open={quickCreate === 'project'} onClose={() => setQuickCreate(null)} title="مشروع جديد">
+          {quickCreate === 'project' && <ProjectForm onSave={(p) => { saveProject(p); setQuickCreate(null); setPage('projects'); }} onCancel={() => setQuickCreate(null)} />}
+        </Sheet>
       </div>
     </>
   );
