@@ -3037,10 +3037,36 @@ function aiExtract(doc: DocItem): [string, string][] {
   return [...base, ['المحتوى', 'تم تحليل المستند العام'], ['عدد الصفحات', '3']];
 }
 
+// smart suggested actions per document type (Document First)
+type DocActionKind = 'tx' | 'tracking' | 'commitment' | 'asset' | 'receivable';
+type DocSuggestion = { kind: DocActionKind; icon: string; label: string; desc: string };
+function suggestedActions(docType: string): DocSuggestion[] {
+  if (docType === 'فاتورة') return [
+    { kind: 'tx', icon: '💸', label: 'تسجيل عملية مالية', desc: 'مصروف/إيراد بقيمة الفاتورة' },
+    { kind: 'tracking', icon: '🛡️', label: 'إضافة ضمان للمتابعة', desc: 'تتبّع ضمان المنتج/الخدمة' },
+    { kind: 'asset', icon: '⬚', label: 'تسجيل كأصل', desc: 'إن كانت فاتورة شراء أصل ملموس' },
+  ];
+  if (docType === 'عقد') return [
+    { kind: 'tracking', icon: '📄', label: 'إضافة عقد للمتابعة', desc: 'تتبّع مدة العقد والتجديد' },
+    { kind: 'commitment', icon: '↻', label: 'إنشاء التزام دوري', desc: 'إن كان العقد بدفعات متكررة' },
+    { kind: 'receivable', icon: '⇄', label: 'تسجيل ذمة', desc: 'إن نتج عن العقد مبلغ مستحق' },
+  ];
+  if (docType === 'وثيقة رسمية') return [
+    { kind: 'tracking', icon: '🪪', label: 'إضافة وثيقة للمتابعة', desc: 'تتبّع تاريخ انتهاء وتجديد' },
+  ];
+  if (docType === 'كشف حساب') return [
+    { kind: 'tx', icon: '💸', label: 'تسجيل عملية مالية', desc: 'إدخال عملية من الكشف' },
+  ];
+  return [
+    { kind: 'tx', icon: '💸', label: 'تسجيل عملية مالية', desc: 'تحويل المستند إلى عملية' },
+    { kind: 'tracking', icon: '🛡️', label: 'إضافة عنصر متابعة', desc: 'تتبّع زمني للمستند' },
+  ];
+}
+
 function Documents({ projectId, projects, documents, onSave, onDelete, onAction, openCreate, onOpenCreate, onCloseCreate, docTypeOptions = DEFAULT_DOC_TYPES, helpEntry }: {
   projectId: string; projects: Project[]; documents: DocItem[];
   onSave: (d: Omit<DocItem, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
-  onAction: (action: 'tx' | 'tracking', doc: DocItem) => void;
+  onAction: (action: DocActionKind, doc: DocItem) => void;
   openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; docTypeOptions?: string[]; helpEntry?: HelpEntry;
 }) {
   const [sheet, setSheet] = useState<null | { mode: 'view' | 'edit' | 'actions' | 'ai'; doc: DocItem }>(null);
@@ -3205,24 +3231,35 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
       <Sheet open={sheet?.mode === 'actions'} onClose={close} title="إجراءات على المستند">
         {sheet?.mode === 'actions' && (() => {
           const d = sheet.doc;
-          const items = [
-            { icon: '🤖', label: 'تحليل بالذكاء الاصطناعي', desc: 'استخراج البيانات تلقائياً', onClick: () => { setSheet({ mode: 'ai', doc: d }); setAiBusy(true); setTimeout(() => setAiBusy(false), 1600); } },
-            { icon: '💸', label: 'إنشاء عملية مالية', desc: 'تحويل الفاتورة إلى مصروف/إيراد', onClick: () => { onAction('tx', d); close(); } },
-            { icon: '🛡️', label: 'إضافة عنصر متابعة', desc: 'إنشاء ضمان أو عقد من المستند', onClick: () => { onAction('tracking', d); close(); } },
-            { icon: '📥', label: 'تنزيل المستند', desc: 'حفظ نسخة على جهازك', onClick: close },
-          ];
+          const suggestions = suggestedActions(d.type);
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 4 }}>📄 {d.name}</div>
-              {items.map(it => (
-                <button key={it.label} onClick={it.onClick} style={{
+              <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 2 }}>📄 {d.name} · {d.type}</div>
+
+              {/* AI analysis entry */}
+              <button onClick={() => { setSheet({ mode: 'ai', doc: d }); setAiBusy(true); setTimeout(() => setAiBusy(false), 1600); }} style={{
+                display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 12,
+                border: '1px solid #ddd6fe', background: 'linear-gradient(135deg,#faf5ff,#eff6ff)', cursor: 'pointer', textAlign: 'right', fontFamily: 'inherit',
+              }}>
+                <span style={{ fontSize: 22 }}>🤖</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#6d28d9' }}>تحليل ذكي واستخراج البيانات</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 1 }}>اقرأ المستند واقترح الإجراءات تلقائياً</div>
+                </div>
+                <span style={{ color: '#a78bfa' }}>‹</span>
+              </button>
+
+              {/* smart suggestions header */}
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginTop: 6 }}>✨ إجراءات مقترحة لـ «{d.type}»</div>
+              {suggestions.map(s => (
+                <button key={s.kind} onClick={() => { onAction(s.kind, d); close(); }} style={{
                   display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 12,
                   border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', textAlign: 'right', fontFamily: 'inherit',
                 }}>
-                  <span style={{ fontSize: 22 }}>{it.icon}</span>
+                  <span style={{ fontSize: 22 }}>{s.icon}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{it.label}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 1 }}>{it.desc}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{s.label}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 1 }}>{s.desc}</div>
                   </div>
                   <span style={{ color: '#d1d5db' }}>‹</span>
                 </button>
@@ -3263,11 +3300,21 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
                 </div>
               </div>
               <div style={{ background: '#f0fdf4', borderRadius: 12, padding: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d', marginBottom: 8 }}>✨ اقتراحات إجرائية</div>
-                <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.9 }}>
-                  • إنشاء عملية مالية من هذا المستند<br />
-                  • إضافة عنصر متابعة للضمان/الانتهاء<br />
-                  • أرشفة المستند وربطه بالمشروع
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d', marginBottom: 10 }}>✨ إجراءات مقترحة — انقر للتنفيذ</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {suggestedActions(sheet.doc.type).map(s => (
+                    <button key={s.kind} onClick={() => { onAction(s.kind, sheet.doc); close(); }} style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderRadius: 10,
+                      border: '1px solid #bbf7d0', background: 'var(--surface)', cursor: 'pointer', textAlign: 'right', fontFamily: 'inherit',
+                    }}>
+                      <span style={{ fontSize: 19 }}>{s.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{s.label}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{s.desc}</div>
+                      </div>
+                      <span style={{ color: '#86efac' }}>‹</span>
+                    </button>
+                  ))}
                 </div>
               </div>
             </>
@@ -6072,10 +6119,15 @@ export default function App() {
     }
   };
 
-  // document → action bridges
-  const docAction = (action: 'tx' | 'tracking', doc: DocItem) => {
+  // document → action bridges (Document First): route to the right section + open its create form
+  const docAction = (action: DocActionKind, doc: DocItem) => {
+    setProjectId(doc.projectId);
     if (action === 'tx') { setPage('finance'); setCreateTx(true); }
-    else { setTrackingPreset({ name: doc.name, type: doc.type === 'عقد' ? 'عقد' : 'ضمان' }); setPage('trackings'); setCreateTracking(true); }
+    else if (action === 'tracking') { setTrackingPreset({ name: doc.name, type: doc.type === 'عقد' ? 'عقد' : doc.type === 'وثيقة رسمية' ? 'وثيقة' : 'ضمان' }); setPage('trackings'); setCreateTracking(true); }
+    else if (action === 'commitment') { setPage('commitments'); setCreateCommitment(true); }
+    else if (action === 'asset') { setPage('assets'); setCreateAsset(true); }
+    else if (action === 'receivable') { setPage('receivables'); setCreateReceivable(true); }
+    setNotifs(ns => [{ id: uid('n'), type: 'info', title: 'من المستند إلى إجراء', body: `تم فتح نموذج الإنشاء من المستند «${doc.name}».`, time: 'الآن', read: false, projectId: doc.projectId, ts: nowStamp() }, ...ns]);
   };
 
   // FAB dispatcher
