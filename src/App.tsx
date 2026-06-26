@@ -27,7 +27,7 @@ type Transaction = { id: string; projectId: string; type: TxType; description: s
 type Tracking = { id: string; name: string; type: string; icon: string; status: TrackingStatus; daysLeft: number; expiryDate: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
 type RequestItem = { id: string; title: string; amount: number; requestedBy: string; status: RequestStatus; date: string; type: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
 type DocItem = { id: string; name: string; type: string; date: string; size: string; status: string; projectId: string; aiRead: boolean; attachments?: Attachment[]; createdBy?: string };
-type Notif = { id: string; type: string; title: string; body: string; time: string; read: boolean; link?: Page };
+type Notif = { id: string; type: string; title: string; body: string; time: string; read: boolean; link?: Page; projectId?: string; section?: string; memberId?: string; ts?: string };
 // audit log entry — records every important event in the app
 type AuditEntry = { id: string; action: string; entity: string; detail: string; user: string; ts: string };
 
@@ -131,10 +131,10 @@ const INITIAL_DOCUMENTS: DocItem[] = [
 ];
 
 const INITIAL_NOTIFS: Notif[] = [
-  { id: 'n1', type: 'danger', title: 'تأمين السيارة منتهي', body: 'انتهى تأمين السيارة منذ 5 أيام. يرجى التجديد عبر قسم المتابعات والضمانات.', time: 'قبل ساعة', read: false, link: 'trackings' },
-  { id: 'n2', type: 'warning', title: 'ضمان يوشك على الانتهاء', body: 'ضمان ثلاجة المطبخ ينتهي خلال 12 يوم. الطرف: مؤسسة الإلكترونيات الحديثة.', time: 'قبل 3 ساعات', read: false, link: 'trackings' },
-  { id: 'n3', type: 'info', title: 'طلب جديد بانتظار موافقتك', body: 'طلب صرف مصروفات السفر بمبلغ 3,200 ر.س — مقدّم الطلب: أحمد العلي.', time: 'أمس', read: false, link: 'requests' },
-  { id: 'n4', type: 'success', title: 'تمت معالجة مستند', body: 'تمت قراءة فاتورة مورد يونيو بنجاح بواسطة محمد العمري.', time: 'أمس', read: true, link: 'documents' },
+  { id: 'n1', type: 'danger', title: 'تأمين السيارة منتهي', body: 'انتهى تأمين السيارة منذ 5 أيام. يرجى التجديد عبر قسم المتابعات والضمانات.', time: 'قبل ساعة', read: false, link: 'trackings', projectId: 'p1', section: 'trackings', ts: '2025-06-26 08:30' },
+  { id: 'n2', type: 'warning', title: 'ضمان يوشك على الانتهاء', body: 'ضمان ثلاجة المطبخ ينتهي خلال 12 يوم. الطرف: مؤسسة الإلكترونيات الحديثة.', time: 'قبل 3 ساعات', read: false, link: 'trackings', projectId: 'p1', section: 'trackings', ts: '2025-06-26 06:15' },
+  { id: 'n3', type: 'info', title: 'طلب جديد بانتظار موافقتك', body: 'طلب صرف مصروفات السفر بمبلغ 3,200 ر.س — مقدّم الطلب: أحمد العلي.', time: 'أمس', read: false, link: 'requests', projectId: 'p2', section: 'requests', ts: '2025-06-25 14:00' },
+  { id: 'n4', type: 'success', title: 'تمت معالجة مستند', body: 'تمت قراءة فاتورة مورد يونيو بنجاح بواسطة محمد العمري.', time: 'أمس', read: true, link: 'documents', projectId: 'p1', section: 'documents', ts: '2025-06-25 10:20' },
 ];
 
 const INITIAL_AUDIT: AuditEntry[] = [
@@ -169,6 +169,7 @@ const INITIAL_MEMBER_TXNS: MemberTxn[] = [
 const fmt = (n: number) => n.toLocaleString('ar-SA') + ' ر.س';
 const fmtNum = (n: number) => n.toLocaleString('ar-SA');
 const today = () => new Date().toISOString().slice(0, 10);
+const nowStamp = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
 const uid = (p: string) => p + Math.random().toString(36).slice(2, 8);
 const daysBetween = (iso: string) => Math.round((new Date(iso).getTime() - Date.now()) / 86400000);
 const statusFromDays = (d: number): TrackingStatus => d < 0 ? 'expired' : d <= 30 ? 'expiring' : 'active';
@@ -563,6 +564,30 @@ function StatCards({ cards }: { cards: { label: string; value: string | number; 
         </div>
       ))}
     </div>
+  );
+}
+
+// reusable unified filter bar: search + dropdown selects + clear
+type FilterDef = { key: string; placeholder: string; options: { v: string; l: string }[] };
+function FilterBar({ search, onSearch, filters, values, onChange, onClear, searchPlaceholder = '🔍 بحث...' }: {
+  search: string; onSearch: (v: string) => void;
+  filters: FilterDef[]; values: Record<string, string>; onChange: (key: string, v: string) => void;
+  onClear: () => void; searchPlaceholder?: string;
+}) {
+  const sel: React.CSSProperties = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', background: 'var(--surface)', color: 'var(--text)' };
+  const active = search !== '' || filters.some(f => values[f.key] && values[f.key] !== 'all');
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        <input value={search} onChange={e => onSearch(e.target.value)} placeholder={searchPlaceholder} style={{ ...sel, flex: 1, minWidth: 150 }} />
+        {filters.map(f => (
+          <select key={f.key} value={values[f.key] ?? 'all'} onChange={e => onChange(f.key, e.target.value)} style={sel}>
+            {f.options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+          </select>
+        ))}
+        {active && <button onClick={onClear} style={{ ...sel, color: 'var(--text-3)' }}>مسح الفلترة</button>}
+      </div>
+    </Card>
   );
 }
 // ═══════════════════════════════════════════
@@ -2879,26 +2904,95 @@ function Requests({ projectId, requests, members, onDecide, onSave, onDelete, op
 // ═══════════════════════════════════════════
 //  NOTIFICATIONS
 // ═══════════════════════════════════════════
-function Notifications({ notifs, onMarkRead, onMarkAll, onNav }: { notifs: Notif[]; onMarkRead: (id: string) => void; onMarkAll: () => void; onNav: (p: Page) => void }) {
+function Notifications({ notifs, projects, members, onMarkRead, onMarkAll, onNav }: { notifs: Notif[]; projects: Project[]; members: Member[]; onMarkRead: (id: string) => void; onMarkAll: () => void; onNav: (p: Page) => void }) {
   const icons: Record<string, string> = { warning: '⚠️', info: 'ℹ️', danger: '🔴', success: '✅' };
   const colors: Record<string, string> = { warning: '#fffbeb', info: '#eff6ff', danger: '#fef2f2', success: '#f0fdf4' };
-  const linkLabel: Record<string, string> = { trackings: 'المتابعات', requests: 'الطلبات', documents: 'المستندات', finance: 'المالية', projects: 'المشاريع' };
+  const linkLabel: Record<string, string> = { trackings: 'المتابعات', requests: 'الطلبات', documents: 'المستندات', finance: 'المالية', projects: 'المشاريع', projectDetail: 'المشروع' };
+  const sectionLabel: Record<string, string> = { trackings: 'متابعات', requests: 'طلبات', documents: 'مستندات', finance: 'مالية', members: 'أعضاء' };
+
+  const [search, setSearch] = useState('');
+  const [fProject, setFProject] = useState('all');
+  const [fSection, setFSection] = useState('all');
+  const [fMember, setFMember] = useState('all');
+  const [fRead, setFRead] = useState('all');
+  const [fPeriod, setFPeriod] = useState('all');
+  const [sort, setSort] = useState('newest');
+
+  const inPeriod = (ts?: string) => {
+    if (fPeriod === 'all' || !ts) return true;
+    const d = new Date(ts.replace(' ', 'T')); const now = new Date('2025-06-26T23:59');
+    const days = (now.getTime() - d.getTime()) / 86400000;
+    if (fPeriod === 'today') return days <= 1;
+    if (fPeriod === 'week') return days <= 7;
+    if (fPeriod === 'month') return days <= 31;
+    if (fPeriod === 'quarter') return days <= 92;
+    return true;
+  };
+
+  const filtered = notifs
+    .filter(n => fProject === 'all' ? true : n.projectId === fProject)
+    .filter(n => fSection === 'all' ? true : n.section === fSection)
+    .filter(n => fMember === 'all' ? true : n.memberId === fMember)
+    .filter(n => fRead === 'all' ? true : fRead === 'read' ? n.read : !n.read)
+    .filter(n => inPeriod(n.ts))
+    .filter(n => search.trim() === '' ? true : (n.title + n.body).includes(search.trim()))
+    .sort((a, b) => {
+      const ta = a.ts ?? '', tb = b.ts ?? '';
+      return sort === 'newest' ? tb.localeCompare(ta) : ta.localeCompare(tb);
+    });
+
+  const clearFilters = () => { setSearch(''); setFProject('all'); setFSection('all'); setFMember('all'); setFRead('all'); setFPeriod('all'); };
+  const unreadCount = notifs.filter(n => !n.read).length;
+
   return (
-    <div style={{ padding: 24, maxWidth: 700 }}>
-      <PageHeader title="الإشعارات والتنبيهات" action={<Btn size="sm" variant="outline" onClick={onMarkAll}>✓ تعليم الكل كمقروء</Btn>} />
+    <div style={{ padding: 24, maxWidth: 760 }}>
+      <PageHeader title="الإشعارات والتنبيهات" subtitle={`${unreadCount} غير مقروء من ${notifs.length}`} action={<Btn size="sm" variant="outline" onClick={onMarkAll}>✓ تعليم الكل كمقروء</Btn>} />
+
+      <FilterBar
+        search={search} onSearch={setSearch} searchPlaceholder="🔍 بحث في الإشعارات..."
+        values={{ project: fProject, section: fSection, member: fMember, read: fRead, period: fPeriod, sort }}
+        onChange={(k, v) => { if (k === 'project') setFProject(v); else if (k === 'section') setFSection(v); else if (k === 'member') setFMember(v); else if (k === 'read') setFRead(v); else if (k === 'period') setFPeriod(v); else if (k === 'sort') setSort(v); }}
+        onClear={clearFilters}
+        filters={[
+          { key: 'project', placeholder: 'المشروع', options: [{ v: 'all', l: 'كل المشاريع' }, ...projects.map(p => ({ v: p.id, l: p.name }))] },
+          { key: 'section', placeholder: 'القسم', options: [{ v: 'all', l: 'كل الأقسام' }, { v: 'trackings', l: 'متابعات' }, { v: 'requests', l: 'طلبات' }, { v: 'documents', l: 'مستندات' }, { v: 'finance', l: 'مالية' }, { v: 'members', l: 'أعضاء' }] },
+          { key: 'member', placeholder: 'العضو', options: [{ v: 'all', l: 'كل الأعضاء' }, ...members.map(m => ({ v: m.id, l: m.name }))] },
+          { key: 'read', placeholder: 'الحالة', options: [{ v: 'all', l: 'الكل' }, { v: 'unread', l: 'غير مقروء' }, { v: 'read', l: 'مقروء' }] },
+          { key: 'period', placeholder: 'الفترة', options: [{ v: 'all', l: 'كل الفترات' }, { v: 'today', l: 'اليوم' }, { v: 'week', l: 'آخر أسبوع' }, { v: 'month', l: 'آخر شهر' }, { v: 'quarter', l: 'آخر ربع' }] },
+          { key: 'sort', placeholder: 'الترتيب', options: [{ v: 'newest', l: 'الأحدث أولاً' }, { v: 'oldest', l: 'الأقدم أولاً' }] },
+        ]}
+      />
+
+      <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 12 }}>عرض {filtered.length} إشعار</div>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {notifs.map(n => (
+        {filtered.length === 0 && (
+          <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🔔</div>
+            <div style={{ fontSize: 14 }}>لا توجد إشعارات مطابقة للفلترة</div>
+          </Card>
+        )}
+        {filtered.map(n => {
+          const proj = projects.find(p => p.id === n.projectId);
+          return (
           <div key={n.id} style={{
             background: n.read ? 'var(--surface)' : colors[n.type], borderRadius: 14, padding: '14px 18px',
             border: `1px solid ${n.read ? 'var(--border)' : 'transparent'}`, display: 'flex', alignItems: 'flex-start', gap: 14, transition: 'all .2s',
           }}>
             <span style={{ fontSize: 22, flexShrink: 0 }}>{icons[n.type]}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3, gap: 8 }}>
                 <div style={{ fontWeight: n.read ? 400 : 600, fontSize: 14, color: 'var(--text)' }}>{n.title}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-3)', flexShrink: 0, marginRight: 10 }}>{n.time}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', flexShrink: 0 }}>{n.time}</div>
               </div>
               <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.7 }}>{n.body}</div>
+              {/* meta chips: project + section */}
+              {(proj || n.section) && (
+                <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                  {proj && <span style={{ fontSize: 10.5, background: 'var(--surface-3)', color: 'var(--text-3)', padding: '2px 8px', borderRadius: 99 }}>{proj.icon} {proj.name}</span>}
+                  {n.section && sectionLabel[n.section] && <span style={{ fontSize: 10.5, background: 'var(--surface-3)', color: 'var(--text-3)', padding: '2px 8px', borderRadius: 99 }}>{sectionLabel[n.section]}</span>}
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                 {n.link && (
                   <button onClick={() => { onMarkRead(n.id); onNav(n.link!); }} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '5px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -2910,7 +3004,8 @@ function Notifications({ notifs, onMarkRead, onMarkAll, onNav }: { notifs: Notif
             </div>
             {!n.read && <span style={{ width: 8, height: 8, borderRadius: 99, background: '#2563eb', flexShrink: 0, marginTop: 5 }} />}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -3164,10 +3259,33 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, o
 function AuditLog({ audit, onNav }: { audit: AuditEntry[]; onNav: (p: Page) => void }) {
   const [search, setSearch] = useState('');
   const [fAction, setFAction] = useState('all');
+  const [fEntity, setFEntity] = useState('all');
+  const [fUser, setFUser] = useState('all');
+  const [fPeriod, setFPeriod] = useState('all');
+  const [sort, setSort] = useState('newest');
   const actions = Array.from(new Set(audit.map(a => a.action)));
+  const entities = Array.from(new Set(audit.map(a => a.entity)));
+  const users = Array.from(new Set(audit.map(a => a.user)));
+
+  const inPeriod = (ts: string) => {
+    if (fPeriod === 'all') return true;
+    const d = new Date(ts.replace(' ', 'T')); const now = new Date('2025-06-26T23:59');
+    const days = (now.getTime() - d.getTime()) / 86400000;
+    if (fPeriod === 'today') return days <= 1;
+    if (fPeriod === 'week') return days <= 7;
+    if (fPeriod === 'month') return days <= 31;
+    return true;
+  };
+
   const filtered = audit
     .filter(a => fAction === 'all' ? true : a.action === fAction)
-    .filter(a => search.trim() === '' ? true : (a.action + a.entity + a.detail + a.user).includes(search.trim()));
+    .filter(a => fEntity === 'all' ? true : a.entity === fEntity)
+    .filter(a => fUser === 'all' ? true : a.user === fUser)
+    .filter(a => inPeriod(a.ts))
+    .filter(a => search.trim() === '' ? true : (a.action + a.entity + a.detail + a.user).includes(search.trim()))
+    .sort((a, b) => sort === 'newest' ? b.ts.localeCompare(a.ts) : a.ts.localeCompare(b.ts));
+
+  const clearFilters = () => { setSearch(''); setFAction('all'); setFEntity('all'); setFUser('all'); setFPeriod('all'); };
 
   // map entity → destination page (clickable navigation)
   const entityNav: Record<string, Page> = {
@@ -3180,21 +3298,23 @@ function AuditLog({ audit, onNav }: { audit: AuditEntry[]; onNav: (p: Page) => v
     : action.includes('تعديل') ? '#a16207' : action.includes('اعتماد') || action.includes('دخول') ? '#1d4ed8'
     : action.includes('رفض') || action.includes('خروج') ? '#9333ea' : '#64748b';
 
-  const selStyle: React.CSSProperties = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', background: 'var(--surface)', color: 'var(--text)' };
-
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
       <PageHeader title="سجل العمليات" subtitle="تتبّع كل الأحداث المهمة داخل النظام" />
 
-      <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 بحث في السجل..." style={{ ...selStyle, flex: 1, minWidth: 160 }} />
-          <select value={fAction} onChange={e => setFAction(e.target.value)} style={selStyle}>
-            <option value="all">كل الإجراءات</option>
-            {actions.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
-        </div>
-      </Card>
+      <FilterBar
+        search={search} onSearch={setSearch} searchPlaceholder="🔍 بحث في السجل..."
+        values={{ action: fAction, entity: fEntity, user: fUser, period: fPeriod, sort }}
+        onChange={(k, v) => { if (k === 'action') setFAction(v); else if (k === 'entity') setFEntity(v); else if (k === 'user') setFUser(v); else if (k === 'period') setFPeriod(v); else if (k === 'sort') setSort(v); }}
+        onClear={clearFilters}
+        filters={[
+          { key: 'action', placeholder: 'الإجراء', options: [{ v: 'all', l: 'كل الإجراءات' }, ...actions.map(a => ({ v: a, l: a }))] },
+          { key: 'entity', placeholder: 'الكيان', options: [{ v: 'all', l: 'كل الكيانات' }, ...entities.map(e => ({ v: e, l: e }))] },
+          { key: 'user', placeholder: 'المنفّذ', options: [{ v: 'all', l: 'كل المنفّذين' }, ...users.map(u => ({ v: u, l: u }))] },
+          { key: 'period', placeholder: 'الفترة', options: [{ v: 'all', l: 'كل الفترات' }, { v: 'today', l: 'اليوم' }, { v: 'week', l: 'آخر أسبوع' }, { v: 'month', l: 'آخر شهر' }] },
+          { key: 'sort', placeholder: 'الترتيب', options: [{ v: 'newest', l: 'الأحدث أولاً' }, { v: 'oldest', l: 'الأقدم أولاً' }] },
+        ]}
+      />
 
       <Card style={{ padding: 0, overflow: 'hidden' }}>
         {filtered.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>لا توجد سجلات مطابقة</div>}
@@ -3483,15 +3603,16 @@ export default function App() {
       setTransactions(list => [newTx, ...list]);
       const notif: Notif = {
         id: uid('n'), type: 'success', title: 'تم اعتماد طلب',
-        body: `تم اعتماد "${req.title}" وإنشاء عملية مالية بمبلغ ${fmt(req.amount)}.`,
-        time: 'الآن', read: false,
+        body: `تم اعتماد "${req.title}" وإنشاء عملية مالية بمبلغ ${fmt(req.amount)}. مقدّم الطلب: ${req.requestedBy}.`,
+        time: 'الآن', read: false, link: 'requests', projectId: req.projectId, section: 'requests', memberId: req.memberId, ts: nowStamp(),
       };
       setNotifs(ns => [notif, ...ns]);
     }
     if (req && status === 'rejected') {
       const notif: Notif = {
         id: uid('n'), type: 'warning', title: 'تم رفض طلب',
-        body: `تم رفض "${req.title}".`, time: 'الآن', read: false,
+        body: `تم رفض "${req.title}" المقدّم من ${req.requestedBy}.`, time: 'الآن', read: false,
+        link: 'requests', projectId: req.projectId, section: 'requests', memberId: req.memberId, ts: nowStamp(),
       };
       setNotifs(ns => [notif, ...ns]);
     }
@@ -3572,7 +3693,7 @@ export default function App() {
         note: `حركة على رصيد العضو (${txn.type})`,
       };
       setTransactions(list => [projTx, ...list]);
-      setNotifs(ns => [{ id: uid('n'), type: 'success', title: 'تمت حركة على رصيد عضو', body: `${ti?.label} بمبلغ ${fmt(txn.amount)} لـ ${m?.name ?? ''}.`, time: 'الآن', read: false }, ...ns]);
+      setNotifs(ns => [{ id: uid('n'), type: 'success', title: 'تمت حركة على رصيد عضو', body: `${ti?.label} بمبلغ ${fmt(txn.amount)} لـ ${m?.name ?? ''}.`, time: 'الآن', read: false, link: 'projectDetail', projectId: txn.projectId, section: 'members', memberId: txn.memberId, ts: nowStamp() }, ...ns]);
     }
   };
 
@@ -3602,7 +3723,7 @@ export default function App() {
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} />;
       case 'trackings': return <Trackings projectId={projectId} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
       case 'requests': return <Requests projectId={projectId} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
-      case 'notifications': return <Notifications notifs={notifs} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} />;
+      case 'notifications': return <Notifications notifs={notifs} projects={projects} members={members} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} />;
       case 'audit': return <AuditLog audit={audit} onNav={setPage} />;
       case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => { logAudit('تسجيل خروج', 'النظام', 'تم تسجيل الخروج'); setAuthed(false); }} />;
       case 'subscription': return <Subscription current={plan} onChoose={setPlan} />;
