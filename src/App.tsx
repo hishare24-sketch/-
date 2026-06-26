@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 // ═══════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════
-type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail';
+type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail' | 'audit';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 // unified attachment (image/file) — preview kept in-session, real upload later via backend
@@ -27,6 +27,8 @@ type Tracking = { id: string; name: string; type: string; icon: string; status: 
 type RequestItem = { id: string; title: string; amount: number; requestedBy: string; status: RequestStatus; date: string; type: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[] };
 type DocItem = { id: string; name: string; type: string; date: string; size: string; status: string; projectId: string; aiRead: boolean; attachments?: Attachment[] };
 type Notif = { id: string; type: string; title: string; body: string; time: string; read: boolean };
+// audit log entry — records every important event in the app
+type AuditEntry = { id: string; action: string; entity: string; detail: string; user: string; ts: string };
 
 // ═══════════════════════════════════════════
 //  CONSTANTS (type options per module)
@@ -125,6 +127,12 @@ const INITIAL_NOTIFS: Notif[] = [
   { id: 'n2', type: 'warning', title: 'ضمان يوشك على الانتهاء', body: 'ضمان ثلاجة المطبخ ينتهي خلال 12 يوم.', time: 'قبل 3 ساعات', read: false },
   { id: 'n3', type: 'info', title: 'طلب جديد بانتظار موافقتك', body: 'طلب صرف مصروفات السفر بمبلغ 3,200 ر.س.', time: 'أمس', read: false },
   { id: 'n4', type: 'success', title: 'تمت معالجة مستند', body: 'تمت قراءة فاتورة مورد يونيو بنجاح.', time: 'أمس', read: true },
+];
+
+const INITIAL_AUDIT: AuditEntry[] = [
+  { id: 'a1', action: 'تسجيل دخول', entity: 'النظام', detail: 'تسجيل دخول ناجح', user: 'محمد العمري', ts: '2025-06-26 09:12' },
+  { id: 'a2', action: 'إنشاء', entity: 'عملية مالية', detail: 'إيراد مبيعات — 12,000 ر.س', user: 'محمد العمري', ts: '2025-06-26 09:20' },
+  { id: 'a3', action: 'اعتماد', entity: 'طلب', detail: 'اعتماد طلب صرف مصروفات السفر', user: 'سارة المحمد', ts: '2025-06-25 16:40' },
 ];
 
 const INITIAL_MEMBERS: Member[] = [
@@ -493,6 +501,7 @@ const NAV = [
   { id: 'trackings',     icon: '◷',  label: 'المتابعات والضمانات' },
   { id: 'requests',      icon: '◫',  label: 'الطلبات والموافقات' },
   { id: 'notifications', icon: '◌',  label: 'الإشعارات' },
+  { id: 'audit',         icon: '⊟',  label: 'سجل التدقيق' },
   { id: 'settings',      icon: '◎',  label: 'الإعدادات' },
 ];
 
@@ -2176,17 +2185,19 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
 // ═══════════════════════════════════════════
 //  TRACKINGS  (add by type / view / edit)
 // ═══════════════════════════════════════════
-function TrackingForm({ initial, projectId, onSave, onCancel }: {
-  initial?: Tracking; projectId: string;
+function TrackingForm({ initial, projectId, members, onSave, onCancel }: {
+  initial?: Tracking; projectId: string; members: Member[];
   onSave: (t: Omit<Tracking, 'id'> & { id?: string }) => void; onCancel: () => void;
 }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [type, setType] = useState(initial?.type ?? TRACKING_TYPES[0].id);
   const [expiryDate, setExpiryDate] = useState(initial?.expiryDate ?? '');
   const [note, setNote] = useState(initial?.note ?? '');
+  const [memberId, setMemberId] = useState(initial?.memberId ?? '');
   const [attachments, setAttachments] = useState<Attachment[]>(initial?.attachments ?? []);
   const valid = name.trim().length > 0 && expiryDate.length > 0;
   const typeIcon = TRACKING_TYPES.find(t => t.id === type)?.icon ?? '🛡️';
+  const projMembers = members.filter(m => m.projectId === projectId);
 
   return (
     <>
@@ -2199,6 +2210,9 @@ function TrackingForm({ initial, projectId, onSave, onCancel }: {
       <Field label="تاريخ الانتهاء">
         <TextInput type="date" value={expiryDate} onChange={setExpiryDate} />
       </Field>
+      <Field label="إسناد لعضو (اختياري)">
+        <Select value={memberId} onChange={setMemberId} options={[{ v: '', l: 'بدون إسناد' }, ...projMembers.map(m => ({ v: m.id, l: m.name }))]} />
+      </Field>
       <Field label="ملاحظات (اختياري)">
         <TextArea value={note} onChange={setNote} placeholder="رقم الضمان، الجهة، تفاصيل..." />
       </Field>
@@ -2209,15 +2223,15 @@ function TrackingForm({ initial, projectId, onSave, onCancel }: {
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
         <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => {
           const d = daysBetween(expiryDate);
-          onSave({ id: initial?.id, name: name.trim(), type, icon: initial?.icon ?? typeIcon, status: statusFromDays(d), daysLeft: d, expiryDate, projectId, note, attachments });
+          onSave({ id: initial?.id, name: name.trim(), type, icon: initial?.icon ?? typeIcon, status: statusFromDays(d), daysLeft: d, expiryDate, projectId, note, memberId: memberId || undefined, attachments });
         }}>{initial ? 'حفظ التعديلات' : 'إضافة المتابعة'}</Btn>
       </div>
     </>
   );
 }
 
-function Trackings({ projectId, trackings, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate, presetName, presetType }: {
-  projectId: string; trackings: Tracking[];
+function Trackings({ projectId, trackings, members, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate, presetName, presetType }: {
+  projectId: string; trackings: Tracking[]; members: Member[];
   onSave: (t: Omit<Tracking, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
   openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; presetName?: string; presetType?: string;
 }) {
@@ -2298,14 +2312,14 @@ function Trackings({ projectId, trackings, onSave, onDelete, openCreate, onOpenC
 
       {/* Create */}
       <Sheet open={openCreate} onClose={onCloseCreate} title="متابعة جديدة">
-        <TrackingForm key={presetName ?? 'new'} projectId={projectId}
+        <TrackingForm key={presetName ?? 'new'} projectId={projectId} members={members}
           initial={presetName ? { id: '', name: presetName, type: presetType ?? TRACKING_TYPES[0].id, icon: TRACKING_TYPES.find(x => x.id === presetType)?.icon ?? '🛡️', status: 'active', daysLeft: 0, expiryDate: '', projectId } : undefined}
           onSave={(t) => { onSave(t); onCloseCreate(); }} onCancel={onCloseCreate} />
       </Sheet>
 
       {/* Edit */}
       <Sheet open={sheet?.mode === 'edit'} onClose={close} title="تعديل المتابعة">
-        {sheet?.mode === 'edit' && <TrackingForm key={sheet.tr.id} initial={sheet.tr} projectId={projectId} onSave={(t) => { onSave(t); close(); }} onCancel={close} />}
+        {sheet?.mode === 'edit' && <TrackingForm key={sheet.tr.id} initial={sheet.tr} projectId={projectId} members={members} onSave={(t) => { onSave(t); close(); }} onCancel={close} />}
       </Sheet>
 
       {/* View */}
@@ -2349,8 +2363,8 @@ function Trackings({ projectId, trackings, onSave, onDelete, openCreate, onOpenC
 // ═══════════════════════════════════════════
 //  REQUESTS  (add by type / view / edit)
 // ═══════════════════════════════════════════
-function RequestForm({ initial, projectId, onSave, onCancel }: {
-  initial?: RequestItem; projectId: string;
+function RequestForm({ initial, projectId, members, onSave, onCancel }: {
+  initial?: RequestItem; projectId: string; members: Member[];
   onSave: (r: Omit<RequestItem, 'id'> & { id?: string }) => void; onCancel: () => void;
 }) {
   const [title, setTitle] = useState(initial?.title ?? '');
@@ -2358,8 +2372,10 @@ function RequestForm({ initial, projectId, onSave, onCancel }: {
   const [amount, setAmount] = useState<number | ''>(initial?.amount ?? '');
   const [requestedBy, setRequestedBy] = useState(initial?.requestedBy ?? 'محمد العمري');
   const [note, setNote] = useState(initial?.note ?? '');
+  const [memberId, setMemberId] = useState(initial?.memberId ?? '');
   const [attachments, setAttachments] = useState<Attachment[]>(initial?.attachments ?? []);
   const valid = title.trim().length > 0 && amount !== '' && Number(amount) > 0;
+  const projMembers = members.filter(m => m.projectId === projectId);
 
   return (
     <>
@@ -2375,6 +2391,9 @@ function RequestForm({ initial, projectId, onSave, onCancel }: {
       <Field label="مقدّم الطلب">
         <TextInput value={requestedBy} onChange={setRequestedBy} placeholder="الاسم" />
       </Field>
+      <Field label="إسناد لعضو (اختياري)">
+        <Select value={memberId} onChange={setMemberId} options={[{ v: '', l: 'بدون إسناد' }, ...projMembers.map(m => ({ v: m.id, l: m.name }))]} />
+      </Field>
       <Field label="ملاحظات (اختياري)">
         <TextArea value={note} onChange={setNote} placeholder="مبرر الطلب أو تفاصيل..." />
       </Field>
@@ -2385,15 +2404,15 @@ function RequestForm({ initial, projectId, onSave, onCancel }: {
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
         <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
           id: initial?.id, title: title.trim(), type, amount: amount === '' ? 0 : amount,
-          requestedBy, status: initial?.status ?? 'pending', date: initial?.date ?? today(), projectId, note, attachments,
+          requestedBy, status: initial?.status ?? 'pending', date: initial?.date ?? today(), projectId, note, memberId: memberId || undefined, attachments,
         })}>{initial ? 'حفظ التعديلات' : 'إرسال الطلب'}</Btn>
       </div>
     </>
   );
 }
 
-function Requests({ projectId, requests, onDecide, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate }: {
-  projectId: string; requests: RequestItem[];
+function Requests({ projectId, requests, members, onDecide, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate }: {
+  projectId: string; requests: RequestItem[]; members: Member[];
   onDecide: (id: string, status: RequestStatus) => void;
   onSave: (r: Omit<RequestItem, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
   openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void;
@@ -2454,12 +2473,12 @@ function Requests({ projectId, requests, onDecide, onSave, onDelete, openCreate,
 
       {/* Create */}
       <Sheet open={openCreate} onClose={onCloseCreate} title="طلب جديد">
-        <RequestForm projectId={projectId} onSave={(r) => { onSave(r); onCloseCreate(); }} onCancel={onCloseCreate} />
+        <RequestForm projectId={projectId} members={members} onSave={(r) => { onSave(r); onCloseCreate(); }} onCancel={onCloseCreate} />
       </Sheet>
 
       {/* Edit */}
       <Sheet open={sheet?.mode === 'edit'} onClose={close} title="تعديل الطلب">
-        {sheet?.mode === 'edit' && <RequestForm key={sheet.req.id} initial={sheet.req} projectId={projectId} onSave={(r) => { onSave(r); close(); }} onCancel={close} />}
+        {sheet?.mode === 'edit' && <RequestForm key={sheet.req.id} initial={sheet.req} projectId={projectId} members={members} onSave={(r) => { onSave(r); close(); }} onCancel={close} />}
       </Sheet>
 
       {/* View */}
@@ -2775,6 +2794,63 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, o
   );
 }
 
+// ═══════════════════════════════════════════
+//  AUDIT LOG (سجل التدقيق لكل الأحداث)
+// ═══════════════════════════════════════════
+function AuditLog({ audit }: { audit: AuditEntry[] }) {
+  const [search, setSearch] = useState('');
+  const [fAction, setFAction] = useState('all');
+  const actions = Array.from(new Set(audit.map(a => a.action)));
+  const filtered = audit
+    .filter(a => fAction === 'all' ? true : a.action === fAction)
+    .filter(a => search.trim() === '' ? true : (a.action + a.entity + a.detail + a.user).includes(search.trim()));
+
+  const actionColor = (action: string) =>
+    action.includes('حذف') ? '#b91c1c' : action.includes('إنشاء') ? '#15803d'
+    : action.includes('تعديل') ? '#a16207' : action.includes('اعتماد') || action.includes('دخول') ? '#1d4ed8'
+    : action.includes('رفض') || action.includes('خروج') ? '#9333ea' : '#64748b';
+
+  const selStyle: React.CSSProperties = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', background: 'var(--surface)', color: 'var(--text)' };
+
+  return (
+    <div style={{ padding: 24, maxWidth: 900 }}>
+      <PageHeader title="سجل التدقيق" subtitle="تتبّع كل الأحداث المهمة داخل النظام" />
+
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 بحث في السجل..." style={{ ...selStyle, flex: 1, minWidth: 160 }} />
+          <select value={fAction} onChange={e => setFAction(e.target.value)} style={selStyle}>
+            <option value="all">كل الإجراءات</option>
+            {actions.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+      </Card>
+
+      <Card style={{ padding: 0, overflow: 'hidden' }}>
+        {filtered.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>لا توجد سجلات مطابقة</div>}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {filtered.map(a => (
+            <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ width: 8, height: 8, borderRadius: 99, background: actionColor(a.action), marginTop: 6, flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: actionColor(a.action) }}>{a.action}</span>
+                  <span style={{ fontSize: 11, background: 'var(--surface-3)', color: 'var(--text-3)', padding: '2px 8px', borderRadius: 99 }}>{a.entity}</span>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 3 }}>{a.detail}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>👤 {a.user} · 🕐 {a.ts}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 12, textAlign: 'center' }}>
+        📌 يُسجّل الجهاز وعنوان IP والبيانات قبل/بعد التعديل عند ربط النظام بالـ Backend.
+      </div>
+    </div>
+  );
+}
+
 function Subscription({ current, onChoose }: { current: string; onChoose: (id: string) => void }) {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
   return (
@@ -3002,6 +3078,9 @@ export default function App() {
   const [members, setMembers] = usePersist<Member[]>('mz_members', INITIAL_MEMBERS);
   const [memberTxns, setMemberTxns] = usePersist<MemberTxn[]>('mz_member_txns', INITIAL_MEMBER_TXNS);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
+  const [audit, setAudit] = usePersist<AuditEntry[]>('mz_audit', INITIAL_AUDIT);
+  const logAudit = (action: string, entity: string, detail: string) =>
+    setAudit(list => [{ id: uid('a'), action, entity, detail, user: 'محمد العمري', ts: new Date().toISOString().slice(0, 16).replace('T', ' ') }, ...list].slice(0, 200));
 
   // create-sheet flags triggered by FAB / headers
   const [createTx, setCreateTx] = useState(false);
@@ -3016,6 +3095,7 @@ export default function App() {
   const markAll = () => setNotifs(n => n.map(x => ({ ...x, read: true })));
   const decideRequest = (id: string, status: RequestStatus) => {
     const req = requests.find(r => r.id === id);
+    logAudit(status === 'approved' ? 'اعتماد' : 'رفض', 'طلب', req?.title ?? '');
     setRequests(rs => rs.map(r => r.id === id ? { ...r, status } : r));
     if (req && status === 'approved') {
       // approved request → create a matching expense transaction
@@ -3044,11 +3124,14 @@ export default function App() {
   };
 
   // upsert helpers (id present = edit, absent = create)
-  const saveProject = (p: Omit<Project, 'id'> & { id?: string }) =>
+  const saveProject = (p: Omit<Project, 'id'> & { id?: string }) => {
+    logAudit(p.id ? 'تعديل' : 'إنشاء', 'مشروع', p.name);
     setProjects(list => p.id ? list.map(x => x.id === p.id ? { ...x, ...p } as Project : x) : [...list, { ...p, id: uid('p') }]);
-  const deleteProject = (id: string) => { setProjects(l => l.filter(x => x.id !== id)); if (projectId === id) setProjectId(projects.find(p => p.id !== id)?.id ?? ''); };
+  };
+  const deleteProject = (id: string) => { const pr = projects.find(p => p.id === id); logAudit('حذف', 'مشروع', pr?.name ?? ''); setProjects(l => l.filter(x => x.id !== id)); if (projectId === id) setProjectId(projects.find(p => p.id !== id)?.id ?? ''); };
 
   const saveTx = (t: Omit<Transaction, 'id'> & { id?: string }) => {
+    logAudit(t.id ? 'تعديل' : 'إنشاء', 'عملية مالية', `${t.description} — ${fmt(t.amount)}`);
     // Editing an existing transaction
     if (t.id) { setTransactions(list => list.map(x => x.id === t.id ? { ...x, ...t } as Transaction : x)); return; }
     // New transfer → create two linked records (out from source, in to target)
@@ -3071,17 +3154,22 @@ export default function App() {
   };
   const deleteTx = (id: string) => setTransactions(list => {
     const tx = list.find(x => x.id === id);
+    logAudit('حذف', 'عملية مالية', tx?.description ?? '');
     if (tx?.linkId) return list.filter(x => x.linkId !== tx.linkId); // delete both sides of a transfer
     return list.filter(x => x.id !== id);
   });
 
-  const saveTracking = (t: Omit<Tracking, 'id'> & { id?: string }) =>
+  const saveTracking = (t: Omit<Tracking, 'id'> & { id?: string }) => {
+    logAudit(t.id ? 'تعديل' : 'إنشاء', 'متابعة', t.name);
     setTrackings(list => t.id ? list.map(x => x.id === t.id ? { ...x, ...t } as Tracking : x) : [{ ...t, id: uid('tr') }, ...list]);
-  const deleteTracking = (id: string) => setTrackings(l => l.filter(x => x.id !== id));
+  };
+  const deleteTracking = (id: string) => { const tr = trackings.find(x => x.id === id); logAudit('حذف', 'متابعة', tr?.name ?? ''); setTrackings(l => l.filter(x => x.id !== id)); };
 
-  const saveRequest = (r: Omit<RequestItem, 'id'> & { id?: string }) =>
+  const saveRequest = (r: Omit<RequestItem, 'id'> & { id?: string }) => {
+    logAudit(r.id ? 'تعديل' : 'إنشاء', 'طلب', r.title);
     setRequests(list => r.id ? list.map(x => x.id === r.id ? { ...x, ...r } as RequestItem : x) : [{ ...r, id: uid('r') }, ...list]);
-  const deleteRequest = (id: string) => setRequests(l => l.filter(x => x.id !== id));
+  };
+  const deleteRequest = (id: string) => { const rq = requests.find(x => x.id === id); logAudit('حذف', 'طلب', rq?.title ?? ''); setRequests(l => l.filter(x => x.id !== id)); };
 
   const saveDoc = (d: Omit<DocItem, 'id'> & { id?: string }) =>
     setDocuments(list => d.id ? list.map(x => x.id === d.id ? { ...x, ...d } as DocItem : x) : [{ ...d, id: uid('d') }, ...list]);
@@ -3138,10 +3226,11 @@ export default function App() {
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} />;
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} />;
-      case 'trackings': return <Trackings projectId={projectId} trackings={trackings} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
-      case 'requests': return <Requests projectId={projectId} requests={requests} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
+      case 'trackings': return <Trackings projectId={projectId} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
+      case 'requests': return <Requests projectId={projectId} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
       case 'notifications': return <Notifications notifs={notifs} onMarkRead={markRead} onMarkAll={markAll} />;
-      case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => setAuthed(false)} />;
+      case 'audit': return <AuditLog audit={audit} />;
+      case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => { logAudit('تسجيل خروج', 'النظام', 'تم تسجيل الخروج'); setAuthed(false); }} />;
       case 'subscription': return <Subscription current={plan} onChoose={setPlan} />;
       default: return null;
     }
@@ -3154,7 +3243,7 @@ export default function App() {
     return (
       <>
         <style>{KEYFRAMES}</style>
-        <Login onAuth={() => setAuthed(true)} />
+        <Login onAuth={() => { logAudit('تسجيل دخول', 'النظام', 'تسجيل دخول ناجح'); setAuthed(true); }} />
       </>
     );
   }
