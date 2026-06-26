@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 // ═══════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════
-type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'reports' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail' | 'audit' | 'customize';
+type Page = 'overview' | 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'reports' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail' | 'audit' | 'customize';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 // unified attachment (image/file) — preview kept in-session, real upload later via backend
@@ -822,7 +822,8 @@ function FilterBar({ search, onSearch, filters, values, onChange, onClear, searc
 //  SIDEBAR
 // ═══════════════════════════════════════════
 const NAV = [
-  { id: 'dashboard',     icon: '◉',  label: 'الرئيسية' },
+  { id: 'overview',      icon: '⬢',  label: 'النظرة الشاملة' },
+  { id: 'dashboard',     icon: '◉',  label: 'لوحة المشروع' },
   { id: 'projects',      icon: '⬡',  label: 'المشاريع' },
   { id: 'finance',       icon: '◈',  label: 'الإدارة المالية' },
   { id: 'ledger',        icon: '⛃',  label: 'السجل المالي' },
@@ -1013,6 +1014,160 @@ function ActionCenter({ unread, onAction, onNav }: {
 // ═══════════════════════════════════════════
 //  DASHBOARD
 // ═══════════════════════════════════════════
+// ═══════════════════════════════════════════
+//  OVERVIEW (النظرة الشاملة — كل المشاريع للمشترك)
+// ═══════════════════════════════════════════
+function Overview({ projects, transactions, trackings, requests, receivables, commitments, onNav, onProject }: {
+  projects: Project[]; transactions: Transaction[]; trackings: Tracking[]; requests: RequestItem[];
+  receivables: Receivable[]; commitments: Commitment[];
+  onNav: (p: Page) => void; onProject: (id: string) => void;
+}) {
+  const palette = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#dc2626', '#0891b2', '#db2777', '#65a30d'];
+  const projName = (id: string) => projects.find(p => p.id === id)?.name ?? '—';
+
+  // totals across all projects
+  const totalBalance = projects.reduce((s, p) => s + computeBalance(p, transactions), 0);
+  const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const recvOpen = receivables.filter(r => r.kind === 'receivable' && r.status !== 'settled').reduce((s, r) => s + recvRemaining(r), 0);
+  const payOpen = receivables.filter(r => r.kind === 'payable' && r.status !== 'settled').reduce((s, r) => s + recvRemaining(r), 0);
+
+  // alerts across all projects
+  const urgentTrackings = trackings.filter(t => t.status === 'expiring' || t.status === 'expired');
+  const pendingReqs = requests.filter(r => r.status === 'pending');
+  const overdueRecv = receivables.filter(r => r.status !== 'settled' && r.dueDate && r.dueDate < today());
+  const dueCommitments = commitments.filter(c => c.active && !commitmentDone(c) && c.nextDue <= new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
+
+  // balance distribution donut
+  const balanceSegments = projects
+    .map((p, i) => ({ value: Math.max(0, Math.round(computeBalance(p, transactions))), color: palette[i % palette.length], label: p.name }))
+    .filter(s => s.value > 0);
+
+  return (
+    <div style={{ padding: 24, maxWidth: 1100 }}>
+      <PageHeader title="النظرة الشاملة" subtitle={`${projects.length} مشروع · رؤية موحّدة لكل أعمالك`} />
+
+      {/* top totals */}
+      <StatCards cards={[
+        { label: 'إجمالي الأرصدة', value: fmtNum(Math.round(totalBalance)), color: '#1d4ed8', bg: '#eff6ff', icon: '💰' },
+        { label: 'إجمالي الإيرادات', value: fmtNum(Math.round(totalIncome)), color: '#15803d', bg: '#f0fdf4', icon: '↓' },
+        { label: 'إجمالي المصروفات', value: fmtNum(Math.round(totalExpense)), color: '#b91c1c', bg: '#fef2f2', icon: '↑' },
+        { label: 'صافي الذمم', value: fmtNum(Math.round(recvOpen - payOpen)), color: recvOpen - payOpen >= 0 ? '#7c3aed' : '#b91c1c', bg: '#faf5ff', icon: '⇄' },
+      ]} />
+
+      {/* action alerts strip */}
+      {(pendingReqs.length > 0 || urgentTrackings.length > 0 || overdueRecv.length > 0 || dueCommitments.length > 0) && (
+        <Card style={{ marginTop: 16, marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 12 }}>⚡ يحتاج انتباهك</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+            {pendingReqs.length > 0 && (
+              <button onClick={() => onNav('requests')} style={alertBtnStyle('#fffbeb', '#a16207')}>
+                <span style={{ fontSize: 20 }}>◫</span><div><div style={{ fontWeight: 700, fontSize: 16 }}>{pendingReqs.length}</div><div style={{ fontSize: 11 }}>طلب معلّق</div></div>
+              </button>
+            )}
+            {overdueRecv.length > 0 && (
+              <button onClick={() => onNav('receivables')} style={alertBtnStyle('#fef2f2', '#b91c1c')}>
+                <span style={{ fontSize: 20 }}>⇄</span><div><div style={{ fontWeight: 700, fontSize: 16 }}>{overdueRecv.length}</div><div style={{ fontSize: 11 }}>ذمة متأخرة</div></div>
+              </button>
+            )}
+            {dueCommitments.length > 0 && (
+              <button onClick={() => onNav('commitments')} style={alertBtnStyle('#eff6ff', '#1d4ed8')}>
+                <span style={{ fontSize: 20 }}>↻</span><div><div style={{ fontWeight: 700, fontSize: 16 }}>{dueCommitments.length}</div><div style={{ fontSize: 11 }}>التزام يستحق</div></div>
+              </button>
+            )}
+            {urgentTrackings.length > 0 && (
+              <button onClick={() => onNav('trackings')} style={alertBtnStyle('#fff7ed', '#c2410c')}>
+                <span style={{ fontSize: 20 }}>⏰</span><div><div style={{ fontWeight: 700, fontSize: 16 }}>{urgentTrackings.length}</div><div style={{ fontSize: 11 }}>متابعة عاجلة</div></div>
+              </button>
+            )}
+          </div>
+        </Card>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 16 }}>
+        {/* balance distribution */}
+        {balanceSegments.length > 0 && (
+          <Card>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 16 }}>توزيع الأرصدة على المشاريع</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <Donut segments={balanceSegments} size={130} label="الرصيد" />
+              <div style={{ flex: 1, minWidth: 120, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {balanceSegments.map(s => (
+                  <div key={s.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-2)' }}><span style={{ width: 9, height: 9, borderRadius: 2, background: s.color }} />{s.label}</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-3)' }}>{fmtNum(s.value)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* receivables snapshot */}
+        <Card>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 16 }}>الذمم على مستوى المنشأة</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: '#f0fdf4', borderRadius: 10 }}>
+              <span style={{ fontSize: 13, color: '#15803d' }}>مستحقّ لنا (مدينة)</span>
+              <span style={{ fontWeight: 800, fontSize: 15, color: '#15803d' }}>{fmt(recvOpen)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: '#fef2f2', borderRadius: 10 }}>
+              <span style={{ fontSize: 13, color: '#b91c1c' }}>مستحقّ علينا (دائنة)</span>
+              <span style={{ fontWeight: 800, fontSize: 15, color: '#b91c1c' }}>{fmt(payOpen)}</span>
+            </div>
+            <button onClick={() => onNav('receivables')} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit' }}>عرض كل الذمم ←</button>
+          </div>
+        </Card>
+      </div>
+
+      {/* projects grid */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>مشاريعك</div>
+        <button onClick={() => onNav('projects')} style={{ background: 'none', border: 'none', fontSize: 12.5, color: '#2563eb', cursor: 'pointer', fontFamily: 'inherit' }}>إدارة المشاريع ←</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+        {projects.map(p => {
+          const bal = computeBalance(p, transactions);
+          const ptxns = transactions.filter(t => t.projectId === p.id);
+          const pinc = ptxns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+          const pexp = ptxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+          const palerts = trackings.filter(t => t.projectId === p.id && t.status !== 'active').length
+            + requests.filter(r => r.projectId === p.id && r.status === 'pending').length;
+          return (
+            <button key={p.id} onClick={() => onProject(p.id)} style={{
+              textAlign: 'right', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14,
+              padding: 16, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', gap: 10,
+              borderTop: `3px solid ${p.color}`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 22 }}>{p.icon}</span>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{p.name}</span>
+                </span>
+                {palerts > 0 && <span style={{ fontSize: 10.5, background: '#fef2f2', color: '#b91c1c', borderRadius: 99, padding: '2px 8px', fontWeight: 600 }}>{palerts} تنبيه</span>}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{p.type}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 4 }}>
+                <div>
+                  <div style={{ fontSize: 10.5, color: 'var(--text-3)' }}>الرصيد</div>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: bal >= 0 ? 'var(--text)' : '#b91c1c' }}>{fmtNum(Math.round(bal))}</div>
+                </div>
+                <div style={{ textAlign: 'left', fontSize: 11 }}>
+                  <div style={{ color: '#15803d' }}>↓ {fmtNum(Math.round(pinc))}</div>
+                  <div style={{ color: '#b91c1c' }}>↑ {fmtNum(Math.round(pexp))}</div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+function alertBtnStyle(bg: string, color: string): React.CSSProperties {
+  return { display: 'flex', alignItems: 'center', gap: 10, background: bg, color, border: 'none', borderRadius: 10, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'right' };
+}
+
 function Dashboard({ projectId, onNav, projects, transactions, trackings, requests, onDecide, prefs, helpEntry }: {
   projectId: string; onNav: (p: Page) => void;
   projects: Project[]; transactions: Transaction[]; trackings: Tracking[];
@@ -4975,10 +5130,10 @@ function BottomBar({ page, onNav, onFab, unread }: {
   page: Page; onNav: (p: Page) => void; onFab: () => void; unread: number;
 }) {
   const items: { id: Page | 'fab'; icon: string; label: string }[] = [
-    { id: 'dashboard', icon: '◉', label: 'الرئيسية' },
+    { id: 'overview', icon: '⬢', label: 'الشاملة' },
     { id: 'projects', icon: '⬡', label: 'المشاريع' },
     { id: 'fab', icon: '＋', label: 'إضافة' },
-    { id: 'documents', icon: '◻', label: 'المستندات' },
+    { id: 'reports', icon: '◳', label: 'التقارير' },
     { id: 'settings', icon: '☰', label: 'المزيد' },
   ];
   return (
@@ -5036,7 +5191,7 @@ const KEYFRAMES = `
 input, select, textarea { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }`;
 
 export default function App() {
-  const [page, setPageRaw] = useState<Page>('dashboard');
+  const [page, setPageRaw] = useState<Page>('overview');
   const [history, setHistory] = useState<Page[]>([]);
   const setPage = (p: Page) => { setHistory(h => [...h, page]); setPageRaw(p); };
   const goBack = () => setHistory(h => { if (h.length === 0) return h; const prev = h[h.length - 1]; setPageRaw(prev); return h.slice(0, -1); });
@@ -5263,6 +5418,7 @@ export default function App() {
 
   const renderPage = () => {
     switch (page) {
+      case 'overview': return <Overview projects={projects} transactions={transactions} trackings={trackings} requests={requests} receivables={receivables} commitments={commitments} onNav={setPage} onProject={(id) => { setProjectId(id); setPage('projectDetail'); }} />;
       case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} prefs={prefs} helpEntry={help.dashboard} />;
       case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} openCreate={createProject} onCloseCreate={() => setCreateProject(false)} prefs={prefs} projectTypes={lists.projectTypes} helpEntry={help.projects} />;
       case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} onQuickAction={fabAction} prefs={prefs} />;
