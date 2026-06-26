@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { useState, useEffect } from 'react';
 
 // ═══════════════════════════════════════════
@@ -6,6 +7,8 @@ import { useState, useEffect } from 'react';
 type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
+// unified attachment (image/file) — preview kept in-session, real upload later via backend
+type Attachment = { id: string; name: string; kind: 'image' | 'file'; size: string; preview?: string };
 type RequestStatus = 'pending' | 'approved' | 'rejected';
 
 type Project = { id: string; name: string; icon: string; balance: number; color: string; type?: string; description?: string };
@@ -19,10 +22,10 @@ type MemberTxn = {
   amount: number; note?: string; date: string; status: MemberTxnStatus;
   direction: 'to_member' | 'from_member'; // money flow relative to member
 };
-type Transaction = { id: string; projectId: string; type: TxType; description: string; amount: number; category: string; date: string; hasDoc: boolean; note?: string; toProject?: string; transferDir?: 'out' | 'in'; linkId?: string };
-type Tracking = { id: string; name: string; type: string; icon: string; status: TrackingStatus; daysLeft: number; expiryDate: string; projectId: string; note?: string };
-type RequestItem = { id: string; title: string; amount: number; requestedBy: string; status: RequestStatus; date: string; type: string; projectId: string; note?: string };
-type DocItem = { id: string; name: string; type: string; date: string; size: string; status: string; projectId: string; aiRead: boolean };
+type Transaction = { id: string; projectId: string; type: TxType; description: string; amount: number; category: string; date: string; hasDoc: boolean; note?: string; toProject?: string; transferDir?: 'out' | 'in'; linkId?: string; source?: string; memberId?: string; attachments?: Attachment[] };
+type Tracking = { id: string; name: string; type: string; icon: string; status: TrackingStatus; daysLeft: number; expiryDate: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[] };
+type RequestItem = { id: string; title: string; amount: number; requestedBy: string; status: RequestStatus; date: string; type: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[] };
+type DocItem = { id: string; name: string; type: string; date: string; size: string; status: string; projectId: string; aiRead: boolean; attachments?: Attachment[] };
 type Notif = { id: string; type: string; title: string; body: string; time: string; read: boolean };
 
 // ═══════════════════════════════════════════
@@ -260,7 +263,24 @@ function Sheet({ open, onClose, title, children, footer }: {
   open: boolean; onClose: () => void; title: string;
   children: React.ReactNode; footer?: React.ReactNode;
 }) {
+  const [dragY, setDragY] = useState(0);
+  const dragRef = React.useRef<{ startY: number; dragging: boolean }>({ startY: 0, dragging: false });
+
+  useEffect(() => { if (open) setDragY(0); }, [open]);
   if (!open) return null;
+
+  const onStart = (clientY: number) => { dragRef.current = { startY: clientY, dragging: true }; };
+  const onMove = (clientY: number) => {
+    if (!dragRef.current.dragging) return;
+    const delta = clientY - dragRef.current.startY;
+    if (delta > 0) setDragY(delta);
+  };
+  const onEnd = () => {
+    if (!dragRef.current.dragging) return;
+    dragRef.current.dragging = false;
+    if (dragY > 110) onClose(); else setDragY(0);
+  };
+
   return (
     <div
       onClick={onClose}
@@ -275,22 +295,30 @@ function Sheet({ open, onClose, title, children, footer }: {
         style={{
           background: 'var(--surface)', width: '100%', maxWidth: 560, maxHeight: '92vh',
           borderRadius: '22px 22px 0 0', display: 'flex', flexDirection: 'column',
-          animation: 'mzSlideUp .28s cubic-bezier(.16,1,.3,1)', boxShadow: '0 -8px 40px rgba(0,0,0,.18)',
+          animation: dragY === 0 ? 'mzSlideUp .28s cubic-bezier(.16,1,.3,1)' : 'none',
+          transform: `translateY(${dragY}px)`, transition: dragRef.current.dragging ? 'none' : 'transform .25s ease',
+          boxShadow: '0 -8px 40px rgba(0,0,0,.18)',
         }}
       >
-        {/* grabber */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10 }}>
-          <div style={{ width: 40, height: 4, borderRadius: 99, background: '#e5e7eb' }} />
+        {/* grabber — drag handle (swipe down to close) */}
+        <div
+          onTouchStart={e => onStart(e.touches[0].clientY)}
+          onTouchMove={e => onMove(e.touches[0].clientY)}
+          onTouchEnd={onEnd}
+          onMouseDown={e => { onStart(e.clientY); const mm = (ev: MouseEvent) => onMove(ev.clientY); const mu = () => { onEnd(); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); }; window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu); }}
+          style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 6, cursor: 'grab', touchAction: 'none' }}
+        >
+          <div style={{ width: 40, height: 5, borderRadius: 99, background: 'var(--border)' }} />
         </div>
         {/* header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 14px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 14px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{title}</div>
           <button onClick={onClose} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', fontSize: 16, color: 'var(--text-3)' }}>✕</button>
         </div>
         {/* body */}
         <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>{children}</div>
         {/* footer */}
-        {footer && <div style={{ padding: '14px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10 }}>{footer}</div>}
+        {footer && <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10 }}>{footer}</div>}
       </div>
     </div>
   );
@@ -347,6 +375,80 @@ function TypePicker({ value, onChange, options }: { value: string; onChange: (v:
           </button>
         );
       })}
+    </div>
+  );
+}
+// ═══════════════════════════════════════════
+//  UNIFIED ATTACHMENTS (camera / gallery / files + preview)
+// ═══════════════════════════════════════════
+function AttachmentPicker({ value, onChange }: { value: Attachment[]; onChange: (a: Attachment[]) => void }) {
+  const camRef = React.useRef<HTMLInputElement>(null);
+  const galRef = React.useRef<HTMLInputElement>(null);
+  const fileRef = React.useRef<HTMLInputElement>(null);
+
+  const humanSize = (bytes: number) => bytes < 1024 ? bytes + ' B' : bytes < 1048576 ? (bytes / 1024).toFixed(0) + ' KB' : (bytes / 1048576).toFixed(1) + ' MB';
+
+  const addFiles = (files: FileList | null, kind: 'image' | 'file') => {
+    if (!files) return;
+    const arr = Array.from(files);
+    let pending = arr.length;
+    const next: Attachment[] = [];
+    arr.forEach(f => {
+      const att: Attachment = { id: uid('att'), name: f.name, kind: f.type.startsWith('image') ? 'image' : kind, size: humanSize(f.size) };
+      // generate a small preview for images (kept in-session)
+      if (att.kind === 'image') {
+        const reader = new FileReader();
+        reader.onload = () => { att.preview = reader.result as string; next.push(att); pending--; if (pending === 0) onChange([...value, ...next]); };
+        reader.onerror = () => { next.push(att); pending--; if (pending === 0) onChange([...value, ...next]); };
+        reader.readAsDataURL(f);
+      } else {
+        next.push(att); pending--; if (pending === 0) onChange([...value, ...next]);
+      }
+    });
+  };
+
+  const remove = (id: string) => onChange(value.filter(a => a.id !== id));
+
+  const btn = (icon: string, label: string, onClick: () => void) => (
+    <button type="button" onClick={onClick} style={{
+      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '12px 8px', borderRadius: 12,
+      border: '1.5px dashed var(--border)', background: 'var(--surface-2)', cursor: 'pointer', fontFamily: 'inherit',
+    }}>
+      <span style={{ fontSize: 20 }}>{icon}</span>
+      <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500 }}>{label}</span>
+    </button>
+  );
+
+  return (
+    <div>
+      {/* hidden native inputs — open camera / gallery / files */}
+      <input ref={camRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { addFiles(e.target.files, 'image'); e.target.value = ''; }} />
+      <input ref={galRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => { addFiles(e.target.files, 'image'); e.target.value = ''; }} />
+      <input ref={fileRef} type="file" multiple style={{ display: 'none' }} onChange={e => { addFiles(e.target.files, 'file'); e.target.value = ''; }} />
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: value.length ? 12 : 0 }}>
+        {btn('📷', 'كاميرا', () => camRef.current?.click())}
+        {btn('🖼️', 'معرض', () => galRef.current?.click())}
+        {btn('📎', 'ملفات', () => fileRef.current?.click())}
+      </div>
+
+      {/* preview thumbnails / file chips */}
+      {value.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {value.map(a => (
+            <div key={a.id} style={{ position: 'relative', width: 72 }}>
+              <div style={{ width: 72, height: 72, borderRadius: 10, overflow: 'hidden', background: 'var(--surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
+                {a.kind === 'image' && a.preview
+                  ? <img src={a.preview} alt={a.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span style={{ fontSize: 26 }}>{a.kind === 'image' ? '🖼️' : '📄'}</span>}
+              </div>
+              <button type="button" onClick={() => remove(a.id)} style={{ position: 'absolute', top: -6, left: -6, width: 20, height: 20, borderRadius: 99, background: '#ef4444', color: '#fff', border: '2px solid var(--surface)', cursor: 'pointer', fontSize: 11, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              <div style={{ fontSize: 9, color: 'var(--text-3)', textAlign: 'center', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 8 }}>📌 يُحفظ شكلياً في هذه النسخة — الرفع الفعلي للسحابة يأتي مع الـ Backend.</div>
     </div>
   );
 }
@@ -1324,7 +1426,9 @@ function TxForm({ initial, projectId, projects, onSave, onCancel }: {
   const [category, setCategory] = useState(initial?.category ?? TX_CATEGORIES[0]);
   const [date, setDate] = useState(initial?.date ?? today());
   const [toProject, setToProject] = useState(initial?.toProject ?? projects.find(p => p.id !== projectId)?.id ?? '');
+  const [source, setSource] = useState(initial?.source ?? '');
   const [note, setNote] = useState(initial?.note ?? '');
+  const [attachments, setAttachments] = useState<Attachment[]>(initial?.attachments ?? []);
   const valid = description.trim().length > 0 && amount !== '' && Number(amount) > 0;
 
   return (
@@ -1347,18 +1451,25 @@ function TxForm({ initial, projectId, projects, onSave, onCancel }: {
           <Select value={category} onChange={setCategory} options={TX_CATEGORIES.map(c => ({ v: c, l: c }))} />
         </Field>
       )}
+      <Field label="المصدر / الجهة (اختياري)">
+        <TextInput value={source} onChange={setSource} placeholder="مثال: مورد، عميل، بنك..." />
+      </Field>
       <Field label="التاريخ">
         <TextInput type="date" value={date} onChange={setDate} />
       </Field>
       <Field label="ملاحظات (اختياري)">
         <TextArea value={note} onChange={setNote} placeholder="أي تفاصيل إضافية..." />
       </Field>
+      <Field label="المرفقات (صور / ملفات)">
+        <AttachmentPicker value={attachments} onChange={setAttachments} />
+      </Field>
       <div style={{ display: 'flex', gap: 10 }}>
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
         <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
           id: initial?.id, projectId, type, description: description.trim(),
           amount: amount === '' ? 0 : amount, category: type === 'transfer' ? 'تحويل' : category,
-          date, hasDoc: initial?.hasDoc ?? false, note, toProject: type === 'transfer' ? toProject : undefined,
+          date, hasDoc: attachments.length > 0 || (initial?.hasDoc ?? false), note, source: source.trim() || undefined,
+          attachments, toProject: type === 'transfer' ? toProject : undefined,
         })}>{initial ? 'حفظ التعديلات' : 'إضافة العملية'}</Btn>
       </div>
     </>
@@ -1520,6 +1631,7 @@ function DocForm({ initial, projectId, projects, onSave, onCancel }: {
   const [type, setType] = useState(initial?.type ?? DOC_TYPES[0]);
   const [date, setDate] = useState(initial?.date ?? today());
   const [targetProject, setTargetProject] = useState(initial?.projectId ?? projectId);
+  const [attachments, setAttachments] = useState<Attachment[]>(initial?.attachments ?? []);
   const valid = name.trim().length > 0;
 
   // smart suggestion: route document to a project type that fits the doc type
@@ -1565,12 +1677,16 @@ function DocForm({ initial, projectId, projects, onSave, onCancel }: {
       <Field label="تاريخ المستند">
         <TextInput type="date" value={date} onChange={setDate} />
       </Field>
+      <Field label="المرفقات (صور / ملفات متعددة)">
+        <AttachmentPicker value={attachments} onChange={setAttachments} />
+      </Field>
       <div style={{ display: 'flex', gap: 10 }}>
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
         <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
           id: initial?.id, name: name.trim(), type, date,
           size: initial?.size ?? Math.round(100 + Math.random() * 900) + ' KB',
           status: initial?.status ?? 'pending', projectId: targetProject, aiRead: initial?.aiRead ?? false,
+          attachments,
         })}>{initial ? 'حفظ التعديلات' : 'رفع المستند'}</Btn>
       </div>
     </>
@@ -1768,6 +1884,7 @@ function TrackingForm({ initial, projectId, onSave, onCancel }: {
   const [type, setType] = useState(initial?.type ?? TRACKING_TYPES[0].id);
   const [expiryDate, setExpiryDate] = useState(initial?.expiryDate ?? '');
   const [note, setNote] = useState(initial?.note ?? '');
+  const [attachments, setAttachments] = useState<Attachment[]>(initial?.attachments ?? []);
   const valid = name.trim().length > 0 && expiryDate.length > 0;
   const typeIcon = TRACKING_TYPES.find(t => t.id === type)?.icon ?? '🛡️';
 
@@ -1785,11 +1902,14 @@ function TrackingForm({ initial, projectId, onSave, onCancel }: {
       <Field label="ملاحظات (اختياري)">
         <TextArea value={note} onChange={setNote} placeholder="رقم الضمان، الجهة، تفاصيل..." />
       </Field>
+      <Field label="المرفقات (صور / ملفات)">
+        <AttachmentPicker value={attachments} onChange={setAttachments} />
+      </Field>
       <div style={{ display: 'flex', gap: 10 }}>
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
         <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => {
           const d = daysBetween(expiryDate);
-          onSave({ id: initial?.id, name: name.trim(), type, icon: initial?.icon ?? typeIcon, status: statusFromDays(d), daysLeft: d, expiryDate, projectId, note });
+          onSave({ id: initial?.id, name: name.trim(), type, icon: initial?.icon ?? typeIcon, status: statusFromDays(d), daysLeft: d, expiryDate, projectId, note, attachments });
         }}>{initial ? 'حفظ التعديلات' : 'إضافة المتابعة'}</Btn>
       </div>
     </>
@@ -1932,6 +2052,7 @@ function RequestForm({ initial, projectId, onSave, onCancel }: {
   const [amount, setAmount] = useState<number | ''>(initial?.amount ?? '');
   const [requestedBy, setRequestedBy] = useState(initial?.requestedBy ?? 'محمد العمري');
   const [note, setNote] = useState(initial?.note ?? '');
+  const [attachments, setAttachments] = useState<Attachment[]>(initial?.attachments ?? []);
   const valid = title.trim().length > 0 && amount !== '' && Number(amount) > 0;
 
   return (
@@ -1951,11 +2072,14 @@ function RequestForm({ initial, projectId, onSave, onCancel }: {
       <Field label="ملاحظات (اختياري)">
         <TextArea value={note} onChange={setNote} placeholder="مبرر الطلب أو تفاصيل..." />
       </Field>
+      <Field label="المرفقات (صور / ملفات)">
+        <AttachmentPicker value={attachments} onChange={setAttachments} />
+      </Field>
       <div style={{ display: 'flex', gap: 10 }}>
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
         <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
           id: initial?.id, title: title.trim(), type, amount: amount === '' ? 0 : amount,
-          requestedBy, status: initial?.status ?? 'pending', date: initial?.date ?? today(), projectId, note,
+          requestedBy, status: initial?.status ?? 'pending', date: initial?.date ?? today(), projectId, note, attachments,
         })}>{initial ? 'حفظ التعديلات' : 'إرسال الطلب'}</Btn>
       </div>
     </>
