@@ -342,7 +342,7 @@ function Sheet({ open, onClose, title, children, footer }: {
   useEffect(() => { if (open) setDragY(0); }, [open]);
   if (!open) return null;
 
-  const onStart = (clientY: number) => { dragRef.current = { startY: clientY, dragging: true }; };
+  const onStart = (clientY: number) => { dragRef.current = { startY: clientY, dragging: true }; setDragY(0); };
   const onMove = (clientY: number) => {
     if (!dragRef.current.dragging) return;
     const delta = clientY - dragRef.current.startY;
@@ -351,7 +351,20 @@ function Sheet({ open, onClose, title, children, footer }: {
   const onEnd = () => {
     if (!dragRef.current.dragging) return;
     dragRef.current.dragging = false;
-    if (dragY > 110) onClose(); else setDragY(0);
+    if (dragY > 90) onClose(); else setDragY(0);
+  };
+
+  // shared drag handlers for the whole header area (grabber + title row)
+  const dragHandlers = {
+    onTouchStart: (e: React.TouchEvent) => onStart(e.touches[0].clientY),
+    onTouchMove: (e: React.TouchEvent) => onMove(e.touches[0].clientY),
+    onTouchEnd: onEnd,
+    onMouseDown: (e: React.MouseEvent) => {
+      onStart(e.clientY);
+      const mm = (ev: MouseEvent) => onMove(ev.clientY);
+      const mu = () => { onEnd(); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+      window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+    },
   };
 
   return (
@@ -368,25 +381,20 @@ function Sheet({ open, onClose, title, children, footer }: {
         style={{
           background: 'var(--surface)', width: '100%', maxWidth: 560, maxHeight: '92vh',
           borderRadius: '22px 22px 0 0', display: 'flex', flexDirection: 'column',
-          animation: dragY === 0 ? 'mzSlideUp .28s cubic-bezier(.16,1,.3,1)' : 'none',
+          animation: dragY === 0 && !dragRef.current.dragging ? 'mzSlideUp .28s cubic-bezier(.16,1,.3,1)' : 'none',
           transform: `translateY(${dragY}px)`, transition: dragRef.current.dragging ? 'none' : 'transform .25s ease',
           boxShadow: '0 -8px 40px rgba(0,0,0,.18)',
         }}
       >
-        {/* grabber — drag handle (swipe down to close) */}
-        <div
-          onTouchStart={e => onStart(e.touches[0].clientY)}
-          onTouchMove={e => onMove(e.touches[0].clientY)}
-          onTouchEnd={onEnd}
-          onMouseDown={e => { onStart(e.clientY); const mm = (ev: MouseEvent) => onMove(ev.clientY); const mu = () => { onEnd(); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); }; window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu); }}
-          style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 6, cursor: 'grab', touchAction: 'none' }}
-        >
-          <div style={{ width: 40, height: 5, borderRadius: 99, background: 'var(--border)' }} />
-        </div>
-        {/* header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 14px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{title}</div>
-          <button onClick={onClose} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', fontSize: 16, color: 'var(--text-3)' }}>✕</button>
+        {/* drag zone: grabber + header together (easy to grab on mobile) */}
+        <div {...dragHandlers} style={{ touchAction: 'none', cursor: 'grab', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 8 }}>
+            <div style={{ width: 44, height: 5, borderRadius: 99, background: 'var(--border)' }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 20px 14px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{title}</div>
+            <button onClick={onClose} onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: 'var(--text-3)', flexShrink: 0 }}>✕</button>
+          </div>
         </div>
         {/* body */}
         <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>{children}</div>
@@ -1362,7 +1370,7 @@ function InviteForm({ projectId, onInvite, onCancel }: {
   );
 }
 
-function ProjectDetail({ projectId, projects, transactions, trackings, requests, documents, members, memberTxns, notifs, onNav, onSaveMember, onDeleteMember, onSaveMemberTxn, onDecideMemberTxn, onOpenMember, onSaveProject, onDeleteProject, onViewTx, onViewDoc, onViewTracking }: {
+function ProjectDetail({ projectId, projects, transactions, trackings, requests, documents, members, memberTxns, notifs, onNav, onSaveMember, onDeleteMember, onSaveMemberTxn, onDecideMemberTxn, onOpenMember, onSaveProject, onDeleteProject, onViewTx, onViewDoc, onViewTracking, onQuickAction }: {
   projectId: string; projects: Project[]; transactions: Transaction[]; trackings: Tracking[];
   requests: RequestItem[]; documents: DocItem[]; members: Member[]; memberTxns: MemberTxn[]; notifs: Notif[];
   onNav: (p: Page) => void;
@@ -1371,6 +1379,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
   onOpenMember: (id: string) => void;
   onSaveProject: (p: Omit<Project, 'id'> & { id?: string }) => void; onDeleteProject: (id: string) => void;
   onViewTx: (t: Transaction) => void; onViewDoc: (d: DocItem) => void; onViewTracking: (t: Tracking) => void;
+  onQuickAction: (a: 'tx' | 'doc' | 'tracking' | 'request') => void;
 }) {
   const [tab, setTab] = useState<'overview' | 'members' | 'cashflow'>('overview');
   const [sheet, setSheet] = useState<null | { mode: 'add' } | { mode: 'edit'; member: Member } | { mode: 'txn' } | { mode: 'invite' } | { mode: 'editProject' } | { mode: 'deleteProject' }>(null);
@@ -1439,6 +1448,26 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
           }}>{l}</button>
         ))}
       </div>
+
+      {/* quick actions: add any item directly within the project */}
+      <Card style={{ marginBottom: 20, padding: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginLeft: 4 }}>إجراء سريع:</span>
+          {[
+            { a: 'tx' as const, icon: '💰', label: 'عملية مالية', color: '#15803d', bg: '#f0fdf4' },
+            { a: 'doc' as const, icon: '📄', label: 'مستند', color: '#1d4ed8', bg: '#eff6ff' },
+            { a: 'tracking' as const, icon: '🛡️', label: 'متابعة', color: '#a16207', bg: '#fffbeb' },
+            { a: 'request' as const, icon: '📝', label: 'طلب', color: '#7c3aed', bg: '#faf5ff' },
+          ].map(b => (
+            <button key={b.a} onClick={() => onQuickAction(b.a)} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 10,
+              border: '1px solid var(--border)', background: b.bg, color: b.color, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500,
+            }}>
+              <span style={{ fontSize: 15 }}>{b.icon}</span>{b.label}
+            </button>
+          ))}
+        </div>
+      </Card>
 
       {/* OVERVIEW */}
       {tab === 'overview' && (
@@ -3716,7 +3745,6 @@ export default function App() {
   const [createDoc, setCreateDoc] = useState(false);
   const [createTracking, setCreateTracking] = useState(false);
   const [createRequest, setCreateRequest] = useState(false);
-  const [createProject, setCreateProject] = useState(false);
   const [trackingPreset, setTrackingPreset] = useState<{ name?: string; type?: string }>({});
 
   const unread = notifs.filter(n => !n.read).length;
@@ -3844,14 +3872,14 @@ export default function App() {
     if (a === 'doc') { setPage('documents'); setCreateDoc(true); }
     if (a === 'tracking') { setTrackingPreset({}); setPage('trackings'); setCreateTracking(true); }
     if (a === 'request') { setPage('requests'); setCreateRequest(true); }
-    if (a === 'project') { setPage('projects'); setCreateProject(true); }
+    if (a === 'project') { setPage('projects'); }
   };
 
   const renderPage = () => {
     switch (page) {
       case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} />;
       case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} />;
-      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} />;
+      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} onQuickAction={fabAction} />;
       case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} onBack={goBack} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} />;
