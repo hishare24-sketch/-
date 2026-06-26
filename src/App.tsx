@@ -544,6 +544,20 @@ function Btn({ children, variant = 'primary', onClick, size = 'md', style = {}, 
   return <button disabled={disabled} style={{ ...base, ...variants[variant], ...style }} onClick={onClick}>{children}</button>;
 }
 
+// reusable empty state with optional call-to-action
+function EmptyState({ icon, title, hint, actionLabel, onAction }: {
+  icon: string; title: string; hint?: string; actionLabel?: string; onAction?: () => void;
+}) {
+  return (
+    <Card style={{ textAlign: 'center', padding: '48px 24px' }}>
+      <div style={{ fontSize: 44, marginBottom: 14, opacity: 0.9 }}>{icon}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-2)', marginBottom: 6 }}>{title}</div>
+      {hint && <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: actionLabel ? 20 : 0, lineHeight: 1.7, maxWidth: 360, marginLeft: 'auto', marginRight: 'auto' }}>{hint}</div>}
+      {actionLabel && onAction && <Btn onClick={onAction}>{actionLabel}</Btn>}
+    </Card>
+  );
+}
+
 // ─── Bottom Sheet (mobile-first modal) ───
 function Sheet({ open, onClose, title, children, footer }: {
   open: boolean; onClose: () => void; title: string;
@@ -3150,16 +3164,10 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
       )}
 
       {docs.length === 0 && (
-        <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>📂</div>
-          <div style={{ fontSize: 14 }}>لا توجد مستندات في هذا المشروع</div>
-        </Card>
+        <EmptyState icon="◻" title="لا توجد مستندات بعد" hint="المستند هو نقطة البداية في موازين — فاتورة أو عقد أو وثيقة. ارفع أول مستند ودع النظام يقترح تحويله إلى عملية أو متابعة أو أصل." actionLabel="+ رفع أول مستند" onAction={onOpenCreate} />
       )}
       {docs.length > 0 && filteredDocs.length === 0 && (
-        <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
-          <div style={{ fontSize: 14 }}>لا توجد مستندات مطابقة للفلترة</div>
-        </Card>
+        <EmptyState icon="🔍" title="لا توجد مستندات مطابقة" hint="جرّب تعديل الفلاتر أو البحث." />
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14 }}>
         {filteredDocs.map(d => (
@@ -3439,10 +3447,9 @@ function Trackings({ projectId, projects, trackings, members, onSave, onDelete, 
       />
 
       {filtered.length === 0 && (
-        <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>🗂️</div>
-          <div style={{ fontSize: 14 }}>لا توجد متابعات مطابقة</div>
-        </Card>
+        trackings.length === 0
+          ? <EmptyState icon="◷" title="لا توجد متابعات بعد" hint="العقود والضمانات والتراخيص والوثائق الرسمية — أي شيء له تاريخ انتهاء. أضف أول متابعة لينبّهك النظام قبل الاستحقاق." actionLabel="+ إضافة أول متابعة" onAction={onOpenCreate} />
+          : <EmptyState icon="🔍" title="لا توجد متابعات مطابقة" hint="جرّب تعديل الفلاتر أو البحث." />
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
         {filtered.map(t => {
@@ -3674,10 +3681,9 @@ function Requests({ projectId, projects, requests, members, onDecide, onSave, on
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {filtered.length === 0 && (
-          <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
-            <div style={{ fontSize: 14 }}>لا توجد طلبات مطابقة</div>
-          </Card>
+          requests.length === 0
+            ? <EmptyState icon="◫" title="لا توجد طلبات بعد" hint="الطلبات تطبّق الحوكمة: طلب صرف أو تحويل أو عهدة يمرّ بدورة اعتماد قبل التنفيذ. أنشئ أول طلب لتفعيل الرقابة على العمليات." actionLabel="+ إنشاء أول طلب" onAction={onOpenCreate} />
+            : <EmptyState icon="🔍" title="لا توجد طلبات مطابقة" hint="جرّب تعديل الفلاتر أو البحث." />
         )}
         {filtered.map(r => (
           <Card key={r.id} style={{ padding: 18 }}>
@@ -4523,10 +4529,9 @@ function Receivables({ projectId, projects, receivables, members, onSave, onPay,
       />
 
       {filtered.length === 0 && (
-        <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>⇄</div>
-          <div style={{ fontSize: 14 }}>لا توجد ذمم مطابقة</div>
-        </Card>
+        receivables.length === 0
+          ? <EmptyState icon="⇄" title="لا توجد ذمم بعد" hint="الذمم هي المبالغ المستحقة لك (مدينة) أو عليك (دائنة). أضف أول ذمة لتتبّع ما لك وما عليك مع العملاء والموردين والأعضاء." actionLabel="+ إضافة أول ذمة" onAction={onOpenCreate} />
+          : <EmptyState icon="🔍" title="لا توجد ذمم مطابقة" hint="جرّب تعديل الفلاتر أو البحث." />
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -4804,10 +4809,9 @@ function Commitments({ projectId, projects, commitments, members, onSave, onPay,
       />
 
       {filtered.length === 0 && (
-        <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>↻</div>
-          <div style={{ fontSize: 14 }}>لا توجد التزامات مطابقة</div>
-        </Card>
+        commitments.length === 0
+          ? <EmptyState icon="↻" title="لا توجد التزامات دورية بعد" hint="الأقساط والإيجارات والاشتراكات وأي مبلغ يتكرر بجدول زمني. أضف أول التزام ليذكّرك النظام بمواعيد الاستحقاق تلقائياً." actionLabel="+ إضافة أول التزام" onAction={onOpenCreate} />
+          : <EmptyState icon="🔍" title="لا توجد التزامات مطابقة" hint="جرّب تعديل الفلاتر أو البحث." />
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -5461,10 +5465,9 @@ function Assets({ projectId, projects, assets, members, onSave, onDelete, onAddM
       />
 
       {filtered.length === 0 && (
-        <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>⬚</div>
-          <div style={{ fontSize: 14 }}>لا توجد أصول مطابقة</div>
-        </Card>
+        assets.length === 0
+          ? <EmptyState icon="⬚" title="لا توجد أصول بعد" hint="السيارات والأجهزة والمعدّات وأي ممتلكات ملموسة. سجّل أول أصل لتتبّع قيمته وضمانه وصيانته وعداد استخدامه في مكان واحد." actionLabel="+ إضافة أول أصل" onAction={onOpenCreate} />
+          : <EmptyState icon="🔍" title="لا توجد أصول مطابقة" hint="جرّب تعديل الفلاتر أو البحث." />
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
