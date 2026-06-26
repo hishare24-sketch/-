@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 // ═══════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════
-type Page = 'overview' | 'tasks' | 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'reports' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail' | 'audit' | 'customize';
+type Page = 'overview' | 'tasks' | 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'reports' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'assets' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail' | 'audit' | 'customize';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 // unified attachment (image/file) — preview kept in-session, real upload later via backend
@@ -54,6 +54,21 @@ type Commitment = {
   nextDue: string;               // تاريخ الاستحقاق القادم
   active: boolean;               // نشط أو موقوف
   payments: CommitmentPayment[];
+  note?: string; attachments?: Attachment[]; createdBy?: string;
+};
+// tangible assets (الأصول الملموسة) — independent lifecycle: purchase, warranty, maintenance, usage
+type AssetCategory = 'vehicle' | 'device' | 'equipment' | 'furniture' | 'property' | 'other';
+type MaintenanceEntry = { id: string; date: string; type: 'صيانة' | 'عطل' | 'فحص'; cost: number; note: string; createdBy?: string };
+type Asset = {
+  id: string; projectId: string; name: string; category: AssetCategory;
+  purchaseDate: string; purchaseValue: number; supplier?: string;
+  warrantyEnd?: string;            // انتهاء الضمان
+  serial?: string;                 // الرقم التسلسلي / اللوحة
+  usageMeter?: number;             // عداد الاستخدام (كم/ساعات)
+  usageUnit?: string;              // وحدة العداد (كم، ساعة)
+  status: 'active' | 'maintenance' | 'retired';  // نشط / تحت الصيانة / مستبعَد
+  memberId?: string;               // المسؤول/الحائز
+  maintenance: MaintenanceEntry[]; // سجل الصيانة والأعطال
   note?: string; attachments?: Attachment[]; createdBy?: string;
 };
 type Transaction = { id: string; projectId: string; type: TxType; description: string; amount: number; category: string; date: string; hasDoc: boolean; note?: string; toProject?: string; transferDir?: 'out' | 'in'; linkId?: string; source?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
@@ -129,6 +144,21 @@ const TRACKING_TYPES = [
 ];
 
 const REQUEST_TYPES = ['مصروف', 'تحويل', 'عهدة', 'صيانة', 'شراء'];
+
+const ASSET_CATEGORIES: { id: AssetCategory; label: string; icon: string }[] = [
+  { id: 'vehicle', label: 'مركبة', icon: '🚗' },
+  { id: 'device', label: 'جهاز', icon: '💻' },
+  { id: 'equipment', label: 'معدّة', icon: '⚙️' },
+  { id: 'furniture', label: 'أثاث', icon: '🪑' },
+  { id: 'property', label: 'عقار', icon: '🏢' },
+  { id: 'other', label: 'أخرى', icon: '📦' },
+];
+const ASSET_STATUS: Record<Asset['status'], { label: string; color: string; bg: string }> = {
+  active: { label: 'نشط', color: '#15803d', bg: '#dcfce7' },
+  maintenance: { label: 'تحت الصيانة', color: '#a16207', bg: '#fef3c7' },
+  retired: { label: 'مستبعَد', color: '#64748b', bg: '#f1f5f9' },
+};
+const assetMaintCost = (a: Asset) => a.maintenance.reduce((s, m) => s + m.cost, 0);
 
 const DEFAULT_DOC_TYPES = ['فاتورة', 'عقد', 'كشف حساب', 'وثيقة رسمية', 'ملف عام'];
 const DEFAULT_PARTY_TYPES = ['عميل', 'مورد', 'بنك', 'جهة حكومية', 'شريك', 'أخرى'];
@@ -217,6 +247,21 @@ const INITIAL_TRACKINGS: Tracking[] = [
   { id: 'tr8', name: 'ترخيص وزارة الصحة', type: 'ترخيص', icon: '⚕️', status: 'expiring', daysLeft: 30, expiryDate: '2025-07-24', projectId: 'p5', createdBy: 'د. ليلى الحربي' },
   { id: 'tr9', name: 'اشتراك نظام الحجوزات', type: 'اشتراك', icon: '📅', status: 'active', daysLeft: 120, expiryDate: '2025-10-24', projectId: 'p5', createdBy: 'عبدالله الشمري' },
   { id: 'tr10', name: 'ضمان أجهزة المتجر', type: 'ضمان', icon: '📦', status: 'expiring', daysLeft: 18, expiryDate: '2025-07-12', projectId: 'p4', createdBy: 'فهد الدوسري' },
+];
+
+const INITIAL_ASSETS: Asset[] = [
+  { id: 'as1', projectId: 'p1', name: 'سيارة تويوتا هايلكس', category: 'vehicle', purchaseDate: '2024-03-15', purchaseValue: 135000, supplier: 'الوكالة', warrantyEnd: '2027-03-15', serial: 'أ ب ج 1234', usageMeter: 28500, usageUnit: 'كم', status: 'active', memberId: 'm2', maintenance: [
+    { id: 'mn1', date: '2024-09-10', type: 'صيانة', cost: 850, note: 'تغيير زيت وفلاتر', createdBy: 'محمد العمري' },
+    { id: 'mn2', date: '2025-03-05', type: 'صيانة', cost: 1200, note: 'صيانة دورية 25 ألف', createdBy: 'محمد العمري' },
+  ], note: 'سيارة الإدارة', createdBy: 'محمد العمري' },
+  { id: 'as2', projectId: 'p1', name: 'خادم Dell PowerEdge', category: 'device', purchaseDate: '2024-06-01', purchaseValue: 22000, supplier: 'شركة التقنية', warrantyEnd: '2025-07-20', serial: 'SVR-9921', status: 'active', maintenance: [], note: 'خادم الاستضافة الداخلي', createdBy: 'أحمد العلي' },
+  { id: 'as3', projectId: 'p5', name: 'جهاز أشعة', category: 'equipment', purchaseDate: '2023-11-20', purchaseValue: 280000, supplier: 'مورد طبي', warrantyEnd: '2026-11-20', serial: 'XR-450', usageMeter: 1840, usageUnit: 'فحص', status: 'maintenance', maintenance: [
+    { id: 'mn3', date: '2025-06-10', type: 'عطل', cost: 4500, note: 'عطل في وحدة التحكم — قيد الإصلاح', createdBy: 'د. ليلى الحربي' },
+  ], createdBy: 'د. ليلى الحربي' },
+  { id: 'as4', projectId: 'p4', name: 'أجهزة كاشير (3)', category: 'device', purchaseDate: '2024-01-10', purchaseValue: 18000, supplier: 'سلة', warrantyEnd: '2025-07-08', usageUnit: '', status: 'active', maintenance: [], createdBy: 'فهد الدوسري' },
+  { id: 'as5', projectId: 'p2', name: 'مكيفات مركزية', category: 'equipment', purchaseDate: '2023-05-01', purchaseValue: 45000, supplier: 'مقاول التكييف', status: 'active', maintenance: [
+    { id: 'mn4', date: '2025-05-15', type: 'فحص', cost: 600, note: 'فحص وتنظيف موسمي', createdBy: 'محمد العمري' },
+  ], createdBy: 'محمد العمري' },
 ];
 
 const INITIAL_REQUESTS: RequestItem[] = [
@@ -574,9 +619,9 @@ function Sheet({ open, onClose, title, children, footer }: {
 }
 
 // ─── Form field primitives ───
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, style = {} }: { label: string; children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div style={{ marginBottom: 16, ...style }}>
       <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>{label}</label>
       {children}
     </div>
@@ -837,6 +882,7 @@ const NAV = [
   { id: 'commitments',   icon: '↻',  label: 'الالتزامات الدورية' },
   { id: 'documents',     icon: '◻',  label: 'المستندات' },
   { id: 'trackings',     icon: '◷',  label: 'المتابعات والضمانات' },
+  { id: 'assets',        icon: '⬚',  label: 'الأصول' },
   { id: 'requests',      icon: '◫',  label: 'الطلبات والموافقات' },
   { id: 'notifications', icon: '◌',  label: 'الإشعارات' },
   { id: 'audit',         icon: '⊟',  label: 'سجل العمليات' },
@@ -5201,6 +5247,294 @@ function SmartReport({ txs, recvs, comms, tracks, reqs, projName }: {
   );
 }
 
+// ═══════════════════════════════════════════
+//  ASSETS (الأصول الملموسة)
+// ═══════════════════════════════════════════
+function AssetForm({ projectId, projects, members, onSave, onCancel }: {
+  projectId: string; projects: Project[]; members: Member[];
+  onSave: (a: Omit<Asset, 'id'>) => void; onCancel: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState<AssetCategory>('vehicle');
+  const [targetProject, setTargetProject] = useState(projectId);
+  const [purchaseDate, setPurchaseDate] = useState(today());
+  const [purchaseValue, setPurchaseValue] = useState<number | ''>('');
+  const [supplier, setSupplier] = useState('');
+  const [warrantyEnd, setWarrantyEnd] = useState('');
+  const [serial, setSerial] = useState('');
+  const [usageMeter, setUsageMeter] = useState<number | ''>('');
+  const [usageUnit, setUsageUnit] = useState('');
+  const [memberId, setMemberId] = useState('');
+  const [note, setNote] = useState('');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const valid = name.trim().length > 0 && purchaseValue !== '' && Number(purchaseValue) >= 0;
+
+  return (
+    <>
+      <Field label="نوع الأصل">
+        <TypePicker value={category} onChange={v => setCategory(v as AssetCategory)} options={ASSET_CATEGORIES.map(c => ({ v: c.id, l: c.label, icon: c.icon }))} />
+      </Field>
+      <Field label="اسم الأصل">
+        <TextInput value={name} onChange={setName} placeholder="مثال: سيارة هايلكس، خادم Dell" />
+      </Field>
+      <Field label="المشروع">
+        <Select value={targetProject} onChange={setTargetProject} options={projects.map(p => ({ v: p.id, l: `${p.icon} ${p.name}` }))} />
+      </Field>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Field label="تاريخ الشراء" style={{ flex: 1 }}>
+          <TextInput type="date" value={purchaseDate} onChange={setPurchaseDate} />
+        </Field>
+        <Field label="قيمة الشراء (ر.س)" style={{ flex: 1 }}>
+          <NumInput value={purchaseValue} onChange={setPurchaseValue} placeholder="0" />
+        </Field>
+      </div>
+      <Field label="المورّد (اختياري)">
+        <TextInput value={supplier} onChange={setSupplier} placeholder="مثال: الوكالة، شركة التقنية" />
+      </Field>
+      <Field label="انتهاء الضمان (اختياري)">
+        <TextInput type="date" value={warrantyEnd} onChange={setWarrantyEnd} />
+      </Field>
+      <Field label="الرقم التسلسلي / اللوحة (اختياري)">
+        <TextInput value={serial} onChange={setSerial} placeholder="مثال: أ ب ج 1234" />
+      </Field>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Field label="عداد الاستخدام (اختياري)" style={{ flex: 1 }}>
+          <NumInput value={usageMeter} onChange={setUsageMeter} placeholder="0" />
+        </Field>
+        <Field label="وحدة العداد" style={{ flex: 1 }}>
+          <TextInput value={usageUnit} onChange={setUsageUnit} placeholder="كم / ساعة" />
+        </Field>
+      </div>
+      <Field label="المسؤول/الحائز (اختياري)">
+        <Select value={memberId} onChange={setMemberId} options={[{ v: '', l: 'بدون' }, ...members.filter(m => m.projectId === targetProject).map(m => ({ v: m.id, l: m.name }))]} />
+      </Field>
+      <Field label="ملاحظات (اختياري)">
+        <TextArea value={note} onChange={setNote} placeholder="تفاصيل إضافية..." />
+      </Field>
+      <Field label="المرفقات (فاتورة، صور)">
+        <AttachmentPicker value={attachments} onChange={setAttachments} />
+      </Field>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
+        <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
+          projectId: targetProject, name: name.trim(), category, purchaseDate,
+          purchaseValue: purchaseValue === '' ? 0 : purchaseValue, supplier: supplier.trim() || undefined,
+          warrantyEnd: warrantyEnd || undefined, serial: serial.trim() || undefined,
+          usageMeter: usageMeter === '' ? undefined : Number(usageMeter), usageUnit: usageUnit.trim() || undefined,
+          status: 'active', memberId: memberId || undefined, maintenance: [], note: note.trim() || undefined, attachments, createdBy: CURRENT_USER,
+        })}>إضافة الأصل</Btn>
+      </div>
+    </>
+  );
+}
+
+function MaintenanceForm({ onSave, onCancel }: { onSave: (m: Omit<MaintenanceEntry, 'id'>) => void; onCancel: () => void }) {
+  const [type, setType] = useState<MaintenanceEntry['type']>('صيانة');
+  const [date, setDate] = useState(today());
+  const [cost, setCost] = useState<number | ''>('');
+  const [note, setNote] = useState('');
+  return (
+    <>
+      <Field label="النوع">
+        <TypePicker value={type} onChange={v => setType(v as MaintenanceEntry['type'])} options={[
+          { v: 'صيانة', l: 'صيانة', icon: '🔧' }, { v: 'عطل', l: 'عطل', icon: '⚠️' }, { v: 'فحص', l: 'فحص', icon: '🔍' },
+        ]} />
+      </Field>
+      <Field label="التاريخ">
+        <TextInput type="date" value={date} onChange={setDate} />
+      </Field>
+      <Field label="التكلفة (ر.س)">
+        <NumInput value={cost} onChange={setCost} placeholder="0" />
+      </Field>
+      <Field label="الوصف">
+        <TextArea value={note} onChange={setNote} placeholder="تفاصيل الصيانة أو العطل..." />
+      </Field>
+      <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#1d4ed8' }}>
+        ℹ️ ستُسجّل التكلفة كمصروف فعلي في الإدارة المالية للمشروع.
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
+        <Btn disabled={cost === '' || Number(cost) < 0} style={{ flex: 1 }} onClick={() => onSave({ type, date, cost: cost === '' ? 0 : cost, note: note.trim(), createdBy: CURRENT_USER })}>تسجيل</Btn>
+      </div>
+    </>
+  );
+}
+
+function Assets({ projectId, projects, assets, members, onSave, onDelete, onAddMaintenance, openCreate, onOpenCreate, onCloseCreate }: {
+  projectId: string; projects: Project[]; assets: Asset[]; members: Member[];
+  onSave: (a: Omit<Asset, 'id'>) => void; onDelete: (id: string) => void;
+  onAddMaintenance: (assetId: string, m: Omit<MaintenanceEntry, 'id'>) => void;
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [fProject, setFProject] = useState('all');
+  const [fCategory, setFCategory] = useState('all');
+  const [fStatus, setFStatus] = useState('all');
+  const [view, setView] = useState<Asset | null>(null);
+  const [addMaint, setAddMaint] = useState(false);
+
+  const projName = (id: string) => projects.find(p => p.id === id)?.name ?? '—';
+  const memberName = (id?: string) => members.find(m => m.id === id)?.name ?? '';
+  const catInfo = (c: AssetCategory) => ASSET_CATEGORIES.find(x => x.id === c)!;
+
+  const filtered = assets
+    .filter(a => fProject === 'all' ? true : a.projectId === fProject)
+    .filter(a => fCategory === 'all' ? true : a.category === fCategory)
+    .filter(a => fStatus === 'all' ? true : a.status === fStatus)
+    .filter(a => search.trim() === '' ? true : (a.name + (a.serial ?? '') + (a.supplier ?? '')).includes(search.trim()));
+
+  const totalValue = assets.reduce((s, a) => s + a.purchaseValue, 0);
+  const activeCount = assets.filter(a => a.status === 'active').length;
+  const inMaint = assets.filter(a => a.status === 'maintenance').length;
+  const warrantyExpiring = assets.filter(a => a.warrantyEnd && a.warrantyEnd >= today() && a.warrantyEnd <= new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)).length;
+
+  const clearFilters = () => { setSearch(''); setFProject('all'); setFCategory('all'); setFStatus('all'); };
+
+  return (
+    <div style={{ padding: 24, maxWidth: 1000 }}>
+      <PageHeader title="الأصول" subtitle="إدارة الأصول الملموسة ودورة حياتها" action={<Btn size="sm" onClick={onOpenCreate}>+ أصل جديد</Btn>} />
+
+      <StatCards cards={[
+        { label: 'إجمالي قيمة الأصول', value: fmtNum(Math.round(totalValue)), color: '#1d4ed8', bg: '#eff6ff', icon: '💎' },
+        { label: 'أصول نشطة', value: activeCount, color: '#15803d', bg: '#f0fdf4', icon: '✓' },
+        { label: 'تحت الصيانة', value: inMaint, color: '#a16207', bg: '#fef3c7', icon: '🔧' },
+        { label: 'ضمانات تنتهي قريباً', value: warrantyExpiring, color: '#c2410c', bg: '#fff7ed', icon: '🛡️' },
+      ]} />
+
+      <FilterBar
+        search={search} onSearch={setSearch} searchPlaceholder="🔍 بحث في الأصول..."
+        values={{ project: fProject, category: fCategory, status: fStatus }}
+        onChange={(k, v) => { if (k === 'project') setFProject(v); else if (k === 'category') setFCategory(v); else if (k === 'status') setFStatus(v); }}
+        onClear={clearFilters}
+        filters={[
+          { key: 'project', placeholder: 'المشروع', options: [{ v: 'all', l: 'كل المشاريع' }, ...projects.map(p => ({ v: p.id, l: p.name }))] },
+          { key: 'category', placeholder: 'النوع', options: [{ v: 'all', l: 'كل الأنواع' }, ...ASSET_CATEGORIES.map(c => ({ v: c.id, l: c.label }))] },
+          { key: 'status', placeholder: 'الحالة', options: [{ v: 'all', l: 'كل الحالات' }, { v: 'active', l: 'نشط' }, { v: 'maintenance', l: 'تحت الصيانة' }, { v: 'retired', l: 'مستبعَد' }] },
+        ]}
+      />
+
+      {filtered.length === 0 && (
+        <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>⬚</div>
+          <div style={{ fontSize: 14 }}>لا توجد أصول مطابقة</div>
+        </Card>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+        {filtered.map(a => {
+          const ci = catInfo(a.category);
+          const st = ASSET_STATUS[a.status];
+          const warrantyActive = a.warrantyEnd && a.warrantyEnd >= today();
+          const warrantyExp = a.warrantyEnd && a.warrantyEnd >= today() && a.warrantyEnd <= new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+          return (
+            <Card key={a.id} style={{ padding: 16, cursor: 'pointer' }}>
+              <div onClick={() => setView(a)}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 24 }}>{ci.icon}</span>
+                    <span>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{a.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{ci.label} · {projName(a.projectId)}</div>
+                    </span>
+                  </span>
+                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: st.bg, color: st.color, flexShrink: 0 }}>{st.label}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 10.5, color: 'var(--text-3)' }}>قيمة الشراء</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{fmtNum(a.purchaseValue)}</div>
+                  </div>
+                  {a.warrantyEnd && (
+                    <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: warrantyExp ? '#fff7ed' : warrantyActive ? '#dcfce7' : '#f1f5f9', color: warrantyExp ? '#c2410c' : warrantyActive ? '#15803d' : '#64748b' }}>
+                      {warrantyActive ? `🛡️ ضمان حتى ${a.warrantyEnd}` : 'انتهى الضمان'}
+                    </span>
+                  )}
+                </div>
+                {a.usageMeter != null && a.usageUnit && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 8 }}>العداد: {fmtNum(a.usageMeter)} {a.usageUnit}</div>}
+                {a.maintenance.length > 0 && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>🔧 {a.maintenance.length} سجل صيانة · إجمالي {fmtNum(assetMaintCost(a))} ر.س</div>}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* create */}
+      <Sheet open={openCreate} onClose={onCloseCreate} title="أصل جديد">
+        {openCreate && <AssetForm projectId={projectId} projects={projects} members={members} onSave={(a) => { onSave(a); onCloseCreate(); }} onCancel={onCloseCreate} />}
+      </Sheet>
+
+      {/* view detail */}
+      <Sheet open={!!view} onClose={() => { setView(null); setAddMaint(false); }} title="تفاصيل الأصل">
+        {view && (() => {
+          const a = view; const ci = catInfo(a.category); const st = ASSET_STATUS[a.status];
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 32 }}>{ci.icon}</span>
+                <div>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>{a.name}</div>
+                  <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: st.bg, color: st.color }}>{st.label}</span>
+                </div>
+              </div>
+
+              {[
+                ['النوع', ci.label], ['المشروع', projName(a.projectId)],
+                ['قيمة الشراء', fmt(a.purchaseValue)], ['تاريخ الشراء', a.purchaseDate],
+                ...(a.supplier ? [['المورّد', a.supplier] as [string, string]] : []),
+                ...(a.warrantyEnd ? [['انتهاء الضمان', a.warrantyEnd] as [string, string]] : []),
+                ...(a.serial ? [['الرقم/اللوحة', a.serial] as [string, string]] : []),
+                ...(a.usageMeter != null ? [['العداد', `${fmtNum(a.usageMeter)} ${a.usageUnit ?? ''}`] as [string, string]] : []),
+                ...(a.memberId ? [['المسؤول', memberName(a.memberId)] as [string, string]] : []),
+                ['إجمالي الصيانة', fmt(assetMaintCost(a))],
+                ...(a.note ? [['ملاحظات', a.note] as [string, string]] : []),
+              ].map(([k, v]) => (
+                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, paddingBottom: 10, borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+                  <span style={{ color: 'var(--text-3)' }}>{k}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text)', textAlign: 'left' }}>{v}</span>
+                </div>
+              ))}
+
+              {/* maintenance log */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)' }}>سجل الصيانة والأعطال ({a.maintenance.length})</span>
+                  <button onClick={() => setAddMaint(true)} style={{ background: '#eff6ff', color: '#1d4ed8', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>+ تسجيل</button>
+                </div>
+                {a.maintenance.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-3)', padding: '8px 0' }}>لا توجد سجلات بعد.</div>}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {[...a.maintenance].reverse().map(m => (
+                    <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 12px', background: 'var(--surface-2)', borderRadius: 8 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>{m.type === 'صيانة' ? '🔧' : m.type === 'عطل' ? '⚠️' : '🔍'} {m.type} — {m.date}</div>
+                        {m.note && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{m.note}</div>}
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#b91c1c', flexShrink: 0 }}>{fmtNum(m.cost)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {a.attachments && a.attachments.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 6 }}>المرفقات ({a.attachments.length})</div>
+                  <AttachmentView items={a.attachments} />
+                </div>
+              )}
+
+              <button onClick={() => { onDelete(a.id); setView(null); }} style={{ background: 'none', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: 8, padding: '8px', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', marginTop: 4 }}>🗑️ حذف الأصل</button>
+            </div>
+          );
+        })()}
+      </Sheet>
+
+      {/* add maintenance */}
+      <Sheet open={addMaint} onClose={() => setAddMaint(false)} title="تسجيل صيانة / عطل">
+        {addMaint && view && <MaintenanceForm onSave={(m) => { onAddMaintenance(view.id, m); setAddMaint(false); setView(null); }} onCancel={() => setAddMaint(false)} />}
+      </Sheet>
+    </div>
+  );
+}
+
 function AuditLog({ audit, onNav }: { audit: AuditEntry[]; onNav: (p: Page) => void }) {
   const [search, setSearch] = useState('');
   const [fAction, setFAction] = useState('all');
@@ -5511,6 +5845,7 @@ export default function App() {
   const [projects, setProjects] = usePersist<Project[]>('mz_projects', INITIAL_PROJECTS);
   const [transactions, setTransactions] = usePersist<Transaction[]>('mz_transactions', INITIAL_TRANSACTIONS);
   const [trackings, setTrackings] = usePersist<Tracking[]>('mz_trackings', INITIAL_TRACKINGS);
+  const [assets, setAssets] = usePersist<Asset[]>('mz_assets', INITIAL_ASSETS);
   const [requests, setRequests] = usePersist<RequestItem[]>('mz_requests', INITIAL_REQUESTS);
   const [documents, setDocuments] = usePersist<DocItem[]>('mz_documents', INITIAL_DOCUMENTS);
   const [notifs, setNotifs] = usePersist<Notif[]>('mz_notifs', INITIAL_NOTIFS);
@@ -5533,6 +5868,7 @@ export default function App() {
   const [createRequest, setCreateRequest] = useState(false);
   const [createReceivable, setCreateReceivable] = useState(false);
   const [createCommitment, setCreateCommitment] = useState(false);
+  const [createAsset, setCreateAsset] = useState(false);
   const [createProject, setCreateProject] = useState(false);
   const [trackingPreset, setTrackingPreset] = useState<{ name?: string; type?: string }>({});
 
@@ -5677,6 +6013,34 @@ export default function App() {
     setNotifs(ns => [{ id: uid('n'), type: 'success', title: isOut ? 'تم دفع التزام' : 'تم استلام دفعة', body: `${c.name}: ${fmt(c.amount)}.${reachedEnd ? ' (اكتملت كل الدفعات)' : ` الاستحقاق القادم بعد التقدّم.`}`, time: 'الآن', read: false, link: 'commitments', projectId: c.projectId, section: 'finance', memberId: c.memberId, ts: nowStamp() }, ...ns]);
   };
 
+  // ── assets (الأصول) ──
+  const saveAsset = (a: Omit<Asset, 'id'>) => {
+    logAudit('إنشاء', 'أصل', `${a.name} — ${fmt(a.purchaseValue)}`);
+    setAssets(list => [{ ...a, id: uid('as') }, ...list]);
+    setNotifs(ns => [{ id: uid('n'), type: 'success', title: 'تمت إضافة أصل', body: `${a.name} بقيمة ${fmt(a.purchaseValue)}.`, time: 'الآن', read: false, link: 'assets', projectId: a.projectId, ts: nowStamp() }, ...ns]);
+  };
+  const deleteAsset = (id: string) => { const a = assets.find(x => x.id === id); logAudit('حذف', 'أصل', a?.name ?? ''); setAssets(l => l.filter(x => x.id !== id)); };
+  // adding maintenance → records a real expense transaction + may flip status
+  const addMaintenance = (assetId: string, m: Omit<MaintenanceEntry, 'id'>) => {
+    const a = assets.find(x => x.id === assetId);
+    if (!a) return;
+    const entry: MaintenanceEntry = { ...m, id: uid('mn') };
+    setAssets(list => list.map(x => x.id === assetId ? {
+      ...x, maintenance: [...x.maintenance, entry],
+      status: m.type === 'عطل' ? 'maintenance' : x.status,
+    } : x));
+    if (m.cost > 0) {
+      const tx: Transaction = {
+        id: uid('t'), projectId: a.projectId, type: 'expense',
+        description: `${m.type} - ${a.name}${m.note ? ` (${m.note})` : ''}`,
+        amount: m.cost, category: 'صيانة', date: m.date, hasDoc: false, note: 'صيانة أصل', createdBy: CURRENT_USER,
+      };
+      setTransactions(list => [tx, ...list]);
+    }
+    logAudit('تسجيل', 'صيانة أصل', `${a.name} — ${m.type} ${fmt(m.cost)}`);
+    setNotifs(ns => [{ id: uid('n'), type: 'info', title: `${m.type} مسجّلة`, body: `${a.name}: ${m.type} بتكلفة ${fmt(m.cost)}.`, time: 'الآن', read: false, link: 'assets', projectId: a.projectId, section: 'finance', ts: nowStamp() }, ...ns]);
+  };
+
   const saveDoc = (d: Omit<DocItem, 'id'> & { id?: string }) =>
     setDocuments(list => d.id ? list.map(x => x.id === d.id ? { ...x, ...d } as DocItem : x) : [{ ...d, id: uid('d'), createdBy: CURRENT_USER }, ...list]);
   const deleteDoc = (id: string) => setDocuments(l => l.filter(x => x.id !== id));
@@ -5735,6 +6099,7 @@ export default function App() {
       case 'commitments': return <Commitments projectId={projectId} projects={projects} commitments={commitments} members={members} onSave={saveCommitment} onPay={payCommitment} onToggle={toggleCommitment} onDelete={deleteCommitment} openCreate={createCommitment} onOpenCreate={() => setCreateCommitment(true)} onCloseCreate={() => setCreateCommitment(false)} helpEntry={help.commitments} />;
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} docTypeOptions={lists.docTypes} helpEntry={help.documents} />;
       case 'trackings': return <Trackings projectId={projectId} projects={projects} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} helpEntry={help.trackings} />;
+      case 'assets': return <Assets projectId={projectId} projects={projects} assets={assets} members={members} onSave={saveAsset} onDelete={deleteAsset} onAddMaintenance={addMaintenance} openCreate={createAsset} onOpenCreate={() => setCreateAsset(true)} onCloseCreate={() => setCreateAsset(false)} />;
       case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} helpEntry={help.requests} />;
       case 'notifications': return <Notifications notifs={notifs} projects={projects} members={members} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} />;
       case 'audit': return <AuditLog audit={audit} onNav={setPage} />;
