@@ -27,7 +27,7 @@ type Transaction = { id: string; projectId: string; type: TxType; description: s
 type Tracking = { id: string; name: string; type: string; icon: string; status: TrackingStatus; daysLeft: number; expiryDate: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
 type RequestItem = { id: string; title: string; amount: number; requestedBy: string; status: RequestStatus; date: string; type: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
 type DocItem = { id: string; name: string; type: string; date: string; size: string; status: string; projectId: string; aiRead: boolean; attachments?: Attachment[]; createdBy?: string };
-type Notif = { id: string; type: string; title: string; body: string; time: string; read: boolean };
+type Notif = { id: string; type: string; title: string; body: string; time: string; read: boolean; link?: Page };
 // audit log entry — records every important event in the app
 type AuditEntry = { id: string; action: string; entity: string; detail: string; user: string; ts: string };
 
@@ -131,10 +131,10 @@ const INITIAL_DOCUMENTS: DocItem[] = [
 ];
 
 const INITIAL_NOTIFS: Notif[] = [
-  { id: 'n1', type: 'danger', title: 'تأمين السيارة منتهي', body: 'انتهى تأمين السيارة منذ 5 أيام. يرجى التجديد.', time: 'قبل ساعة', read: false },
-  { id: 'n2', type: 'warning', title: 'ضمان يوشك على الانتهاء', body: 'ضمان ثلاجة المطبخ ينتهي خلال 12 يوم.', time: 'قبل 3 ساعات', read: false },
-  { id: 'n3', type: 'info', title: 'طلب جديد بانتظار موافقتك', body: 'طلب صرف مصروفات السفر بمبلغ 3,200 ر.س.', time: 'أمس', read: false },
-  { id: 'n4', type: 'success', title: 'تمت معالجة مستند', body: 'تمت قراءة فاتورة مورد يونيو بنجاح.', time: 'أمس', read: true },
+  { id: 'n1', type: 'danger', title: 'تأمين السيارة منتهي', body: 'انتهى تأمين السيارة منذ 5 أيام. يرجى التجديد عبر قسم المتابعات والضمانات.', time: 'قبل ساعة', read: false, link: 'trackings' },
+  { id: 'n2', type: 'warning', title: 'ضمان يوشك على الانتهاء', body: 'ضمان ثلاجة المطبخ ينتهي خلال 12 يوم. الطرف: مؤسسة الإلكترونيات الحديثة.', time: 'قبل 3 ساعات', read: false, link: 'trackings' },
+  { id: 'n3', type: 'info', title: 'طلب جديد بانتظار موافقتك', body: 'طلب صرف مصروفات السفر بمبلغ 3,200 ر.س — مقدّم الطلب: أحمد العلي.', time: 'أمس', read: false, link: 'requests' },
+  { id: 'n4', type: 'success', title: 'تمت معالجة مستند', body: 'تمت قراءة فاتورة مورد يونيو بنجاح بواسطة محمد العمري.', time: 'أمس', read: true, link: 'documents' },
 ];
 
 const INITIAL_AUDIT: AuditEntry[] = [
@@ -1178,16 +1178,18 @@ function InviteForm({ projectId, onInvite, onCancel }: {
   );
 }
 
-function ProjectDetail({ projectId, projects, transactions, trackings, requests, documents, members, memberTxns, notifs, onNav, onSaveMember, onDeleteMember, onSaveMemberTxn, onDecideMemberTxn, onOpenMember }: {
+function ProjectDetail({ projectId, projects, transactions, trackings, requests, documents, members, memberTxns, notifs, onNav, onSaveMember, onDeleteMember, onSaveMemberTxn, onDecideMemberTxn, onOpenMember, onSaveProject, onDeleteProject, onViewTx, onViewDoc, onViewTracking }: {
   projectId: string; projects: Project[]; transactions: Transaction[]; trackings: Tracking[];
   requests: RequestItem[]; documents: DocItem[]; members: Member[]; memberTxns: MemberTxn[]; notifs: Notif[];
   onNav: (p: Page) => void;
   onSaveMember: (m: Omit<Member, 'id'> & { id?: string }) => void; onDeleteMember: (id: string) => void;
   onSaveMemberTxn: (t: Omit<MemberTxn, 'id'>) => void; onDecideMemberTxn: (id: string, status: MemberTxnStatus) => void;
   onOpenMember: (id: string) => void;
+  onSaveProject: (p: Omit<Project, 'id'> & { id?: string }) => void; onDeleteProject: (id: string) => void;
+  onViewTx: (t: Transaction) => void; onViewDoc: (d: DocItem) => void; onViewTracking: (t: Tracking) => void;
 }) {
   const [tab, setTab] = useState<'overview' | 'members' | 'cashflow'>('overview');
-  const [sheet, setSheet] = useState<null | { mode: 'add' } | { mode: 'edit'; member: Member } | { mode: 'txn' } | { mode: 'invite' }>(null);
+  const [sheet, setSheet] = useState<null | { mode: 'add' } | { mode: 'edit'; member: Member } | { mode: 'txn' } | { mode: 'invite' } | { mode: 'editProject' } | { mode: 'deleteProject' }>(null);
   const project = projects.find(p => p.id === projectId);
   if (!project) return <div style={{ padding: 24 }}>المشروع غير موجود.</div>;
 
@@ -1215,6 +1217,11 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
   const maxFlow = Math.max(...months.map(m => Math.max(byMonth[m].income, byMonth[m].expense)), 1);
 
   const close = () => setSheet(null);
+  // current user's permissions in this project (simulated as owner — first member matching CURRENT_USER, else owner)
+  const me = members.find(m => m.projectId === projectId && m.name === CURRENT_USER) ?? members.find(m => m.projectId === projectId && m.role === 'owner');
+  const myPerms = me?.permissions ?? ROLE_PERMS.owner;
+  const canEdit = myPerms.includes('project_edit');
+  const canDelete = myPerms.includes('project_delete');
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
@@ -1230,6 +1237,12 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
           <div style={{ fontSize: 12, color: 'var(--text-3)' }}>الرصيد الحالي</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: balance >= 0 ? '#15803d' : '#b91c1c' }}>{fmt(balance)}</div>
         </div>
+        {(canEdit || canDelete) && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            {canEdit && <button onClick={() => setSheet({ mode: 'editProject' })} style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', fontSize: 15, color: 'var(--text-2)' }} title="تعديل المشروع">✎</button>}
+            {canDelete && <button onClick={() => setSheet({ mode: 'deleteProject' })} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', fontSize: 15, color: '#b91c1c' }} title="حذف المشروع">🗑️</button>}
+          </div>
+        )}
       </div>
 
       {/* tabs */}
@@ -1266,14 +1279,17 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
             <Card>
               <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>الموارد والمستندات</div>
               {[
-                ['📄 المستندات', projDocs.length],
-                ['🛡️ المتابعات والضمانات', projTrackings.length],
-                ['📝 الطلبات', projReqs.length],
-                ['⏳ طلبات معلقة', pendingReqs.length],
-              ].map(([l, n]) => (
-                <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+                ['📄 المستندات', projDocs.length, 'documents' as Page],
+                ['🛡️ المتابعات والضمانات', projTrackings.length, 'trackings' as Page],
+                ['📝 الطلبات', projReqs.length, 'requests' as Page],
+                ['⏳ طلبات معلقة', pendingReqs.length, 'requests' as Page],
+              ].map(([l, n, dest]) => (
+                <div key={l as string} onClick={() => onNav(dest as Page)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)', fontSize: 13, cursor: 'pointer' }}>
                   <span style={{ color: 'var(--text-2)' }}>{l}</span>
-                  <span style={{ fontWeight: 700, color: 'var(--text)' }}>{n as number}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 700, color: 'var(--text)' }}>{n as number}</span>
+                    <span style={{ color: 'var(--text-3)', fontSize: 15 }}>‹</span>
+                  </span>
                 </div>
               ))}
             </Card>
@@ -1308,6 +1324,52 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
               </div>
             </Card>
           </div>
+
+          {/* interactive recent documents & trackings (open / view) */}
+          {(projDocs.length > 0 || projTrackings.length > 0) && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px,1fr))', gap: 16, marginTop: 16 }}>
+              {projDocs.length > 0 && (
+                <Card>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ fontWeight: 600, fontSize: 15 }}>📄 مستندات المشروع</div>
+                    <button onClick={() => onNav('documents')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ‹</button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {projDocs.slice(0, 4).map(d => (
+                      <div key={d.id} onClick={() => onViewDoc(d)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 9, background: 'var(--surface-2)', cursor: 'pointer' }}>
+                        <span style={{ fontSize: 18 }}>{d.attachments?.find(a => a.kind === 'image' && a.preview) ? '🖼️' : '📄'}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{d.type} · {d.date}</div>
+                        </div>
+                        <span style={{ color: 'var(--text-3)', fontSize: 14 }}>‹</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+              {projTrackings.length > 0 && (
+                <Card>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ fontWeight: 600, fontSize: 15 }}>🛡️ متابعات المشروع</div>
+                    <button onClick={() => onNav('trackings')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ‹</button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {projTrackings.slice(0, 4).map(t => (
+                      <div key={t.id} onClick={() => onViewTracking(t)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 9, background: 'var(--surface-2)', cursor: 'pointer' }}>
+                        <span style={{ fontSize: 18 }}>{t.icon}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
+                          <div style={{ fontSize: 11, color: t.status === 'expired' ? '#b91c1c' : 'var(--text-3)' }}>{t.status === 'expired' ? 'منتهي' : `${t.daysLeft} يوم`}</div>
+                        </div>
+                        <span style={{ color: 'var(--text-3)', fontSize: 14 }}>‹</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+            </div>
+          )}
         </>
       )}
 
@@ -1460,8 +1522,56 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
               ))}
             </div>
           </Card>
+
+          {/* innovative: all project operations as an interactive flow timeline */}
+          <Card style={{ marginTop: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div style={{ fontWeight: 600, fontSize: 15 }}>تفاصيل عمليات التدفق ({txns.length})</div>
+              <button onClick={() => onNav('finance')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>الإدارة المالية ‹</button>
+            </div>
+            {txns.length === 0 && <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>لا توجد عمليات بعد</div>}
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {[...txns].sort((a, b) => b.date.localeCompare(a.date)).map(t => {
+                const isIn = t.type === 'income' || (t.type === 'transfer' && t.transferDir === 'in');
+                return (
+                  <div key={t.id} onClick={() => onViewTx(t)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 12px', borderRadius: 10, cursor: 'pointer', borderRight: `3px solid ${isIn ? '#22c55e' : '#f87171'}`, background: 'var(--surface-2)' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 99, background: isIn ? '#f0fdf4' : '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+                      {t.type === 'income' ? '↓' : t.type === 'expense' ? '↑' : '↔'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                        {t.category} · {t.date}{t.source ? ` · ${t.source}` : ''} · بواسطة {t.createdBy ?? CURRENT_USER}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'left', flexShrink: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: isIn ? '#15803d' : '#b91c1c' }}>{isIn ? '+' : '−'}{fmtNum(t.amount)}</div>
+                      {t.attachments && t.attachments.length > 0 && <div style={{ fontSize: 10, color: 'var(--text-3)' }}>📎 {t.attachments.length}</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
         </>
       )}
+
+      {/* edit project */}
+      <Sheet open={sheet?.mode === 'editProject'} onClose={close} title="تعديل المشروع">
+        {sheet?.mode === 'editProject' && <ProjectForm initial={project} onSave={(p) => { onSaveProject(p); close(); }} onCancel={close} />}
+      </Sheet>
+      {/* delete project confirm */}
+      <Sheet open={sheet?.mode === 'deleteProject'} onClose={close} title="حذف المشروع">
+        <div style={{ textAlign: 'center', padding: '10px 0 4px' }}>
+          <div style={{ fontSize: 40, marginBottom: 10 }}>⚠️</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>حذف "{project.name}"؟</div>
+          <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20 }}>سيتم حذف المشروع. لا يمكن التراجع عن هذا الإجراء.</div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <Btn variant="outline" style={{ flex: 1 }} onClick={close}>إلغاء</Btn>
+            <Btn variant="danger" style={{ flex: 1 }} onClick={() => { onDeleteProject(projectId); onNav('projects'); }}>🗑️ حذف نهائي</Btn>
+          </div>
+        </div>
+      </Sheet>
     </div>
   );
 }
@@ -2537,25 +2647,34 @@ function Requests({ projectId, requests, members, onDecide, onSave, onDelete, op
 // ═══════════════════════════════════════════
 //  NOTIFICATIONS
 // ═══════════════════════════════════════════
-function Notifications({ notifs, onMarkRead, onMarkAll }: { notifs: Notif[]; onMarkRead: (id: string) => void; onMarkAll: () => void }) {
+function Notifications({ notifs, onMarkRead, onMarkAll, onNav }: { notifs: Notif[]; onMarkRead: (id: string) => void; onMarkAll: () => void; onNav: (p: Page) => void }) {
   const icons: Record<string, string> = { warning: '⚠️', info: 'ℹ️', danger: '🔴', success: '✅' };
   const colors: Record<string, string> = { warning: '#fffbeb', info: '#eff6ff', danger: '#fef2f2', success: '#f0fdf4' };
+  const linkLabel: Record<string, string> = { trackings: 'المتابعات', requests: 'الطلبات', documents: 'المستندات', finance: 'المالية', projects: 'المشاريع' };
   return (
     <div style={{ padding: 24, maxWidth: 700 }}>
       <PageHeader title="الإشعارات والتنبيهات" action={<Btn size="sm" variant="outline" onClick={onMarkAll}>✓ تعليم الكل كمقروء</Btn>} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {notifs.map(n => (
-          <div key={n.id} onClick={() => onMarkRead(n.id)} style={{
-            background: n.read ? '#fff' : colors[n.type], borderRadius: 14, padding: '14px 18px', cursor: 'pointer',
-            border: `1px solid ${n.read ? '#f1f5f9' : 'transparent'}`, display: 'flex', alignItems: 'flex-start', gap: 14, transition: 'all .2s',
+          <div key={n.id} style={{
+            background: n.read ? 'var(--surface)' : colors[n.type], borderRadius: 14, padding: '14px 18px',
+            border: `1px solid ${n.read ? 'var(--border)' : 'transparent'}`, display: 'flex', alignItems: 'flex-start', gap: 14, transition: 'all .2s',
           }}>
             <span style={{ fontSize: 22, flexShrink: 0 }}>{icons[n.type]}</span>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
                 <div style={{ fontWeight: n.read ? 400 : 600, fontSize: 14, color: 'var(--text)' }}>{n.title}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-3)', flexShrink: 0, marginRight: 10 }}>{n.time}</div>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{n.body}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.7 }}>{n.body}</div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                {n.link && (
+                  <button onClick={() => { onMarkRead(n.id); onNav(n.link!); }} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '5px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    استعراض في {linkLabel[n.link] ?? 'القسم'} ‹
+                  </button>
+                )}
+                {!n.read && <button onClick={() => onMarkRead(n.id)} style={{ background: 'var(--surface-3)', color: 'var(--text-3)', border: 'none', borderRadius: 8, padding: '5px 14px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>تعليم كمقروء</button>}
+              </div>
             </div>
             {!n.read && <span style={{ width: 8, height: 8, borderRadius: 99, background: '#2563eb', flexShrink: 0, marginTop: 5 }} />}
           </div>
@@ -3244,14 +3363,14 @@ export default function App() {
     switch (page) {
       case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} />;
       case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} />;
-      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} />;
+      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} />;
       case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} onBack={goBack} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} />;
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} />;
       case 'trackings': return <Trackings projectId={projectId} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
       case 'requests': return <Requests projectId={projectId} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
-      case 'notifications': return <Notifications notifs={notifs} onMarkRead={markRead} onMarkAll={markAll} />;
+      case 'notifications': return <Notifications notifs={notifs} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} />;
       case 'audit': return <AuditLog audit={audit} onNav={setPage} />;
       case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => { logAudit('تسجيل خروج', 'النظام', 'تم تسجيل الخروج'); setAuthed(false); }} />;
       case 'subscription': return <Subscription current={plan} onChoose={setPlan} />;
