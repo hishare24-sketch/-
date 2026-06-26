@@ -3899,8 +3899,8 @@ const COMMITMENT_KINDS: { id: CommitmentKind; label: string; icon: string }[] = 
   { id: 'obligation', label: 'التزام دوري', icon: '🔁' },
   { id: 'subscription', label: 'اشتراك', icon: '💳' },
 ];
-function CommitmentForm({ projectId, projects, members, onSave, onCancel }: {
-  projectId: string; projects: Project[]; members: Member[];
+function CommitmentForm({ projectId, projects, onSave, onCancel }: {
+  projectId: string; projects: Project[];
   onSave: (c: Omit<Commitment, 'id'>) => void; onCancel: () => void;
 }) {
   const [kind, setKind] = useState<CommitmentKind>('installment');
@@ -3981,8 +3981,8 @@ function CommitmentForm({ projectId, projects, members, onSave, onCancel }: {
   );
 }
 
-function Commitments({ projectId, projects, commitments, members, onSave, onPay, onToggle, onDelete, openCreate, onOpenCreate, onCloseCreate }: {
-  projectId: string; projects: Project[]; commitments: Commitment[]; members: Member[];
+function Commitments({ projectId, projects, commitments, onSave, onPay, onToggle, onDelete, openCreate, onOpenCreate, onCloseCreate }: {
+  projectId: string; projects: Project[]; commitments: Commitment[];
   onSave: (c: Omit<Commitment, 'id'>) => void; onPay: (id: string) => void; onToggle: (id: string) => void; onDelete: (id: string) => void;
   openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void;
 }) {
@@ -4077,7 +4077,7 @@ function Commitments({ projectId, projects, commitments, members, onSave, onPay,
                   <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>
                     {projName(c.projectId)}{c.party ? ` · ${c.party}` : ''}{!done ? ` · يستحق ${c.nextDue}` : ''}
                   </div>
-                  {c.totalCount && (
+                  {c.totalCount != null && (
                     <div style={{ marginTop: 8 }}>
                       <div style={{ height: 6, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: isOut ? '#f87171' : '#22c55e' }} />
@@ -4085,7 +4085,7 @@ function Commitments({ projectId, projects, commitments, members, onSave, onPay,
                       <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 3 }}>دُفع {c.paidCount} من {c.totalCount} دفعة ({pct}%)</div>
                     </div>
                   )}
-                  {!c.totalCount && c.paidCount > 0 && <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 6 }}>دُفع {c.paidCount} دفعة (مستمر)</div>}
+                  {c.totalCount == null && c.paidCount > 0 && <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 6 }}>دُفع {c.paidCount} دفعة (مستمر)</div>}
                 </div>
                 <div style={{ textAlign: 'left', flexShrink: 0 }}>
                   <div style={{ fontSize: 16, fontWeight: 800, color: isOut ? '#b91c1c' : '#15803d' }}>{isOut ? '−' : '+'}{fmtNum(c.amount)}</div>
@@ -4109,7 +4109,7 @@ function Commitments({ projectId, projects, commitments, members, onSave, onPay,
 
       {/* create */}
       <Sheet open={openCreate} onClose={onCloseCreate} title="التزام دوري جديد">
-        {openCreate && <CommitmentForm projectId={projectId} projects={projects} members={members} onSave={(c) => { onSave(c); onCloseCreate(); }} onCancel={onCloseCreate} />}
+        {openCreate && <CommitmentForm projectId={projectId} projects={projects} onSave={(c) => { onSave(c); onCloseCreate(); }} onCancel={onCloseCreate} />}
       </Sheet>
 
       {/* view */}
@@ -4118,18 +4118,18 @@ function Commitments({ projectId, projects, commitments, members, onSave, onPay,
           const c = viewC;
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {[
+              {([
                 ['النوع', `${kindInfo(c.kind).icon} ${kindInfo(c.kind).label}`],
                 ['الاتجاه', c.direction === 'out' ? '↑ صادر (ندفع)' : '↓ وارد (نستلم)'],
-                ['الاسم', c.name], ...(c.party ? [['الطرف', c.party] as [string, string]] : []),
+                ['الاسم', c.name], ...(c.party ? [['الطرف', c.party]] : []),
                 ['المشروع', projName(c.projectId)],
                 ['مبلغ الدفعة', fmt(c.amount)], ['التكرار', FREQ_LABEL[c.freq]],
                 ['تاريخ البداية', c.startDate], ['الاستحقاق القادم', commitmentDone(c) ? 'مكتمل' : c.nextDue],
                 ['الدفعات', c.totalCount ? `${c.paidCount} من ${c.totalCount}` : `${c.paidCount} (مستمر)`],
                 ['الحالة', commitmentDone(c) ? 'مكتمل' : c.active ? 'نشط' : 'موقوف'],
                 ['أضافها', c.createdBy ?? CURRENT_USER],
-                ...(c.note ? [['ملاحظات', c.note] as [string, string]] : []),
-              ].map(([k, v]) => (
+                ...(c.note ? [['ملاحظات', c.note]] : []),
+              ] as [string, string][]).map(([k, v]) => (
                 <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, paddingBottom: 10, borderBottom: '1px solid var(--border)', fontSize: 13 }}>
                   <span style={{ color: 'var(--text-3)' }}>{k}</span>
                   <span style={{ fontWeight: 600, color: 'var(--text)', textAlign: 'left' }}>{v}</span>
@@ -4685,7 +4685,7 @@ export default function App() {
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} />;
       case 'receivables': return <Receivables projectId={projectId} projects={projects} receivables={receivables} members={members} onSave={saveReceivable} onPay={payReceivable} onDelete={deleteReceivable} openCreate={createReceivable} onOpenCreate={() => setCreateReceivable(true)} onCloseCreate={() => setCreateReceivable(false)} />;
-      case 'commitments': return <Commitments projectId={projectId} projects={projects} commitments={commitments} members={members} onSave={saveCommitment} onPay={payCommitment} onToggle={toggleCommitment} onDelete={deleteCommitment} openCreate={createCommitment} onOpenCreate={() => setCreateCommitment(true)} onCloseCreate={() => setCreateCommitment(false)} />;
+      case 'commitments': return <Commitments projectId={projectId} projects={projects} commitments={commitments} onSave={saveCommitment} onPay={payCommitment} onToggle={toggleCommitment} onDelete={deleteCommitment} openCreate={createCommitment} onOpenCreate={() => setCreateCommitment(true)} onCloseCreate={() => setCreateCommitment(false)} />;
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} />;
       case 'trackings': return <Trackings projectId={projectId} projects={projects} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
       case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
