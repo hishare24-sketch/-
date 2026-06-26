@@ -498,6 +498,74 @@ function AttachmentView({ items }: { items?: Attachment[] }) {
   );
 }
 // ═══════════════════════════════════════════
+//  STAT CHARTS (lightweight CSS donut + bars)
+// ═══════════════════════════════════════════
+// donut chart from segments (uses conic-gradient)
+function Donut({ segments, size = 120, label }: { segments: { value: number; color: string; label: string }[]; size?: number; label?: string }) {
+  const total = segments.reduce((s, x) => s + x.value, 0) || 1;
+  let acc = 0;
+  const stops = segments.map(seg => {
+    const start = (acc / total) * 360; acc += seg.value;
+    const end = (acc / total) * 360;
+    return `${seg.color} ${start}deg ${end}deg`;
+  }).join(', ');
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+      <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+        <div style={{ width: size, height: size, borderRadius: '50%', background: total === 1 && segments.every(s => s.value === 0) ? 'var(--surface-3)' : `conic-gradient(${stops})` }} />
+        <div style={{ position: 'absolute', inset: '22%', borderRadius: '50%', background: 'var(--surface)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{total === 1 && segments.every(s => s.value === 0) ? 0 : total}</div>
+          {label && <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{label}</div>}
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, flex: 1, minWidth: 120 }}>
+        {segments.map(s => (
+          <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 }}>
+            <span style={{ width: 11, height: 11, borderRadius: 3, background: s.color, flexShrink: 0 }} />
+            <span style={{ color: 'var(--text-2)', flex: 1 }}>{s.label}</span>
+            <span style={{ fontWeight: 700, color: 'var(--text)' }}>{s.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// horizontal labeled bars
+function StatBars({ bars }: { bars: { label: string; value: number; color: string }[] }) {
+  const max = Math.max(...bars.map(b => b.value), 1);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {bars.map(b => (
+        <div key={b.label}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
+            <span style={{ color: 'var(--text-2)' }}>{b.label}</span>
+            <span style={{ fontWeight: 700, color: 'var(--text)' }}>{b.value}</span>
+          </div>
+          <div style={{ height: 10, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${(b.value / max) * 100}%`, background: b.color, borderRadius: 99, transition: 'width .4s ease' }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// small stat number cards row
+function StatCards({ cards }: { cards: { label: string; value: string | number; color: string; bg: string; icon?: string }[] }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 12, marginBottom: 16 }}>
+      {cards.map(c => (
+        <div key={c.label} style={{ background: c.bg, borderRadius: 14, padding: 14 }}>
+          {c.icon && <div style={{ fontSize: 16, marginBottom: 3 }}>{c.icon}</div>}
+          <div style={{ fontSize: 19, fontWeight: 800, color: c.color }}>{c.value}</div>
+          <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{c.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+// ═══════════════════════════════════════════
 //  SIDEBAR
 // ═══════════════════════════════════════════
 const NAV = [
@@ -905,9 +973,44 @@ function Projects({ projects, transactions, onOpen, onSave, onDelete }: {
   const [sheet, setSheet] = useState<null | { mode: 'create' } | { mode: 'edit' | 'view'; project: Project }>(null);
   const close = () => setSheet(null);
 
+  // section statistics
+  const totalBalance = projects.reduce((s, p) => s + computeBalance(p, transactions), 0);
+  const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const palette = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#dc2626', '#0891b2', '#db2777', '#65a30d'];
+  const balanceSegments = projects.map((p, i) => ({ value: Math.max(0, Math.round(computeBalance(p, transactions))), color: palette[i % palette.length], label: p.name }));
+  const netBars = projects.map((p, i) => {
+    const txns = transactions.filter(t => t.projectId === p.id);
+    const net = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0) - txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    return { label: p.name, value: Math.max(0, Math.round(net)), color: palette[i % palette.length] };
+  });
+
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
       <PageHeader title="المشاريع" action={<Btn size="sm" onClick={() => setSheet({ mode: 'create' })}>+ مشروع جديد</Btn>} />
+
+      {/* section statistics */}
+      {projects.length > 0 && (
+        <>
+          <StatCards cards={[
+            { label: 'عدد المشاريع', value: projects.length, color: '#1d4ed8', bg: '#eff6ff', icon: '⬡' },
+            { label: 'إجمالي الأرصدة', value: fmtNum(totalBalance), color: '#15803d', bg: '#f0fdf4', icon: '∑' },
+            { label: 'إجمالي الإيرادات', value: fmtNum(totalIncome), color: '#15803d', bg: '#f0fdf4', icon: '↓' },
+            { label: 'إجمالي المصروفات', value: fmtNum(totalExpense), color: '#b91c1c', bg: '#fef2f2', icon: '↑' },
+          ]} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px,1fr))', gap: 16, marginBottom: 22 }}>
+            <Card>
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>توزيع الأرصدة على المشاريع</div>
+              <Donut segments={balanceSegments} label="مشروع" />
+            </Card>
+            <Card>
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>صافي كل مشروع</div>
+              <StatBars bars={netBars} />
+            </Card>
+          </div>
+        </>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: 18 }}>
         {projects.map(p => {
           const txns = transactions.filter(t => t.projectId === p.id);
@@ -2157,6 +2260,38 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
         </div>
       </div>
 
+      {docs.length > 0 && (() => {
+        const byType: Record<string, number> = {};
+        docs.forEach(d => { byType[d.type] = (byType[d.type] ?? 0) + 1; });
+        const palette = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2'];
+        const typeSegs = Object.entries(byType).map(([k, v], i) => ({ value: v, color: palette[i % palette.length], label: k }));
+        const aiRead = docs.filter(d => d.aiRead).length;
+        const withAtt = docs.filter(d => d.attachments && d.attachments.length > 0).length;
+        return (
+          <>
+            <StatCards cards={[
+              { label: 'إجمالي المستندات', value: docs.length, color: '#1d4ed8', bg: '#eff6ff', icon: '📄' },
+              { label: 'تمت قراءتها AI', value: aiRead, color: '#7c3aed', bg: '#faf5ff', icon: '🤖' },
+              { label: 'بها مرفقات', value: withAtt, color: '#15803d', bg: '#f0fdf4', icon: '📎' },
+              { label: 'أنواع مختلفة', value: Object.keys(byType).length, color: '#d97706', bg: '#fffbeb', icon: '🗂️' },
+            ]} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px,1fr))', gap: 16, marginBottom: 22 }}>
+              <Card>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>توزيع المستندات حسب النوع</div>
+                <Donut segments={typeSegs} label="مستند" />
+              </Card>
+              <Card>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>حالة قراءة الذكاء الاصطناعي</div>
+                <StatBars bars={[
+                  { label: 'تمت القراءة', value: aiRead, color: '#7c3aed' },
+                  { label: 'لم تُقرأ بعد', value: docs.length - aiRead, color: '#cbd5e1' },
+                ]} />
+              </Card>
+            </div>
+          </>
+        );
+      })()}
+
       {docs.length === 0 && (
         <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>📂</div>
@@ -2549,6 +2684,43 @@ function Requests({ projectId, requests, members, onDecide, onSave, onDelete, op
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
       <PageHeader title="الطلبات والموافقات" subtitle="إدارة دورة الاعتماد" action={<Btn size="sm" onClick={onOpenCreate}>+ طلب جديد</Btn>} />
+
+      {reqs.length > 0 && (() => {
+        const pending = reqs.filter(r => r.status === 'pending');
+        const approved = reqs.filter(r => r.status === 'approved');
+        const rejected = reqs.filter(r => r.status === 'rejected');
+        const decided = approved.length + rejected.length;
+        const approvalRate = decided > 0 ? Math.round((approved.length / decided) * 100) : 0;
+        const approvedAmount = approved.reduce((s, r) => s + r.amount, 0);
+        const pendingAmount = pending.reduce((s, r) => s + r.amount, 0);
+        return (
+          <>
+            <StatCards cards={[
+              { label: 'إجمالي الطلبات', value: reqs.length, color: '#1d4ed8', bg: '#eff6ff', icon: '📋' },
+              { label: 'معلقة', value: pending.length, color: '#a16207', bg: '#fffbeb', icon: '⏳' },
+              { label: 'معتمدة', value: approved.length, color: '#15803d', bg: '#f0fdf4', icon: '✅' },
+              { label: 'نسبة الاعتماد', value: approvalRate + '%', color: '#7c3aed', bg: '#faf5ff', icon: '📊' },
+            ]} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px,1fr))', gap: 16, marginBottom: 22 }}>
+              <Card>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>توزيع الطلبات حسب الحالة</div>
+                <Donut segments={[
+                  { value: pending.length, color: '#f59e0b', label: 'معلقة' },
+                  { value: approved.length, color: '#22c55e', label: 'معتمدة' },
+                  { value: rejected.length, color: '#ef4444', label: 'مرفوضة' },
+                ]} label="طلب" />
+              </Card>
+              <Card>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>المبالغ حسب الحالة</div>
+                <StatBars bars={[
+                  { label: 'معتمدة (ر.س)', value: Math.round(approvedAmount), color: '#22c55e' },
+                  { label: 'معلقة (ر.س)', value: Math.round(pendingAmount), color: '#f59e0b' },
+                ]} />
+              </Card>
+            </div>
+          </>
+        );
+      })()}
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'var(--surface-3)', padding: 4, borderRadius: 12, width: 'fit-content', flexWrap: 'wrap' }}>
         {[['all', 'الكل'], ['pending', 'معلقة'], ['approved', 'معتمدة'], ['rejected', 'مرفوضة']].map(([val, label]) => (
