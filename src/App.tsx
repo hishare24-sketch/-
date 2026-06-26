@@ -2565,11 +2565,11 @@ function aiExtract(doc: DocItem): [string, string][] {
   return [...base, ['المحتوى', 'تم تحليل المستند العام'], ['عدد الصفحات', '3']];
 }
 
-function Documents({ projectId, projects, documents, onSave, onDelete, onAction, openCreate, onOpenCreate, onCloseCreate, docTypes = DEFAULT_DOC_TYPES }: {
+function Documents({ projectId, projects, documents, onSave, onDelete, onAction, openCreate, onOpenCreate, onCloseCreate, docTypeOptions = DEFAULT_DOC_TYPES }: {
   projectId: string; projects: Project[]; documents: DocItem[];
   onSave: (d: Omit<DocItem, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
   onAction: (action: 'tx' | 'tracking', doc: DocItem) => void;
-  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; docTypes?: string[];
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; docTypeOptions?: string[];
 }) {
   const [sheet, setSheet] = useState<null | { mode: 'view' | 'edit' | 'actions' | 'ai'; doc: DocItem }>(null);
   const [aiBusy, setAiBusy] = useState(false);
@@ -2685,12 +2685,12 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
 
       {/* Upload */}
       <Sheet open={openCreate} onClose={onCloseCreate} title="رفع مستند">
-        <DocForm projectId={projectId} projects={projects} docTypes={docTypes} onSave={(d) => { onSave(d); onCloseCreate(); }} onCancel={onCloseCreate} />
+        <DocForm projectId={projectId} projects={projects} docTypes={docTypeOptions} onSave={(d) => { onSave(d); onCloseCreate(); }} onCancel={onCloseCreate} />
       </Sheet>
 
       {/* Edit */}
       <Sheet open={sheet?.mode === 'edit'} onClose={close} title="تعديل المستند">
-        {sheet?.mode === 'edit' && <DocForm key={sheet.doc.id} initial={sheet.doc} projectId={projectId} projects={projects} docTypes={docTypes} onSave={(d) => { onSave(d); close(); }} onCancel={close} />}
+        {sheet?.mode === 'edit' && <DocForm key={sheet.doc.id} initial={sheet.doc} projectId={projectId} projects={projects} docTypes={docTypeOptions} onSave={(d) => { onSave(d); close(); }} onCancel={close} />}
       </Sheet>
 
       {/* View */}
@@ -4800,7 +4800,7 @@ export default function App() {
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} />;
       case 'receivables': return <Receivables projectId={projectId} projects={projects} receivables={receivables} members={members} onSave={saveReceivable} onPay={payReceivable} onDelete={deleteReceivable} openCreate={createReceivable} onOpenCreate={() => setCreateReceivable(true)} onCloseCreate={() => setCreateReceivable(false)} />;
       case 'commitments': return <Commitments projectId={projectId} projects={projects} commitments={commitments} members={members} onSave={saveCommitment} onPay={payCommitment} onToggle={toggleCommitment} onDelete={deleteCommitment} openCreate={createCommitment} onOpenCreate={() => setCreateCommitment(true)} onCloseCreate={() => setCreateCommitment(false)} />;
-      case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} docTypes={lists.docTypes} />;
+      case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} docTypeOptions={lists.docTypes} />;
       case 'trackings': return <Trackings projectId={projectId} projects={projects} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
       case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
       case 'notifications': return <Notifications notifs={notifs} projects={projects} members={members} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} />;
