@@ -1814,6 +1814,7 @@ function TxForm({ initial, projectId, projects, onSave, onCancel }: {
   onSave: (t: Omit<Transaction, 'id'> & { id?: string }) => void; onCancel: () => void;
 }) {
   const [type, setType] = useState<TxType>(initial?.type ?? 'expense');
+  const [targetProject, setTargetProject] = useState(initial?.projectId ?? projectId);
   const [description, setDescription] = useState(initial?.description ?? '');
   const [amount, setAmount] = useState<number | ''>(initial?.amount ?? '');
   const [category, setCategory] = useState(initial?.category ?? TX_CATEGORIES[0]);
@@ -1829,6 +1830,9 @@ function TxForm({ initial, projectId, projects, onSave, onCancel }: {
       <Field label="نوع العملية">
         <TypePicker value={type} onChange={v => setType(v as TxType)} options={TX_TYPES.map(t => ({ v: t.id, l: t.label, icon: t.icon }))} />
       </Field>
+      <Field label="المشروع">
+        <Select value={targetProject} onChange={setTargetProject} options={projects.map(p => ({ v: p.id, l: `${p.icon} ${p.name}` }))} />
+      </Field>
       <Field label="الوصف">
         <TextInput value={description} onChange={setDescription} placeholder={type === 'income' ? 'مثال: إيراد مبيعات' : type === 'expense' ? 'مثال: فاتورة كهرباء' : 'مثال: تحويل بين الحسابات'} />
       </Field>
@@ -1837,7 +1841,7 @@ function TxForm({ initial, projectId, projects, onSave, onCancel }: {
       </Field>
       {type === 'transfer' ? (
         <Field label="إلى مشروع">
-          <Select value={toProject} onChange={setToProject} options={projects.filter(p => p.id !== projectId).map(p => ({ v: p.id, l: p.name }))} />
+          <Select value={toProject} onChange={setToProject} options={projects.filter(p => p.id !== targetProject).map(p => ({ v: p.id, l: p.name }))} />
         </Field>
       ) : (
         <Field label="التصنيف">
@@ -1859,7 +1863,7 @@ function TxForm({ initial, projectId, projects, onSave, onCancel }: {
       <div style={{ display: 'flex', gap: 10 }}>
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
         <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
-          id: initial?.id, projectId, type, description: description.trim(),
+          id: initial?.id, projectId: targetProject, type, description: description.trim(),
           amount: amount === '' ? 0 : amount, category: type === 'transfer' ? 'تحويل' : category,
           date, hasDoc: attachments.length > 0 || (initial?.hasDoc ?? false), note, source: source.trim() || undefined,
           attachments, toProject: type === 'transfer' ? toProject : undefined,
@@ -2668,24 +2672,28 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
 // ═══════════════════════════════════════════
 //  TRACKINGS  (add by type / view / edit)
 // ═══════════════════════════════════════════
-function TrackingForm({ initial, projectId, members, onSave, onCancel }: {
-  initial?: Tracking; projectId: string; members: Member[];
+function TrackingForm({ initial, projectId, projects, members, onSave, onCancel }: {
+  initial?: Tracking; projectId: string; projects: Project[]; members: Member[];
   onSave: (t: Omit<Tracking, 'id'> & { id?: string }) => void; onCancel: () => void;
 }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [type, setType] = useState(initial?.type ?? TRACKING_TYPES[0].id);
+  const [targetProject, setTargetProject] = useState(initial?.projectId ?? projectId);
   const [expiryDate, setExpiryDate] = useState(initial?.expiryDate ?? '');
   const [note, setNote] = useState(initial?.note ?? '');
   const [memberId, setMemberId] = useState(initial?.memberId ?? '');
   const [attachments, setAttachments] = useState<Attachment[]>(initial?.attachments ?? []);
   const valid = name.trim().length > 0 && expiryDate.length > 0;
   const typeIcon = TRACKING_TYPES.find(t => t.id === type)?.icon ?? '🛡️';
-  const projMembers = members.filter(m => m.projectId === projectId);
+  const projMembers = members.filter(m => m.projectId === targetProject);
 
   return (
     <>
       <Field label="نوع المتابعة">
         <TypePicker value={type} onChange={setType} options={TRACKING_TYPES.map(t => ({ v: t.id, l: t.id, icon: t.icon }))} />
+      </Field>
+      <Field label="المشروع">
+        <Select value={targetProject} onChange={v => { setTargetProject(v); setMemberId(''); }} options={projects.map(p => ({ v: p.id, l: `${p.icon} ${p.name}` }))} />
       </Field>
       <Field label="الاسم">
         <TextInput value={name} onChange={setName} placeholder="مثال: ضمان الثلاجة" />
@@ -2706,15 +2714,15 @@ function TrackingForm({ initial, projectId, members, onSave, onCancel }: {
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
         <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => {
           const d = daysBetween(expiryDate);
-          onSave({ id: initial?.id, name: name.trim(), type, icon: initial?.icon ?? typeIcon, status: statusFromDays(d), daysLeft: d, expiryDate, projectId, note, memberId: memberId || undefined, attachments });
+          onSave({ id: initial?.id, name: name.trim(), type, icon: initial?.icon ?? typeIcon, status: statusFromDays(d), daysLeft: d, expiryDate, projectId: targetProject, note, memberId: memberId || undefined, attachments });
         }}>{initial ? 'حفظ التعديلات' : 'إضافة المتابعة'}</Btn>
       </div>
     </>
   );
 }
 
-function Trackings({ projectId, trackings, members, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate, presetName, presetType }: {
-  projectId: string; trackings: Tracking[]; members: Member[];
+function Trackings({ projectId, projects, trackings, members, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate, presetName, presetType }: {
+  projectId: string; projects: Project[]; trackings: Tracking[]; members: Member[];
   onSave: (t: Omit<Tracking, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
   openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; presetName?: string; presetType?: string;
 }) {
@@ -2819,14 +2827,14 @@ function Trackings({ projectId, trackings, members, onSave, onDelete, openCreate
 
       {/* Create */}
       <Sheet open={openCreate} onClose={onCloseCreate} title="متابعة جديدة">
-        <TrackingForm key={presetName ?? 'new'} projectId={projectId} members={members}
+        <TrackingForm key={presetName ?? 'new'} projectId={projectId} projects={projects} members={members}
           initial={presetName ? { id: '', name: presetName, type: presetType ?? TRACKING_TYPES[0].id, icon: TRACKING_TYPES.find(x => x.id === presetType)?.icon ?? '🛡️', status: 'active', daysLeft: 0, expiryDate: '', projectId } : undefined}
           onSave={(t) => { onSave(t); onCloseCreate(); }} onCancel={onCloseCreate} />
       </Sheet>
 
       {/* Edit */}
       <Sheet open={sheet?.mode === 'edit'} onClose={close} title="تعديل المتابعة">
-        {sheet?.mode === 'edit' && <TrackingForm key={sheet.tr.id} initial={sheet.tr} projectId={projectId} members={members} onSave={(t) => { onSave(t); close(); }} onCancel={close} />}
+        {sheet?.mode === 'edit' && <TrackingForm key={sheet.tr.id} initial={sheet.tr} projectId={projectId} projects={projects} members={members} onSave={(t) => { onSave(t); close(); }} onCancel={close} />}
       </Sheet>
 
       {/* View */}
@@ -2870,24 +2878,28 @@ function Trackings({ projectId, trackings, members, onSave, onDelete, openCreate
 // ═══════════════════════════════════════════
 //  REQUESTS  (add by type / view / edit)
 // ═══════════════════════════════════════════
-function RequestForm({ initial, projectId, members, onSave, onCancel }: {
-  initial?: RequestItem; projectId: string; members: Member[];
+function RequestForm({ initial, projectId, projects, members, onSave, onCancel }: {
+  initial?: RequestItem; projectId: string; projects: Project[]; members: Member[];
   onSave: (r: Omit<RequestItem, 'id'> & { id?: string }) => void; onCancel: () => void;
 }) {
   const [title, setTitle] = useState(initial?.title ?? '');
   const [type, setType] = useState(initial?.type ?? REQUEST_TYPES[0]);
+  const [targetProject, setTargetProject] = useState(initial?.projectId ?? projectId);
   const [amount, setAmount] = useState<number | ''>(initial?.amount ?? '');
   const [requestedBy, setRequestedBy] = useState(initial?.requestedBy ?? 'محمد العمري');
   const [note, setNote] = useState(initial?.note ?? '');
   const [memberId, setMemberId] = useState(initial?.memberId ?? '');
   const [attachments, setAttachments] = useState<Attachment[]>(initial?.attachments ?? []);
   const valid = title.trim().length > 0 && amount !== '' && Number(amount) > 0;
-  const projMembers = members.filter(m => m.projectId === projectId);
+  const projMembers = members.filter(m => m.projectId === targetProject);
 
   return (
     <>
       <Field label="نوع الطلب">
         <TypePicker value={type} onChange={setType} options={REQUEST_TYPES.map(t => ({ v: t, l: t }))} />
+      </Field>
+      <Field label="المشروع">
+        <Select value={targetProject} onChange={v => { setTargetProject(v); setMemberId(''); }} options={projects.map(p => ({ v: p.id, l: `${p.icon} ${p.name}` }))} />
       </Field>
       <Field label="عنوان الطلب">
         <TextInput value={title} onChange={setTitle} placeholder="مثال: طلب صرف مصروفات السفر" />
@@ -2911,15 +2923,15 @@ function RequestForm({ initial, projectId, members, onSave, onCancel }: {
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
         <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
           id: initial?.id, title: title.trim(), type, amount: amount === '' ? 0 : amount,
-          requestedBy, status: initial?.status ?? 'pending', date: initial?.date ?? today(), projectId, note, memberId: memberId || undefined, attachments,
+          requestedBy, status: initial?.status ?? 'pending', date: initial?.date ?? today(), projectId: targetProject, note, memberId: memberId || undefined, attachments,
         })}>{initial ? 'حفظ التعديلات' : 'إرسال الطلب'}</Btn>
       </div>
     </>
   );
 }
 
-function Requests({ projectId, requests, members, onDecide, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate }: {
-  projectId: string; requests: RequestItem[]; members: Member[];
+function Requests({ projectId, projects, requests, members, onDecide, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate }: {
+  projectId: string; projects: Project[]; requests: RequestItem[]; members: Member[];
   onDecide: (id: string, status: RequestStatus) => void;
   onSave: (r: Omit<RequestItem, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
   openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void;
@@ -3041,12 +3053,12 @@ function Requests({ projectId, requests, members, onDecide, onSave, onDelete, op
 
       {/* Create */}
       <Sheet open={openCreate} onClose={onCloseCreate} title="طلب جديد">
-        <RequestForm projectId={projectId} members={members} onSave={(r) => { onSave(r); onCloseCreate(); }} onCancel={onCloseCreate} />
+        <RequestForm projectId={projectId} projects={projects} members={members} onSave={(r) => { onSave(r); onCloseCreate(); }} onCancel={onCloseCreate} />
       </Sheet>
 
       {/* Edit */}
       <Sheet open={sheet?.mode === 'edit'} onClose={close} title="تعديل الطلب">
-        {sheet?.mode === 'edit' && <RequestForm key={sheet.req.id} initial={sheet.req} projectId={projectId} members={members} onSave={(r) => { onSave(r); close(); }} onCancel={close} />}
+        {sheet?.mode === 'edit' && <RequestForm key={sheet.req.id} initial={sheet.req} projectId={projectId} projects={projects} members={members} onSave={(r) => { onSave(r); close(); }} onCancel={close} />}
       </Sheet>
 
       {/* View */}
@@ -3909,8 +3921,8 @@ export default function App() {
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} />;
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} />;
-      case 'trackings': return <Trackings projectId={projectId} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
-      case 'requests': return <Requests projectId={projectId} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
+      case 'trackings': return <Trackings projectId={projectId} projects={projects} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} />;
+      case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} />;
       case 'notifications': return <Notifications notifs={notifs} projects={projects} members={members} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} />;
       case 'audit': return <AuditLog audit={audit} onNav={setPage} />;
       case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => { logAudit('تسجيل خروج', 'النظام', 'تم تسجيل الخروج'); setAuthed(false); }} />;
