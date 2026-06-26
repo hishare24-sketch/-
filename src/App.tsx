@@ -231,6 +231,20 @@ const daysBetween = (iso: string) => Math.round((new Date(iso).getTime() - Date.
 const statusFromDays = (d: number): TrackingStatus => d < 0 ? 'expired' : d <= 30 ? 'expiring' : 'active';
 
 // ── localStorage-backed state (replaceable by a real DB later) ──
+// data version: bump this whenever seed/initial data changes,
+// so stale localStorage from older versions is cleared automatically (one-time).
+const DATA_VERSION = '3';
+(() => {
+  try {
+    const stored = localStorage.getItem('mz_data_version');
+    if (stored !== DATA_VERSION) {
+      // clear all app keys so new seed data loads, then record the new version
+      Object.keys(localStorage).filter(k => k.startsWith('mz_') && k !== 'mz_theme' && k !== 'mz_authed').forEach(k => localStorage.removeItem(k));
+      localStorage.setItem('mz_data_version', DATA_VERSION);
+    }
+  } catch { /* ignore */ }
+})();
+
 function usePersist<T>(key: string, initial: T): [T, React.Dispatch<React.SetStateAction<T>>] {
   const [val, setVal] = useState<T>(() => {
     try {
@@ -1053,14 +1067,17 @@ function ProjectForm({ initial, onSave, onCancel }: {
   );
 }
 
-function Projects({ projects, transactions, onOpen, onSave, onDelete }: {
+function Projects({ projects, transactions, onOpen, onSave, onDelete, openCreate, onCloseCreate }: {
   projects: Project[]; transactions: Transaction[];
   onOpen: (id: string) => void;
   onSave: (p: Omit<Project, 'id'> & { id?: string }) => void;
   onDelete: (id: string) => void;
+  openCreate?: boolean; onCloseCreate?: () => void;
 }) {
   const [sheet, setSheet] = useState<null | { mode: 'create' } | { mode: 'edit' | 'view'; project: Project }>(null);
-  const close = () => setSheet(null);
+  const close = () => { setSheet(null); onCloseCreate?.(); };
+  // open create sheet when triggered from the global FAB
+  useEffect(() => { if (openCreate) setSheet({ mode: 'create' }); }, [openCreate]);
 
   // section statistics
   const totalBalance = projects.reduce((s, p) => s + computeBalance(p, transactions), 0);
@@ -1860,6 +1877,7 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
   const [tab, setTab] = useState<'all' | TxType>('all');
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
+  const [sort, setSort] = useState('newest');
   const [sheet, setSheet] = useState<null | { mode: 'edit' | 'view'; tx: Transaction }>(null);
   const project = projects.find(p => p.id === projectId)!;
   const txns = transactions.filter(t => t.projectId === projectId);
@@ -1867,7 +1885,8 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
   const filtered = txns
     .filter(t => tab === 'all' ? true : t.type === tab)
     .filter(t => catFilter === 'all' ? true : t.category === catFilter)
-    .filter(t => search.trim() === '' ? true : t.description.includes(search.trim()));
+    .filter(t => search.trim() === '' ? true : t.description.includes(search.trim()))
+    .sort((a, b) => sort === 'newest' ? b.date.localeCompare(a.date) : sort === 'oldest' ? a.date.localeCompare(b.date) : b.amount - a.amount);
   const income = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const expense = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const transfersIn = txns.filter(t => t.type === 'transfer' && t.transferDir === 'in').reduce((s, t) => s + t.amount, 0);
@@ -1953,8 +1972,13 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
             <option value="all">كل التصنيفات</option>
             {cats.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          {(search || catFilter !== 'all') && (
-            <button onClick={() => { setSearch(''); setCatFilter('all'); }} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, color: 'var(--text-3)' }}>مسح الفلترة</button>
+          <select value={sort} onChange={e => setSort(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer' }}>
+            <option value="newest">الأحدث أولاً</option>
+            <option value="oldest">الأقدم أولاً</option>
+            <option value="amount">الأعلى مبلغاً</option>
+          </select>
+          {(search || catFilter !== 'all' || sort !== 'newest') && (
+            <button onClick={() => { setSearch(''); setCatFilter('all'); setSort('newest'); }} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, color: 'var(--text-3)' }}>مسح الفلترة</button>
           )}
         </div>
         <div style={{ overflowX: 'auto' }}>
@@ -3745,6 +3769,7 @@ export default function App() {
   const [createDoc, setCreateDoc] = useState(false);
   const [createTracking, setCreateTracking] = useState(false);
   const [createRequest, setCreateRequest] = useState(false);
+  const [createProject, setCreateProject] = useState(false);
   const [trackingPreset, setTrackingPreset] = useState<{ name?: string; type?: string }>({});
 
   const unread = notifs.filter(n => !n.read).length;
@@ -3872,13 +3897,13 @@ export default function App() {
     if (a === 'doc') { setPage('documents'); setCreateDoc(true); }
     if (a === 'tracking') { setTrackingPreset({}); setPage('trackings'); setCreateTracking(true); }
     if (a === 'request') { setPage('requests'); setCreateRequest(true); }
-    if (a === 'project') { setPage('projects'); }
+    if (a === 'project') { setPage('projects'); setCreateProject(true); }
   };
 
   const renderPage = () => {
     switch (page) {
       case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} />;
-      case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} />;
+      case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} openCreate={createProject} onCloseCreate={() => setCreateProject(false)} />;
       case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} onQuickAction={fabAction} />;
       case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} onBack={goBack} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} />;
