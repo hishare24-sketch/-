@@ -95,39 +95,74 @@ const INITIAL_PROJECTS: Project[] = [
   { id: 'p1', name: 'شركة النخيل', icon: '🏢', balance: 284500, color: '#2563eb', type: 'شركة', description: 'شركة تجارية متخصصة في التوريدات' },
   { id: 'p2', name: 'مشروع المنزل', icon: '🏠', balance: 52300, color: '#059669', type: 'مشروع منزلي', description: 'إدارة مصاريف والتزامات المنزل' },
   { id: 'p3', name: 'مطعم الديوانية', icon: '🍽️', balance: 118900, color: '#d97706', type: 'مطعم', description: 'مطعم وجبات شعبية' },
+  { id: 'p4', name: 'متجر أناقة', icon: '🛍️', balance: 76400, color: '#7c3aed', type: 'متجر إلكتروني', description: 'متجر إلكتروني للأزياء والإكسسوارات' },
+  { id: 'p5', name: 'عيادة الشفاء', icon: '🏥', balance: 203100, color: '#0891b2', type: 'عيادة', description: 'عيادة طبية متعددة التخصصات' },
+  { id: 'p6', name: 'ميزانية العائلة', icon: '👨‍👩‍👧', balance: 31800, color: '#db2777', type: 'مشروع أسري', description: 'إدارة الالتزامات والمصاريف العائلية' },
 ];
 
 const INITIAL_TRANSACTIONS: Transaction[] = [
-  { id: 't1', projectId: 'p1', type: 'income', description: 'إيراد مبيعات يونيو', amount: 48000, category: 'مبيعات', date: '2025-06-18', hasDoc: true },
-  { id: 't2', projectId: 'p1', type: 'expense', description: 'رواتب الموظفين', amount: 21000, category: 'رواتب', date: '2025-06-15', hasDoc: true },
-  { id: 't3', projectId: 'p1', type: 'expense', description: 'إيجار المكتب', amount: 8500, category: 'إيجار', date: '2025-06-01', hasDoc: false },
-  { id: 't4', projectId: 'p1', type: 'income', description: 'عمولة مشروع', amount: 12000, category: 'مبيعات', date: '2025-06-10', hasDoc: true },
-  { id: 't5', projectId: 'p1', type: 'expense', description: 'فاتورة كهرباء', amount: 1800, category: 'فواتير', date: '2025-06-05', hasDoc: true },
-  { id: 't6', projectId: 'p2', type: 'expense', description: 'قسط السيارة', amount: 2200, category: 'قسط', date: '2025-06-20', hasDoc: false },
-  { id: 't7', projectId: 'p3', type: 'income', description: 'مبيعات الأسبوع', amount: 32000, category: 'مبيعات', date: '2025-06-19', hasDoc: false },
+  // شركة النخيل
+  { id: 't1', projectId: 'p1', type: 'income', description: 'إيراد مبيعات يونيو', amount: 48000, category: 'مبيعات', date: '2025-06-18', hasDoc: true, source: 'عميل: مجموعة الرواد', createdBy: 'محمد العمري' },
+  { id: 't2', projectId: 'p1', type: 'expense', description: 'رواتب الموظفين', amount: 21000, category: 'رواتب', date: '2025-06-15', hasDoc: true, createdBy: 'سارة المحمد' },
+  { id: 't3', projectId: 'p1', type: 'expense', description: 'إيجار المكتب', amount: 8500, category: 'إيجار', date: '2025-06-01', hasDoc: false, createdBy: 'محمد العمري' },
+  { id: 't4', projectId: 'p1', type: 'income', description: 'عمولة مشروع', amount: 12000, category: 'مبيعات', date: '2025-05-10', hasDoc: true, source: 'شركة البناء الحديث', createdBy: 'محمد العمري' },
+  { id: 't5', projectId: 'p1', type: 'expense', description: 'فاتورة كهرباء', amount: 1800, category: 'فواتير', date: '2025-06-05', hasDoc: true, createdBy: 'أحمد العلي' },
+  { id: 't6', projectId: 'p1', type: 'expense', description: 'حملة تسويق رقمي', amount: 6500, category: 'تسويق', date: '2025-05-28', hasDoc: false, createdBy: 'سارة المحمد' },
+  // المنزل
+  { id: 't7', projectId: 'p2', type: 'expense', description: 'قسط السيارة', amount: 2200, category: 'قسط', date: '2025-06-20', hasDoc: false, createdBy: 'محمد العمري' },
+  { id: 't8', projectId: 'p2', type: 'expense', description: 'فاتورة المياه والكهرباء', amount: 740, category: 'فواتير', date: '2025-06-08', hasDoc: true, createdBy: 'محمد العمري' },
+  { id: 't9', projectId: 'p2', type: 'income', description: 'الراتب الشهري', amount: 18000, category: 'مبيعات', date: '2025-06-01', hasDoc: false, createdBy: 'محمد العمري' },
+  // مطعم
+  { id: 't10', projectId: 'p3', type: 'income', description: 'مبيعات الأسبوع', amount: 32000, category: 'مبيعات', date: '2025-06-19', hasDoc: false, createdBy: 'محمد الزيد' },
+  { id: 't11', projectId: 'p3', type: 'expense', description: 'شراء مواد خام', amount: 14500, category: 'أخرى', date: '2025-06-17', hasDoc: true, source: 'سوق الخضار المركزي', createdBy: 'محمد الزيد' },
+  { id: 't12', projectId: 'p3', type: 'expense', description: 'رواتب العمالة', amount: 9000, category: 'رواتب', date: '2025-06-15', hasDoc: false, createdBy: 'محمد الزيد' },
+  // متجر أناقة
+  { id: 't13', projectId: 'p4', type: 'income', description: 'مبيعات المتجر الإلكتروني', amount: 27600, category: 'مبيعات', date: '2025-06-21', hasDoc: true, source: 'منصة سلة', createdBy: 'نورة القحطاني' },
+  { id: 't14', projectId: 'p4', type: 'expense', description: 'رسوم الشحن', amount: 3400, category: 'أخرى', date: '2025-06-20', hasDoc: false, createdBy: 'نورة القحطاني' },
+  { id: 't15', projectId: 'p4', type: 'expense', description: 'اشتراك المنصة الشهري', amount: 1200, category: 'فواتير', date: '2025-06-10', hasDoc: true, createdBy: 'فهد الدوسري' },
+  // عيادة
+  { id: 't16', projectId: 'p5', type: 'income', description: 'إيرادات الكشوفات', amount: 56000, category: 'مبيعات', date: '2025-06-22', hasDoc: true, source: 'مرضى + تأمين', createdBy: 'د. ليلى الحربي' },
+  { id: 't17', projectId: 'p5', type: 'expense', description: 'مستلزمات طبية', amount: 18900, category: 'أخرى', date: '2025-06-18', hasDoc: true, source: 'شركة المعدات الطبية', createdBy: 'د. ليلى الحربي' },
+  { id: 't18', projectId: 'p5', type: 'expense', description: 'رواتب الكادر الطبي', amount: 42000, category: 'رواتب', date: '2025-06-15', hasDoc: false, createdBy: 'عبدالله الشمري' },
+  // العائلة
+  { id: 't19', projectId: 'p6', type: 'expense', description: 'مصاريف المدارس', amount: 4800, category: 'أخرى', date: '2025-06-12', hasDoc: true, createdBy: 'محمد العمري' },
+  { id: 't20', projectId: 'p6', type: 'expense', description: 'تسوق البقالة الشهري', amount: 2300, category: 'أخرى', date: '2025-06-09', hasDoc: false, createdBy: 'منى العمري' },
 ];
 
 const INITIAL_TRACKINGS: Tracking[] = [
-  { id: 'tr1', name: 'ضمان ثلاجة المطبخ', type: 'ضمان', icon: '🧊', status: 'expiring', daysLeft: 12, expiryDate: '2025-07-06', projectId: 'p1' },
-  { id: 'tr2', name: 'عقد إيجار المكتب', type: 'عقد', icon: '📄', status: 'active', daysLeft: 180, expiryDate: '2025-12-31', projectId: 'p1' },
-  { id: 'tr3', name: 'رخصة السجل التجاري', type: 'ترخيص', icon: '🏛️', status: 'expiring', daysLeft: 25, expiryDate: '2025-07-19', projectId: 'p1' },
-  { id: 'tr4', name: 'تأمين السيارة', type: 'تأمين', icon: '🚗', status: 'expired', daysLeft: -5, expiryDate: '2025-06-19', projectId: 'p2' },
-  { id: 'tr5', name: 'اشتراك Adobe', type: 'اشتراك', icon: '💻', status: 'active', daysLeft: 45, expiryDate: '2025-08-08', projectId: 'p1' },
-  { id: 'tr6', name: 'ضمان مكيف الاستقبال', type: 'ضمان', icon: '❄️', status: 'active', daysLeft: 240, expiryDate: '2026-02-20', projectId: 'p3' },
+  { id: 'tr1', name: 'ضمان ثلاجة المطبخ', type: 'ضمان', icon: '🧊', status: 'expiring', daysLeft: 12, expiryDate: '2025-07-06', projectId: 'p1', createdBy: 'سارة المحمد' },
+  { id: 'tr2', name: 'عقد إيجار المكتب', type: 'عقد', icon: '📄', status: 'active', daysLeft: 180, expiryDate: '2025-12-31', projectId: 'p1', createdBy: 'محمد العمري' },
+  { id: 'tr3', name: 'رخصة السجل التجاري', type: 'ترخيص', icon: '🏛️', status: 'expiring', daysLeft: 25, expiryDate: '2025-07-19', projectId: 'p1', createdBy: 'محمد العمري' },
+  { id: 'tr4', name: 'تأمين السيارة', type: 'تأمين', icon: '🚗', status: 'expired', daysLeft: -5, expiryDate: '2025-06-19', projectId: 'p2', createdBy: 'محمد العمري' },
+  { id: 'tr5', name: 'اشتراك Adobe', type: 'اشتراك', icon: '💻', status: 'active', daysLeft: 45, expiryDate: '2025-08-08', projectId: 'p1', createdBy: 'أحمد العلي' },
+  { id: 'tr6', name: 'ضمان مكيف الاستقبال', type: 'ضمان', icon: '❄️', status: 'active', daysLeft: 240, expiryDate: '2026-02-20', projectId: 'p3', createdBy: 'محمد الزيد' },
+  { id: 'tr7', name: 'عقد توريد الأقمشة', type: 'عقد', icon: '🧵', status: 'active', daysLeft: 90, expiryDate: '2025-09-24', projectId: 'p4', createdBy: 'نورة القحطاني' },
+  { id: 'tr8', name: 'ترخيص وزارة الصحة', type: 'ترخيص', icon: '⚕️', status: 'expiring', daysLeft: 30, expiryDate: '2025-07-24', projectId: 'p5', createdBy: 'د. ليلى الحربي' },
+  { id: 'tr9', name: 'اشتراك نظام الحجوزات', type: 'اشتراك', icon: '📅', status: 'active', daysLeft: 120, expiryDate: '2025-10-24', projectId: 'p5', createdBy: 'عبدالله الشمري' },
+  { id: 'tr10', name: 'ضمان أجهزة المتجر', type: 'ضمان', icon: '📦', status: 'expiring', daysLeft: 18, expiryDate: '2025-07-12', projectId: 'p4', createdBy: 'فهد الدوسري' },
 ];
 
 const INITIAL_REQUESTS: RequestItem[] = [
-  { id: 'r1', title: 'طلب صرف مصروفات السفر', amount: 3200, requestedBy: 'أحمد العلي', status: 'pending', date: '2025-06-20', type: 'مصروف', projectId: 'p1' },
-  { id: 'r2', title: 'تعزيز عهدة الصندوق', amount: 5000, requestedBy: 'سارة المحمد', status: 'pending', date: '2025-06-19', type: 'عهدة', projectId: 'p1' },
-  { id: 'r3', title: 'شراء معدات مكتبية', amount: 8700, requestedBy: 'خالد السعد', status: 'approved', date: '2025-06-15', type: 'شراء', projectId: 'p1' },
-  { id: 'r4', title: 'صيانة أجهزة المطبخ', amount: 1500, requestedBy: 'محمد الزيد', status: 'rejected', date: '2025-06-12', type: 'صيانة', projectId: 'p3' },
+  { id: 'r1', title: 'طلب صرف مصروفات السفر', amount: 3200, requestedBy: 'أحمد العلي', status: 'pending', date: '2025-06-20', type: 'مصروف', projectId: 'p1', createdBy: 'أحمد العلي' },
+  { id: 'r2', title: 'تعزيز عهدة الصندوق', amount: 5000, requestedBy: 'سارة المحمد', status: 'pending', date: '2025-06-19', type: 'عهدة', projectId: 'p1', createdBy: 'سارة المحمد' },
+  { id: 'r3', title: 'شراء معدات مكتبية', amount: 8700, requestedBy: 'خالد السعد', status: 'approved', date: '2025-06-15', type: 'شراء', projectId: 'p1', createdBy: 'خالد السعد' },
+  { id: 'r4', title: 'صيانة أجهزة المطبخ', amount: 1500, requestedBy: 'محمد الزيد', status: 'rejected', date: '2025-06-12', type: 'صيانة', projectId: 'p3', createdBy: 'محمد الزيد' },
+  { id: 'r5', title: 'شراء مخزون جديد', amount: 12000, requestedBy: 'نورة القحطاني', status: 'pending', date: '2025-06-21', type: 'شراء', projectId: 'p4', createdBy: 'نورة القحطاني' },
+  { id: 'r6', title: 'تعويض مستلزمات طبية', amount: 6300, requestedBy: 'د. ليلى الحربي', status: 'approved', date: '2025-06-18', type: 'مصروف', projectId: 'p5', createdBy: 'د. ليلى الحربي' },
+  { id: 'r7', title: 'طلب إجازة مدفوعة', amount: 0, requestedBy: 'عبدالله الشمري', status: 'pending', date: '2025-06-22', type: 'أخرى', projectId: 'p5', createdBy: 'عبدالله الشمري' },
+  { id: 'r8', title: 'صرف بدل مواصلات', amount: 800, requestedBy: 'فهد الدوسري', status: 'approved', date: '2025-06-14', type: 'مصروف', projectId: 'p4', createdBy: 'فهد الدوسري' },
 ];
 
 const INITIAL_DOCUMENTS: DocItem[] = [
-  { id: 'd1', name: 'فاتورة مورد يونيو', type: 'فاتورة', date: '2025-06-18', size: '245 KB', status: 'processed', projectId: 'p1', aiRead: true },
-  { id: 'd2', name: 'عقد الإيجار السنوي', type: 'عقد', date: '2025-01-01', size: '1.2 MB', status: 'processed', projectId: 'p1', aiRead: true },
-  { id: 'd3', name: 'كشف حساب البنك', type: 'كشف حساب', date: '2025-06-01', size: '380 KB', status: 'pending', projectId: 'p1', aiRead: false },
-  { id: 'd4', name: 'رخصة البلدية', type: 'وثيقة رسمية', date: '2024-07-15', size: '890 KB', status: 'processed', projectId: 'p1', aiRead: true },
+  { id: 'd1', name: 'فاتورة مورد يونيو', type: 'فاتورة', date: '2025-06-18', size: '245 KB', status: 'processed', projectId: 'p1', aiRead: true, createdBy: 'محمد العمري' },
+  { id: 'd2', name: 'عقد الإيجار السنوي', type: 'عقد', date: '2025-01-01', size: '1.2 MB', status: 'processed', projectId: 'p1', aiRead: true, createdBy: 'محمد العمري' },
+  { id: 'd3', name: 'كشف حساب البنك', type: 'كشف حساب', date: '2025-06-01', size: '380 KB', status: 'pending', projectId: 'p1', aiRead: false, createdBy: 'سارة المحمد' },
+  { id: 'd4', name: 'رخصة البلدية', type: 'وثيقة رسمية', date: '2024-07-15', size: '890 KB', status: 'processed', projectId: 'p1', aiRead: true, createdBy: 'محمد العمري' },
+  { id: 'd5', name: 'فاتورة مواد خام', type: 'فاتورة', date: '2025-06-17', size: '198 KB', status: 'processed', projectId: 'p3', aiRead: true, createdBy: 'محمد الزيد' },
+  { id: 'd6', name: 'عقد توريد الأقمشة', type: 'عقد', date: '2025-06-24', size: '760 KB', status: 'pending', projectId: 'p4', aiRead: false, createdBy: 'نورة القحطاني' },
+  { id: 'd7', name: 'ترخيص وزارة الصحة', type: 'وثيقة رسمية', date: '2024-07-24', size: '1.1 MB', status: 'processed', projectId: 'p5', aiRead: true, createdBy: 'د. ليلى الحربي' },
+  { id: 'd8', name: 'كشف حساب العيادة', type: 'كشف حساب', date: '2025-06-22', size: '420 KB', status: 'processed', projectId: 'p5', aiRead: true, createdBy: 'عبدالله الشمري' },
+  { id: 'd9', name: 'فاتورة المدارس', type: 'فاتورة', date: '2025-06-12', size: '156 KB', status: 'pending', projectId: 'p6', aiRead: false, createdBy: 'محمد العمري' },
 ];
 
 const INITIAL_NOTIFS: Notif[] = [
@@ -144,10 +179,25 @@ const INITIAL_AUDIT: AuditEntry[] = [
 ];
 
 const INITIAL_MEMBERS: Member[] = [
+  // شركة النخيل
   { id: 'm1', projectId: 'p1', name: 'محمد العمري', email: 'mohammed@example.com', role: 'owner', permissions: ROLE_PERMS.owner, balance: 0, status: 'active' },
   { id: 'm2', projectId: 'p1', name: 'سارة المحمد', email: 'sara@example.com', role: 'manager', permissions: ROLE_PERMS.manager, balance: 5000, status: 'active' },
   { id: 'm3', projectId: 'p1', name: 'أحمد العلي', email: 'ahmad@example.com', role: 'member', permissions: ROLE_PERMS.member, balance: 1200, status: 'active' },
-  { id: 'm4', projectId: 'p3', name: 'محمد الزيد', email: 'mz@example.com', role: 'manager', permissions: ROLE_PERMS.manager, balance: 0, status: 'active' },
+  { id: 'm4', projectId: 'p1', name: 'خالد السعد', email: 'khalid@example.com', role: 'member', permissions: ROLE_PERMS.member, balance: 0, status: 'active' },
+  { id: 'm5', projectId: 'p1', name: 'ريم الناصر', email: 'reem@example.com', role: 'viewer', permissions: ROLE_PERMS.viewer, balance: 0, status: 'active' },
+  // مطعم الديوانية
+  { id: 'm6', projectId: 'p3', name: 'محمد الزيد', email: 'mz@example.com', role: 'manager', permissions: ROLE_PERMS.manager, balance: 800, status: 'active' },
+  { id: 'm7', projectId: 'p3', name: 'يوسف الحمدان', email: 'yousef@example.com', role: 'member', permissions: ROLE_PERMS.member, balance: 300, status: 'active' },
+  // متجر أناقة
+  { id: 'm8', projectId: 'p4', name: 'نورة القحطاني', email: 'noura@example.com', role: 'owner', permissions: ROLE_PERMS.owner, balance: 0, status: 'active' },
+  { id: 'm9', projectId: 'p4', name: 'فهد الدوسري', email: 'fahad@example.com', role: 'manager', permissions: ROLE_PERMS.manager, balance: 1500, status: 'active' },
+  // عيادة الشفاء
+  { id: 'm10', projectId: 'p5', name: 'د. ليلى الحربي', email: 'laila@example.com', role: 'owner', permissions: ROLE_PERMS.owner, balance: 0, status: 'active' },
+  { id: 'm11', projectId: 'p5', name: 'عبدالله الشمري', email: 'abdullah@example.com', role: 'manager', permissions: ROLE_PERMS.manager, balance: 2400, status: 'active' },
+  { id: 'm12', projectId: 'p5', name: 'هند المطيري', email: 'hind@example.com', role: 'member', permissions: ROLE_PERMS.member, balance: 600, status: 'active' },
+  // العائلة
+  { id: 'm13', projectId: 'p6', name: 'محمد العمري', email: 'mohammed@example.com', role: 'owner', permissions: ROLE_PERMS.owner, balance: 0, status: 'active' },
+  { id: 'm14', projectId: 'p6', name: 'منى العمري', email: 'mona@example.com', role: 'manager', permissions: ROLE_PERMS.manager, balance: 0, status: 'active' },
 ];
 
 const MEMBER_TXN_TYPES: { id: MemberTxnType; label: string; icon: string; direction: 'to_member' | 'from_member'; desc: string }[] = [
@@ -158,9 +208,15 @@ const MEMBER_TXN_TYPES: { id: MemberTxnType; label: string; icon: string; direct
 ];
 
 const INITIAL_MEMBER_TXNS: MemberTxn[] = [
-  { id: 'mt1', projectId: 'p1', memberId: 'm2', type: 'custody', amount: 5000, note: 'عهدة مصاريف تشغيلية', date: '2025-06-15', status: 'accepted', direction: 'to_member' },
-  { id: 'mt2', projectId: 'p1', memberId: 'm3', type: 'custody', amount: 1200, note: 'عهدة نثرية', date: '2025-06-18', status: 'accepted', direction: 'to_member' },
-  { id: 'mt3', projectId: 'p1', memberId: 'm3', type: 'custody', amount: 2000, note: 'عهدة إضافية بانتظار القبول', date: '2025-06-22', status: 'pending', direction: 'to_member' },
+  { id: 'mt1', projectId: 'p1', memberId: 'm2', type: 'custody', amount: 5000, note: 'عهدة مصاريف تشغيلية', date: '2025-06-15', status: 'accepted', direction: 'to_member', createdBy: 'محمد العمري' },
+  { id: 'mt2', projectId: 'p1', memberId: 'm3', type: 'custody', amount: 1200, note: 'عهدة نثرية', date: '2025-06-18', status: 'accepted', direction: 'to_member', createdBy: 'محمد العمري' },
+  { id: 'mt3', projectId: 'p1', memberId: 'm3', type: 'custody', amount: 2000, note: 'عهدة إضافية بانتظار القبول', date: '2025-06-22', status: 'pending', direction: 'to_member', createdBy: 'سارة المحمد' },
+  { id: 'mt4', projectId: 'p1', memberId: 'm4', type: 'expense', amount: 950, note: 'تعويض مصروف وقود', date: '2025-06-20', status: 'accepted', direction: 'to_member', createdBy: 'محمد العمري' },
+  { id: 'mt5', projectId: 'p1', memberId: 'm2', type: 'settlement', amount: 1800, note: 'إرجاع جزء من العهدة', date: '2025-06-23', status: 'pending', direction: 'from_member', createdBy: 'سارة المحمد' },
+  { id: 'mt6', projectId: 'p3', memberId: 'm6', type: 'custody', amount: 800, note: 'عهدة مشتريات يومية', date: '2025-06-19', status: 'accepted', direction: 'to_member', createdBy: 'محمد الزيد' },
+  { id: 'mt7', projectId: 'p4', memberId: 'm9', type: 'custody', amount: 1500, note: 'عهدة تغليف وشحن', date: '2025-06-21', status: 'accepted', direction: 'to_member', createdBy: 'نورة القحطاني' },
+  { id: 'mt8', projectId: 'p5', memberId: 'm11', type: 'custody', amount: 2400, note: 'عهدة مستلزمات', date: '2025-06-18', status: 'accepted', direction: 'to_member', createdBy: 'د. ليلى الحربي' },
+  { id: 'mt9', projectId: 'p5', memberId: 'm12', type: 'expense', amount: 600, note: 'تعويض مواصلات', date: '2025-06-22', status: 'pending', direction: 'to_member', createdBy: 'عبدالله الشمري' },
 ];
 
 // ═══════════════════════════════════════════
@@ -2324,7 +2380,18 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
 }) {
   const [sheet, setSheet] = useState<null | { mode: 'view' | 'edit' | 'actions' | 'ai'; doc: DocItem }>(null);
   const [aiBusy, setAiBusy] = useState(false);
+  const [search, setSearch] = useState('');
+  const [fType, setFType] = useState('all');
+  const [fAi, setFAi] = useState('all');
+  const [sort, setSort] = useState('newest');
   const docs = documents.filter(d => d.projectId === projectId);
+  const docTypes = Array.from(new Set(docs.map(d => d.type)));
+  const filteredDocs = docs
+    .filter(d => fType === 'all' ? true : d.type === fType)
+    .filter(d => fAi === 'all' ? true : fAi === 'read' ? d.aiRead : !d.aiRead)
+    .filter(d => search.trim() === '' ? true : (d.name + d.type).includes(search.trim()))
+    .sort((a, b) => sort === 'newest' ? b.date.localeCompare(a.date) : sort === 'oldest' ? a.date.localeCompare(b.date) : a.name.localeCompare(b.name));
+  const clearFilters = () => { setSearch(''); setFType('all'); setFAi('all'); setSort('newest'); };
   const close = () => setSheet(null);
 
   return (
@@ -2377,14 +2444,34 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
         );
       })()}
 
+      {docs.length > 0 && (
+        <FilterBar
+          search={search} onSearch={setSearch} searchPlaceholder="🔍 بحث في المستندات..."
+          values={{ type: fType, ai: fAi, sort }}
+          onChange={(k, v) => { if (k === 'type') setFType(v); else if (k === 'ai') setFAi(v); else if (k === 'sort') setSort(v); }}
+          onClear={clearFilters}
+          filters={[
+            { key: 'type', placeholder: 'النوع', options: [{ v: 'all', l: 'كل الأنواع' }, ...docTypes.map(t => ({ v: t, l: t }))] },
+            { key: 'ai', placeholder: 'قراءة AI', options: [{ v: 'all', l: 'الكل' }, { v: 'read', l: 'مقروءة AI' }, { v: 'unread', l: 'غير مقروءة' }] },
+            { key: 'sort', placeholder: 'الترتيب', options: [{ v: 'newest', l: 'الأحدث' }, { v: 'oldest', l: 'الأقدم' }, { v: 'name', l: 'الاسم' }] },
+          ]}
+        />
+      )}
+
       {docs.length === 0 && (
         <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>📂</div>
           <div style={{ fontSize: 14 }}>لا توجد مستندات في هذا المشروع</div>
         </Card>
       )}
+      {docs.length > 0 && filteredDocs.length === 0 && (
+        <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
+          <div style={{ fontSize: 14 }}>لا توجد مستندات مطابقة للفلترة</div>
+        </Card>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14 }}>
-        {docs.map(d => (
+        {filteredDocs.map(d => (
           <Card key={d.id} style={{ padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
               <div style={{ width: 40, height: 48, background: 'var(--surface-3)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>📄</div>
@@ -2579,15 +2666,27 @@ function Trackings({ projectId, trackings, members, onSave, onDelete, openCreate
   openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; presetName?: string; presetType?: string;
 }) {
   const [filter, setFilter] = useState<'all' | TrackingStatus>('all');
+  const [search, setSearch] = useState('');
+  const [fType, setFType] = useState('all');
+  const [fMember, setFMember] = useState('all');
+  const [sort, setSort] = useState('soonest');
   const [sheet, setSheet] = useState<null | { mode: 'view' | 'edit'; tr: Tracking }>(null);
   const all = trackings.filter(t => t.projectId === projectId);
-  const filtered = filter === 'all' ? all : all.filter(t => t.status === filter);
+  const types = Array.from(new Set(all.map(t => t.type)));
+  const projMembers = members.filter(m => m.projectId === projectId);
+  const filtered = all
+    .filter(t => filter === 'all' ? true : t.status === filter)
+    .filter(t => fType === 'all' ? true : t.type === fType)
+    .filter(t => fMember === 'all' ? true : t.memberId === fMember)
+    .filter(t => search.trim() === '' ? true : (t.name + t.type + (t.note ?? '')).includes(search.trim()))
+    .sort((a, b) => sort === 'soonest' ? a.daysLeft - b.daysLeft : sort === 'latest' ? b.daysLeft - a.daysLeft : a.name.localeCompare(b.name));
   const counts = {
     all: all.length,
     active: all.filter(t => t.status === 'active').length,
     expiring: all.filter(t => t.status === 'expiring').length,
     expired: all.filter(t => t.status === 'expired').length,
   };
+  const clearFilters = () => { setSearch(''); setFType('all'); setFMember('all'); setSort('soonest'); };
   const close = () => setSheet(null);
 
   return (
@@ -2610,6 +2709,18 @@ function Trackings({ projectId, trackings, members, onSave, onDelete, openCreate
           </div>
         ))}
       </div>
+
+      <FilterBar
+        search={search} onSearch={setSearch} searchPlaceholder="🔍 بحث في المتابعات..."
+        values={{ type: fType, member: fMember, sort }}
+        onChange={(k, v) => { if (k === 'type') setFType(v); else if (k === 'member') setFMember(v); else if (k === 'sort') setSort(v); }}
+        onClear={clearFilters}
+        filters={[
+          { key: 'type', placeholder: 'النوع', options: [{ v: 'all', l: 'كل الأنواع' }, ...types.map(t => ({ v: t, l: t }))] },
+          { key: 'member', placeholder: 'العضو', options: [{ v: 'all', l: 'كل الأعضاء' }, ...projMembers.map(m => ({ v: m.id, l: m.name }))] },
+          { key: 'sort', placeholder: 'الترتيب', options: [{ v: 'soonest', l: 'الأقرب انتهاءً' }, { v: 'latest', l: 'الأبعد انتهاءً' }, { v: 'name', l: 'الاسم' }] },
+        ]}
+      />
 
       {filtered.length === 0 && (
         <Card style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
@@ -2761,9 +2872,21 @@ function Requests({ projectId, requests, members, onDecide, onSave, onDelete, op
   openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void;
 }) {
   const [filter, setFilter] = useState<'all' | RequestStatus>('all');
+  const [search, setSearch] = useState('');
+  const [fType, setFType] = useState('all');
+  const [fMember, setFMember] = useState('all');
+  const [sort, setSort] = useState('newest');
   const [sheet, setSheet] = useState<null | { mode: 'view' | 'edit'; req: RequestItem }>(null);
   const reqs = requests.filter(r => r.projectId === projectId);
-  const filtered = filter === 'all' ? reqs : reqs.filter(r => r.status === filter);
+  const types = Array.from(new Set(reqs.map(r => r.type)));
+  const projMembers = members.filter(m => m.projectId === projectId);
+  const filtered = reqs
+    .filter(r => filter === 'all' ? true : r.status === filter)
+    .filter(r => fType === 'all' ? true : r.type === fType)
+    .filter(r => fMember === 'all' ? true : r.memberId === fMember)
+    .filter(r => search.trim() === '' ? true : (r.title + r.requestedBy + (r.note ?? '')).includes(search.trim()))
+    .sort((a, b) => sort === 'newest' ? b.date.localeCompare(a.date) : sort === 'oldest' ? a.date.localeCompare(b.date) : b.amount - a.amount);
+  const clearFilters = () => { setSearch(''); setFType('all'); setFMember('all'); setSort('newest'); };
   const close = () => setSheet(null);
 
   return (
@@ -2816,6 +2939,18 @@ function Requests({ projectId, requests, members, onDecide, onSave, onDelete, op
           }}>{label}</button>
         ))}
       </div>
+
+      <FilterBar
+        search={search} onSearch={setSearch} searchPlaceholder="🔍 بحث في الطلبات..."
+        values={{ type: fType, member: fMember, sort }}
+        onChange={(k, v) => { if (k === 'type') setFType(v); else if (k === 'member') setFMember(v); else if (k === 'sort') setSort(v); }}
+        onClear={clearFilters}
+        filters={[
+          { key: 'type', placeholder: 'النوع', options: [{ v: 'all', l: 'كل الأنواع' }, ...types.map(t => ({ v: t, l: t }))] },
+          { key: 'member', placeholder: 'العضو', options: [{ v: 'all', l: 'كل الأعضاء' }, ...projMembers.map(m => ({ v: m.id, l: m.name }))] },
+          { key: 'sort', placeholder: 'الترتيب', options: [{ v: 'newest', l: 'الأحدث' }, { v: 'oldest', l: 'الأقدم' }, { v: 'amount', l: 'الأعلى مبلغاً' }] },
+        ]}
+      />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {filtered.length === 0 && (
