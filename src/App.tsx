@@ -15,7 +15,7 @@ type Project = { id: string; name: string; icon: string; balance: number; color:
 type Member = { id: string; projectId: string; name: string; email: string; role: MemberRole; permissions: string[]; balance?: number; status?: 'active' | 'invited' };
 type MemberRole = 'owner' | 'manager' | 'member' | 'viewer';
 // member custody / settlement movements (طلب → قبول/رفض)
-type MemberTxnType = 'custody' | 'settlement' | 'expense' | 'deduction';
+type MemberTxnType = 'custody' | 'settlement' | 'expense' | 'deduction' | 'supply' | 'bonus' | 'advance' | 'salary';
 type MemberTxnStatus = 'pending' | 'accepted' | 'rejected';
 type MemberTxn = {
   id: string; projectId: string; memberId: string; type: MemberTxnType;
@@ -280,7 +280,11 @@ const INITIAL_MEMBERS: Member[] = [
 const MEMBER_TXN_TYPES: { id: MemberTxnType; label: string; icon: string; direction: 'to_member' | 'from_member'; desc: string }[] = [
   { id: 'custody',    label: 'صرف عهدة',     icon: '📤', direction: 'to_member',   desc: 'صرف مبلغ كعهدة للعضو' },
   { id: 'expense',    label: 'مصروف للعضو',  icon: '💸', direction: 'to_member',   desc: 'تعويض مصروف تكبّده العضو' },
-  { id: 'settlement', label: 'تسوية/إرجاع',  icon: '📥', direction: 'from_member', desc: 'استرجاع مبلغ من العضو' },
+  { id: 'bonus',      label: 'مكافأة/حافز',  icon: '🎁', direction: 'to_member',   desc: 'مكافأة أو حافز يُمنح للعضو' },
+  { id: 'advance',    label: 'سلفة',         icon: '🏦', direction: 'to_member',   desc: 'سلفة (دَين على العضو يُسترجع لاحقاً)' },
+  { id: 'salary',     label: 'راتب/أجر',     icon: '💰', direction: 'to_member',   desc: 'صرف راتب أو أجر للعضو' },
+  { id: 'supply',     label: 'توريد/تحصيل',  icon: '📥', direction: 'from_member', desc: 'مبلغ يورّده العضو للمشروع (تحصيل مندوب)' },
+  { id: 'settlement', label: 'تسوية/إرجاع',  icon: '↩️', direction: 'from_member', desc: 'استرجاع مبلغ من العضو' },
   { id: 'deduction',  label: 'خصم/تصفية',   icon: '➖', direction: 'from_member', desc: 'خصم من رصيد العضو' },
 ];
 
@@ -4007,9 +4011,11 @@ const PLANS = [
 // ═══════════════════════════════════════════
 //  MEMBER DETAIL (full profile + stats + charts)
 // ═══════════════════════════════════════════
-function MemberDetail({ memberId, members, projects, transactions, memberTxns, onBack }: {
+function MemberDetail({ memberId, members, projects, transactions, memberTxns, receivables, commitments, requests, onBack, onNav }: {
   memberId: string; members: Member[]; projects: Project[];
-  transactions: Transaction[]; memberTxns: MemberTxn[]; onBack: () => void;
+  transactions: Transaction[]; memberTxns: MemberTxn[];
+  receivables: Receivable[]; commitments: Commitment[]; requests: RequestItem[];
+  onBack: () => void; onNav: (p: Page) => void;
 }) {
   const member = members.find(m => m.id === memberId);
   if (!member) return <div style={{ padding: 24 }}>العضو غير موجود.</div>;
@@ -4034,6 +4040,13 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, o
 
   const totalBalanceAllProjects = myProjects.reduce((s, p) => s + p.balance, 0);
   const roleInfo = ROLES.find(r => r.id === member.role)!;
+
+  // all member-ids belonging to this person (same email across projects)
+  const myMemberIds = members.filter(m => m.email === member.email).map(m => m.id);
+  // linked receivables / commitments / requests (read-only aggregation, no balance merge)
+  const myRecv = receivables.filter(r => r.memberId && myMemberIds.includes(r.memberId));
+  const myComms = commitments.filter(c => c.memberId && myMemberIds.includes(c.memberId));
+  const myReqs = requests.filter(r => (r.memberId && myMemberIds.includes(r.memberId)) || r.requestedBy === member.name);
 
   // monthly chart of member movements
   const byMonth: Record<string, { in: number; out: number }> = {};
@@ -4153,6 +4166,82 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, o
           })}
         </div>
       </Card>
+
+      {/* linked receivables */}
+      {myRecv.length > 0 && (
+        <Card style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>⇄ الذمم المرتبطة ({myRecv.length})</div>
+            <button onClick={() => onNav('receivables')} style={{ background: 'none', border: 'none', fontSize: 12, color: '#2563eb', cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ←</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {myRecv.map(r => (
+              <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', background: 'var(--surface-2)', borderRadius: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{r.kind === 'receivable' ? 'مدينة (لنا)' : 'دائنة (علينا)'} — {r.party}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{projName(r.projectId)}{r.dueDate ? ` · يستحق ${r.dueDate}` : ''}</div>
+                </div>
+                <div style={{ textAlign: 'left', flexShrink: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: r.kind === 'receivable' ? '#15803d' : '#b91c1c' }}>{fmtNum(recvRemaining(r))}</div>
+                  <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{r.status === 'settled' ? 'مسددة' : r.status === 'partial' ? 'جزئية' : 'مفتوحة'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* linked commitments */}
+      {myComms.length > 0 && (
+        <Card style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>↻ الالتزامات المرتبطة ({myComms.length})</div>
+            <button onClick={() => onNav('commitments')} style={{ background: 'none', border: 'none', fontSize: 12, color: '#2563eb', cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ←</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {myComms.map(c => (
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', background: 'var(--surface-2)', borderRadius: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{c.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{projName(c.projectId)} · {FREQ_LABEL[c.freq]}{!commitmentDone(c) ? ` · يستحق ${c.nextDue}` : ''}</div>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: c.direction === 'out' ? '#b91c1c' : '#15803d', flexShrink: 0 }}>{c.direction === 'out' ? '−' : '+'}{fmtNum(c.amount)}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* linked requests */}
+      {myReqs.length > 0 && (
+        <Card style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>◫ الطلبات المرتبطة ({myReqs.length})</div>
+            <button onClick={() => onNav('requests')} style={{ background: 'none', border: 'none', fontSize: 12, color: '#2563eb', cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ←</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {myReqs.map(r => (
+              <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', background: 'var(--surface-2)', borderRadius: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{r.title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{projName(r.projectId)} · {r.type}</div>
+                </div>
+                <div style={{ textAlign: 'left', flexShrink: 0 }}>
+                  {r.amount > 0 && <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{fmtNum(r.amount)}</div>}
+                  <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: r.status === 'pending' ? '#fef3c7' : r.status === 'rejected' ? '#fee2e2' : '#dcfce7', color: r.status === 'pending' ? '#a16207' : r.status === 'rejected' ? '#b91c1c' : '#15803d' }}>
+                    {r.status === 'approved' ? 'معتمد' : r.status === 'rejected' ? 'مرفوض' : 'معلّق'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* read-only note */}
+      <div style={{ marginTop: 16, padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 10, fontSize: 11.5, color: 'var(--text-3)', textAlign: 'center' }}>
+        هذه نظرة مجمّعة للقراءة. أرصدة العهد والذمم والالتزامات تبقى مستقلة لتجنّب الازدواج المحاسبي.
+      </div>
     </div>
   );
 }
@@ -5638,7 +5727,7 @@ export default function App() {
       case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} prefs={prefs} helpEntry={help.dashboard} />;
       case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} openCreate={createProject} onCloseCreate={() => setCreateProject(false)} prefs={prefs} projectTypes={lists.projectTypes} helpEntry={help.projects} />;
       case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} onQuickAction={fabAction} prefs={prefs} />;
-      case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} onBack={goBack} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
+      case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} receivables={receivables} commitments={commitments} requests={requests} onBack={goBack} onNav={setPage} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} txCategories={lists.txCategories} helpEntry={help.finance} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} helpEntry={help.ledger} />;
       case 'reports': return <Reports projects={projects} transactions={transactions} receivables={receivables} commitments={commitments} trackings={trackings} requests={requests} members={members} />;
