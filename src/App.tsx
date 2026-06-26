@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 // ═══════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════
-type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription';
+type Page = 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'documents' | 'trackings' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 // unified attachment (image/file) — preview kept in-session, real upload later via backend
@@ -449,6 +449,35 @@ function AttachmentPicker({ value, onChange }: { value: Attachment[]; onChange: 
         </div>
       )}
       <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 8 }}>📌 يُحفظ شكلياً في هذه النسخة — الرفع الفعلي للسحابة يأتي مع الـ Backend.</div>
+    </div>
+  );
+}
+
+// read-only attachments display (in view sheets)
+function AttachmentView({ items }: { items?: Attachment[] }) {
+  const [zoom, setZoom] = useState<string | null>(null);
+  if (!items || items.length === 0) return null;
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {items.map(a => (
+          <div key={a.id} style={{ width: 76 }}>
+            <div
+              onClick={() => a.kind === 'image' && a.preview && setZoom(a.preview)}
+              style={{ width: 76, height: 76, borderRadius: 10, overflow: 'hidden', background: 'var(--surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)', cursor: a.kind === 'image' && a.preview ? 'pointer' : 'default' }}>
+              {a.kind === 'image' && a.preview
+                ? <img src={a.preview} alt={a.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <span style={{ fontSize: 26 }}>{a.kind === 'image' ? '🖼️' : '📄'}</span>}
+            </div>
+            <div style={{ fontSize: 9, color: 'var(--text-3)', textAlign: 'center', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div>
+          </div>
+        ))}
+      </div>
+      {zoom && (
+        <div onClick={() => setZoom(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'mzFade .2s ease' }}>
+          <img src={zoom} alt="معاينة" style={{ maxWidth: '92%', maxHeight: '88%', borderRadius: 12 }} />
+        </div>
+      )}
     </div>
   );
 }
@@ -1128,12 +1157,13 @@ function InviteForm({ projectId, onInvite, onCancel }: {
   );
 }
 
-function ProjectDetail({ projectId, projects, transactions, trackings, requests, documents, members, memberTxns, notifs, onNav, onSaveMember, onDeleteMember, onSaveMemberTxn, onDecideMemberTxn }: {
+function ProjectDetail({ projectId, projects, transactions, trackings, requests, documents, members, memberTxns, notifs, onNav, onSaveMember, onDeleteMember, onSaveMemberTxn, onDecideMemberTxn, onOpenMember }: {
   projectId: string; projects: Project[]; transactions: Transaction[]; trackings: Tracking[];
   requests: RequestItem[]; documents: DocItem[]; members: Member[]; memberTxns: MemberTxn[]; notifs: Notif[];
   onNav: (p: Page) => void;
   onSaveMember: (m: Omit<Member, 'id'> & { id?: string }) => void; onDeleteMember: (id: string) => void;
   onSaveMemberTxn: (t: Omit<MemberTxn, 'id'>) => void; onDecideMemberTxn: (id: string, status: MemberTxnStatus) => void;
+  onOpenMember: (id: string) => void;
 }) {
   const [tab, setTab] = useState<'overview' | 'members' | 'cashflow'>('overview');
   const [sheet, setSheet] = useState<null | { mode: 'add' } | { mode: 'edit'; member: Member } | { mode: 'txn' } | { mode: 'invite' }>(null);
@@ -1324,6 +1354,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                       <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{m.email}</div>
                     </div>
                     <span style={{ background: roleInfo.color + '18', color: roleInfo.color, padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{roleInfo.label}</span>
+                    <button onClick={() => onOpenMember(m.id)} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: 'var(--text-3)', flexShrink: 0 }} title="عرض الملف">👤</button>
                     {m.role !== 'owner' && (
                       <button onClick={() => setSheet({ mode: 'edit', member: m })} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: 'var(--text-3)', flexShrink: 0 }}>✎</button>
                     )}
@@ -1601,9 +1632,9 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
             ['الوصف', t.description],
             ['المبلغ', fmt(t.amount)],
             ['التصنيف', t.category],
+            ...(t.source ? [['المصدر/الجهة', t.source] as [string, string]] : []),
             ['التاريخ', t.date],
             ...(t.toProject ? [['إلى مشروع', projects.find(p => p.id === t.toProject)?.name ?? '—'] as [string, string]] : []),
-            ['المستند', t.hasDoc ? '✅ مرفق' : '❌ غير مرفق'],
             ...(t.note ? [['ملاحظات', t.note] as [string, string]] : []),
           ];
           return (
@@ -1614,6 +1645,12 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
                   <span style={{ fontWeight: 500, color: 'var(--text-2)', textAlign: 'left' }}>{v}</span>
                 </div>
               ))}
+              {t.attachments && t.attachments.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 6 }}>المرفقات ({t.attachments.length})</div>
+                  <AttachmentView items={t.attachments} />
+                </div>
+              )}
             </div>
           );
         })()}
@@ -2035,10 +2072,11 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
         ) : undefined}>
         {sheet?.mode === 'view' && (() => {
           const d = sheet.doc;
+          const firstImg = d.attachments?.find(a => a.kind === 'image' && a.preview);
           return (
             <>
               <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 18, textAlign: 'center', marginBottom: 16 }}>
-                <div style={{ fontSize: 48 }}>📄</div>
+                {firstImg ? <img src={firstImg.preview} alt={d.name} style={{ maxWidth: '100%', maxHeight: 180, borderRadius: 10 }} /> : <div style={{ fontSize: 48 }}>📄</div>}
                 <div style={{ fontWeight: 600, marginTop: 8 }}>{d.name}</div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -2048,6 +2086,12 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
                   </div>
                 ))}
               </div>
+              {d.attachments && d.attachments.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 6 }}>المرفقات ({d.attachments.length})</div>
+                  <AttachmentView items={d.attachments} />
+                </div>
+              )}
             </>
           );
         })()}
@@ -2289,6 +2333,12 @@ function Trackings({ projectId, trackings, onSave, onDelete, openCreate, onOpenC
                   </div>
                 ))}
               </div>
+              {t.attachments && t.attachments.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 6 }}>المرفقات ({t.attachments.length})</div>
+                  <AttachmentView items={t.attachments} />
+                </div>
+              )}
             </>
           );
         })()}
@@ -2438,6 +2488,12 @@ function Requests({ projectId, requests, onDecide, onSave, onDelete, openCreate,
                   </div>
                 ))}
               </div>
+              {r.attachments && r.attachments.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 6 }}>المرفقات ({r.attachments.length})</div>
+                  <AttachmentView items={r.attachments} />
+                </div>
+              )}
             </>
           );
         })()}
@@ -2565,6 +2621,159 @@ const PLANS = [
   { id: 'business', name: 'الأعمال', price: 99, tag: 'للفرق', color: '#7c3aed', features: ['كل مزايا الاحترافية', 'صلاحيات متقدمة', 'موافقات متعددة', 'إدارة أعضاء كاملة', 'تكاملات خارجية'] },
   { id: 'enterprise', name: 'المؤسسات', price: 249, tag: 'للمنشآت الكبيرة', color: '#059669', features: ['كل مزايا الأعمال', 'تكامل ERP / CRM', 'تتبّع GPS للأصول', 'ذكاء اصطناعي متقدم', 'دعم مؤسسي مخصص'] },
 ];
+
+// ═══════════════════════════════════════════
+//  MEMBER DETAIL (full profile + stats + charts)
+// ═══════════════════════════════════════════
+function MemberDetail({ memberId, members, projects, transactions, memberTxns, onBack }: {
+  memberId: string; members: Member[]; projects: Project[];
+  transactions: Transaction[]; memberTxns: MemberTxn[]; onBack: () => void;
+}) {
+  const member = members.find(m => m.id === memberId);
+  if (!member) return <div style={{ padding: 24 }}>العضو غير موجود.</div>;
+
+  // all member movements across the system
+  const myTxns = memberTxns.filter(t => t.memberId === memberId);
+  const accepted = myTxns.filter(t => t.status === 'accepted');
+  const incoming = accepted.filter(t => t.direction === 'to_member').reduce((s, t) => s + t.amount, 0);
+  const outgoing = accepted.filter(t => t.direction === 'from_member').reduce((s, t) => s + t.amount, 0);
+  const pending = myTxns.filter(t => t.status === 'pending').length;
+
+  // projects this member belongs to (same email across projects)
+  const myProjects = members.filter(m => m.email === member.email).map(m => {
+    const proj = projects.find(p => p.id === m.projectId);
+    const pTxns = memberTxns.filter(t => t.memberId === m.id && t.status === 'accepted');
+    return {
+      project: proj, role: m.role, balance: m.balance ?? 0,
+      in: pTxns.filter(t => t.direction === 'to_member').reduce((s, t) => s + t.amount, 0),
+      out: pTxns.filter(t => t.direction === 'from_member').reduce((s, t) => s + t.amount, 0),
+    };
+  }).filter(x => x.project);
+
+  const totalBalanceAllProjects = myProjects.reduce((s, p) => s + p.balance, 0);
+  const roleInfo = ROLES.find(r => r.id === member.role)!;
+
+  // monthly chart of member movements
+  const byMonth: Record<string, { in: number; out: number }> = {};
+  accepted.forEach(t => {
+    const m = t.date.slice(0, 7);
+    if (!byMonth[m]) byMonth[m] = { in: 0, out: 0 };
+    if (t.direction === 'to_member') byMonth[m].in += t.amount; else byMonth[m].out += t.amount;
+  });
+  const months = Object.keys(byMonth).sort();
+  const maxM = Math.max(...months.map(m => Math.max(byMonth[m].in, byMonth[m].out)), 1);
+
+  const projName = (id: string) => projects.find(p => p.id === id)?.name ?? '—';
+
+  return (
+    <div style={{ padding: 24, maxWidth: 1100 }}>
+      <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12 }}>‹ رجوع</button>
+
+      {/* profile header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+        <div style={{ width: 72, height: 72, borderRadius: 99, background: roleInfo.color + '22', color: roleInfo.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 30, flexShrink: 0 }}>
+          {member.name.charAt(0)}
+        </div>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{member.name}</h1>
+          <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 2 }}>{member.email}</div>
+          <span style={{ display: 'inline-block', marginTop: 8, background: roleInfo.color + '18', color: roleInfo.color, padding: '3px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600 }}>{roleInfo.label}</span>
+        </div>
+        <div style={{ textAlign: 'left' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>الرصيد (هذا المشروع)</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: (member.balance ?? 0) > 0 ? '#15803d' : 'var(--text-3)' }}>{fmt(member.balance ?? 0)}</div>
+        </div>
+      </div>
+
+      {/* stat cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 14, marginBottom: 22 }}>
+        {[
+          { l: 'إجمالي الوارد', v: fmt(incoming), c: '#15803d', bg: '#f0fdf4', i: '↓' },
+          { l: 'إجمالي الصادر', v: fmt(outgoing), c: '#b91c1c', bg: '#fef2f2', i: '↑' },
+          { l: 'رصيد كل المشاريع', v: fmt(totalBalanceAllProjects), c: '#1d4ed8', bg: '#eff6ff', i: '∑' },
+          { l: 'حركات معلّقة', v: String(pending), c: '#a16207', bg: '#fffbeb', i: '⏳' },
+        ].map(s => (
+          <div key={s.l} style={{ background: s.bg, borderRadius: 14, padding: 16 }}>
+            <div style={{ fontSize: 18, marginBottom: 4 }}>{s.i}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: s.c }}>{s.v}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px,1fr))', gap: 16, marginBottom: 16 }}>
+        {/* projects of member */}
+        <Card>
+          <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14 }}>المشاريع المنتمي إليها ({myProjects.length})</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {myProjects.map((p, i) => (
+              <div key={i} style={{ padding: '12px 14px', background: 'var(--surface-2)', borderRadius: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{p.project!.icon} {p.project!.name}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{ROLES.find(r => r.id === p.role)?.label}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
+                  <span style={{ color: '#15803d' }}>وارد {fmtNum(p.in)}</span>
+                  <span style={{ color: '#b91c1c' }}>صادر {fmtNum(p.out)}</span>
+                  <span style={{ color: '#1d4ed8', marginRight: 'auto', fontWeight: 600 }}>رصيد {fmtNum(p.balance)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* monthly movement chart */}
+        <Card>
+          <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14 }}>الحركة الشهرية</div>
+          {months.length === 0 && <div style={{ color: 'var(--text-3)', fontSize: 13, padding: 12, textAlign: 'center' }}>لا توجد حركات بعد</div>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {months.map(m => (
+              <div key={m}>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>{m}</div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 3 }}>
+                  <span style={{ fontSize: 10, color: '#15803d', width: 32 }}>وارد</span>
+                  <div style={{ flex: 1, height: 12, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}><div style={{ height: '100%', width: `${(byMonth[m].in / maxM) * 100}%`, background: '#22c55e' }} /></div>
+                  <span style={{ fontSize: 11, color: '#15803d', width: 60, textAlign: 'left' }}>{fmtNum(byMonth[m].in)}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <span style={{ fontSize: 10, color: '#b91c1c', width: 32 }}>صادر</span>
+                  <div style={{ flex: 1, height: 12, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}><div style={{ height: '100%', width: `${(byMonth[m].out / maxM) * 100}%`, background: '#f87171' }} /></div>
+                  <span style={{ fontSize: 11, color: '#b91c1c', width: 60, textAlign: 'left' }}>{fmtNum(byMonth[m].out)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      {/* all member operations */}
+      <Card>
+        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 14 }}>كل العمليات المرتبطة بالعضو ({myTxns.length})</div>
+        {myTxns.length === 0 && <div style={{ color: 'var(--text-3)', fontSize: 13, padding: 12, textAlign: 'center' }}>لا توجد عمليات</div>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {myTxns.map(t => {
+            const ti = MEMBER_TXN_TYPES.find(x => x.id === t.type);
+            return (
+              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: 'var(--surface-2)', borderRadius: 10 }}>
+                <span style={{ fontSize: 18 }}>{ti?.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{ti?.label} — {projName(t.projectId)}</div>
+                  {t.note && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{t.note}</div>}
+                </div>
+                <div style={{ textAlign: 'left', flexShrink: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: t.direction === 'to_member' ? '#15803d' : '#b91c1c' }}>{t.direction === 'to_member' ? '+' : '−'}{fmtNum(t.amount)}</div>
+                  <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: t.status === 'pending' ? '#fef3c7' : t.status === 'rejected' ? '#fee2e2' : '#dcfce7', color: t.status === 'pending' ? '#a16207' : t.status === 'rejected' ? '#b91c1c' : '#15803d' }}>
+                    {t.status === 'accepted' ? 'مقبولة' : t.status === 'rejected' ? 'مرفوضة' : 'معلّقة'}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+    </div>
+  );
+}
 
 function Subscription({ current, onChoose }: { current: string; onChoose: (id: string) => void }) {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
@@ -2792,6 +3001,7 @@ export default function App() {
   const [notifs, setNotifs] = usePersist<Notif[]>('mz_notifs', INITIAL_NOTIFS);
   const [members, setMembers] = usePersist<Member[]>('mz_members', INITIAL_MEMBERS);
   const [memberTxns, setMemberTxns] = usePersist<MemberTxn[]>('mz_member_txns', INITIAL_MEMBER_TXNS);
+  const [selectedMember, setSelectedMember] = useState<string | null>(null);
 
   // create-sheet flags triggered by FAB / headers
   const [createTx, setCreateTx] = useState(false);
@@ -2923,7 +3133,8 @@ export default function App() {
     switch (page) {
       case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} />;
       case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} />;
-      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} />;
+      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} />;
+      case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} onBack={goBack} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} />;
       case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} />;
