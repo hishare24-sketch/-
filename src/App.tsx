@@ -4979,7 +4979,7 @@ function Surveys({ surveys, projects, onSave, onDelete, openCreate, onCloseCreat
       <PageHeader title="الاستبيانات" subtitle="أنشئ استبيانات، شاركها داخلياً، وحلّل النتائج" action={<Btn size="sm" onClick={onOpenCreate}>+ استبيان جديد</Btn>} />
 
       {surveys.length === 0 ? (
-        <EmptyState icon="📊" title="لا توجد استبيانات بعد" desc="أنشئ أول استبيان من قالب جاهز أو من الصفر." />
+        <EmptyState icon="📊" title="لا توجد استبيانات بعد" hint="أنشئ أول استبيان من قالب جاهز أو من الصفر." />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
           {surveys.map(s => {
@@ -5155,7 +5155,7 @@ function SurveyResults({ survey, onClose }: { survey: Survey; onClose: () => voi
         <div style={{ fontSize: 13, color: 'var(--text-3)' }}>إجمالي الإجابات</div>
       </div>
       {survey.responses.length === 0 ? (
-        <EmptyState icon="📊" title="لا توجد إجابات بعد" desc="شارك الاستبيان لجمع الإجابات." />
+        <EmptyState icon="📊" title="لا توجد إجابات بعد" hint="شارك الاستبيان لجمع الإجابات." />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           {survey.questions.map((q, i) => {
@@ -5164,7 +5164,7 @@ function SurveyResults({ survey, onClose }: { survey: Survey; onClose: () => voi
               <div key={q.id}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>{i + 1}. {q.text}</div>
                 {q.kind === 'rating' && ans.length > 0 && (
-                  <div style={{ fontSize: 13, color: 'var(--text-2)' }}>المتوسّط: <b style={{ color: 'var(--accent, #2563eb)' }}>{(ans.reduce((s, a) => s + (a as number), 0) / ans.length).toFixed(1)} ⭐</b> من {ans.length} تقييم</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-2)' }}>المتوسّط: <b style={{ color: 'var(--accent, #2563eb)' }}>{(ans.reduce((s: number, a) => s + Number(a), 0) / ans.length).toFixed(1)} ⭐</b> من {ans.length} تقييم</div>
                 )}
                 {(q.kind === 'single' || q.kind === 'multi') && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
