@@ -4051,7 +4051,7 @@ function Notifications({ notifs, projects, members, onMarkRead, onMarkAll, onNav
 // ═══════════════════════════════════════════
 //  CUSTOMIZE (لوحة القوائم المخصّصة)
 // ═══════════════════════════════════════════
-function Customize({ lists, onChange, help, onHelpChange, healthData, onNav }: { lists: CustomLists; onChange: (l: CustomLists) => void; help: HelpTexts; onHelpChange: (h: HelpTexts) => void; healthData: Parameters<typeof runHealthCheck>[0]; onNav: (p: Page) => void }) {
+function Customize({ lists, onChange, help, onHelpChange, healthData, onNav, onNavigate }: { lists: CustomLists; onChange: (l: CustomLists) => void; help: HelpTexts; onHelpChange: (h: HelpTexts) => void; healthData: Parameters<typeof runHealthCheck>[0]; onNav: (p: Page) => void; onNavigate: (p: Page, itemId?: string, projId?: string) => void }) {
   const sections: { key: keyof CustomLists; title: string; icon: string; desc: string; placeholder: string }[] = [
     { key: 'txCategories', title: 'التصنيفات المالية', icon: '🏷️', desc: 'تصنيفات الإيرادات والمصروفات في الإدارة المالية', placeholder: 'مثال: تبرعات' },
     { key: 'projectTypes', title: 'أنواع المشاريع', icon: '⬡', desc: 'الأنواع المتاحة عند إنشاء مشروع جديد', placeholder: 'مثال: عيادة' },
@@ -4077,7 +4077,7 @@ function Customize({ lists, onChange, help, onHelpChange, healthData, onNav }: {
     <div style={{ padding: 24, maxWidth: 760 }}>
       <PageHeader title="التخصيص" subtitle="إدارة القوائم المخصّصة المستخدمة في كل الأقسام" />
 
-      <HealthCheck data={healthData} onNav={onNav} />
+      <HealthCheck data={healthData} onNavigate={onNavigate} />
 
       <Card style={{ marginBottom: 16, background: 'var(--info-bg)', border: '1px solid #bfdbfe' }}>
         <div style={{ fontSize: 13, color: 'var(--info-text)', lineHeight: 1.8 }}>
@@ -4820,7 +4820,7 @@ function Receivables({ projectId, projects, receivables, members, onSave, onPay,
           const isOverdue = r.status !== 'settled' && r.dueDate && r.dueDate < today();
           const pct = r.amount > 0 ? Math.round((paid / r.amount) * 100) : 0;
           return (
-            <Card key={r.id} style={{ padding: 16, borderRight: `3px solid ${isRecv ? '#22c55e' : '#f87171'}` }}>
+            <Card key={r.id} dataHl={r.id} style={{ padding: 16, borderRight: `3px solid ${isRecv ? '#22c55e' : '#f87171'}` }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <span style={{ fontSize: 22, flexShrink: 0 }}>{isRecv ? '📥' : '📤'}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -5099,7 +5099,7 @@ function Commitments({ projectId, projects, commitments, members, onSave, onPay,
           const overdue = c.active && !done && c.nextDue < today();
           const pct = c.totalCount ? Math.round((c.paidCount / c.totalCount) * 100) : 0;
           return (
-            <Card key={c.id} style={{ padding: 16, opacity: c.active && !done ? 1 : 0.65, borderRight: `3px solid ${isOut ? '#f87171' : '#22c55e'}` }}>
+            <Card key={c.id} dataHl={c.id} style={{ padding: 16, opacity: c.active && !done ? 1 : 0.65, borderRight: `3px solid ${isOut ? '#f87171' : '#22c55e'}` }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <span style={{ fontSize: 22, flexShrink: 0 }}>{ki.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -5877,7 +5877,11 @@ function Assets({ projectId, projects, assets, members, onSave, onDelete, onAddM
 // ═══════════════════════════════════════════
 //  HEALTH CHECK (فحص اتساق الحسابات)
 // ═══════════════════════════════════════════
-type HealthIssue = { level: 'error' | 'warning' | 'ok'; title: string; detail: string };
+type HealthIssue = {
+  level: 'error' | 'warning' | 'ok'; title: string; detail: string;
+  cause?: string; why?: string; fix?: string; ai?: string;
+  action?: { label: string; page: Page; itemId?: string; projId?: string };
+};
 function runHealthCheck(data: {
   projects: Project[]; transactions: Transaction[]; receivables: Receivable[];
   commitments: Commitment[]; assets: Asset[]; members: Member[]; memberTxns: MemberTxn[];
@@ -5890,59 +5894,107 @@ function runHealthCheck(data: {
   const transfers = transactions.filter(t => t.type === 'transfer');
   const linkGroups = new Map<string, Transaction[]>();
   transfers.forEach(t => { if (t.linkId) { const g = linkGroups.get(t.linkId) ?? []; g.push(t); linkGroups.set(t.linkId, g); } });
-  let brokenTransfers = 0;
+  let brokenTransfers = 0; let firstBrokenTx: Transaction | undefined;
   linkGroups.forEach(g => {
     const hasIn = g.some(x => x.transferDir === 'in');
     const hasOut = g.some(x => x.transferDir === 'out');
-    if (!hasIn || !hasOut || g.length !== 2) brokenTransfers++;
+    if (!hasIn || !hasOut || g.length !== 2) { brokenTransfers++; firstBrokenTx = firstBrokenTx ?? g[0]; }
   });
-  const orphanTransfers = transfers.filter(t => !t.linkId).length;
-  if (brokenTransfers === 0 && orphanTransfers === 0) issues.push({ level: 'ok', title: 'التحويلات متوازنة', detail: `كل التحويلات بين المشاريع لها طرفان (صادر ووارد) متطابقان.` });
-  else issues.push({ level: 'warning', title: 'تحويلات غير متوازنة', detail: `${brokenTransfers + orphanTransfers} تحويل بلا طرف مقابل مكتمل. قد يكون ناتجاً عن حذف عملية مرتبطة.` });
+  const orphanTransfersList = transfers.filter(t => !t.linkId);
+  const orphanTransfers = orphanTransfersList.length;
+  if (brokenTransfers === 0 && orphanTransfers === 0) issues.push({ level: 'ok', title: 'التحويلات متوازنة', detail: 'كل التحويلات بين المشاريع لها طرفان (صادر ووارد) متطابقان.', ai: 'تحويلاتك سليمة محاسبياً. كل مبلغ خرج من مشروع دخل في الآخر دون فقد أو ازدواج.' });
+  else {
+    const tx = firstBrokenTx ?? orphanTransfersList[0];
+    issues.push({
+      level: 'warning', title: 'تحويلات غير متوازنة', detail: `${brokenTransfers + orphanTransfers} تحويل بلا طرف مقابل مكتمل.`,
+      cause: 'تحويل بين مشروعين فقد أحد طرفيه (الصادر أو الوارد).',
+      why: 'يحدث عادةً عند حذف إحدى عمليتي التحويل المرتبطتين يدوياً، فيبقى الطرف الآخر معلّقاً.',
+      fix: 'افتح العملية المتأثرة في الإدارة المالية، واحذف الطرف المتبقي ثم أعد إنشاء التحويل كاملاً، أو أضف الطرف المقابل يدوياً.',
+      ai: 'أنصحك بإعادة إنشاء هذا التحويل من البداية بدل ترقيعه — هذا يضمن ربط الطرفين تلقائياً ويحافظ على توازن أرصدة المشروعين.',
+      action: tx ? { label: 'عرض العملية في المالية', page: 'finance', itemId: tx.id, projId: tx.projectId } : undefined,
+    });
+  }
 
-  // 2. member balance consistency: balance should equal sum of accepted member txns by direction
-  let mismatchMembers = 0;
+  // 2. member balance consistency
+  let mismatchMembers = 0; let firstMismatch: Member | undefined;
   members.forEach(m => {
     const accepted = memberTxns.filter(t => t.memberId === m.id && t.status === 'accepted');
     const computed = accepted.reduce((s, t) => s + (t.direction === 'to_member' ? t.amount : -t.amount), 0);
     const stored = m.balance ?? 0;
-    if (Math.abs(computed - stored) > 1) mismatchMembers++;
+    if (Math.abs(computed - stored) > 1) { mismatchMembers++; firstMismatch = firstMismatch ?? m; }
   });
-  if (mismatchMembers === 0) issues.push({ level: 'ok', title: 'أرصدة الأعضاء متطابقة', detail: 'رصيد كل عضو يساوي مجموع حركات عهده المقبولة.' });
-  else issues.push({ level: 'warning', title: 'أرصدة أعضاء غير متطابقة', detail: `${mismatchMembers} عضو رصيده المخزّن لا يطابق مجموع حركاته المقبولة.` });
+  if (mismatchMembers === 0) issues.push({ level: 'ok', title: 'أرصدة الأعضاء متطابقة', detail: 'رصيد كل عضو يساوي مجموع حركات عهده المقبولة.', ai: 'أرصدة العهد لدى أعضائك دقيقة ومطابقة لحركاتهم. لا حاجة لأي تسوية.' });
+  else issues.push({
+    level: 'warning', title: 'أرصدة أعضاء غير متطابقة', detail: `${mismatchMembers} عضو رصيده المخزّن لا يطابق مجموع حركاته المقبولة.`,
+    cause: 'الرصيد المحفوظ للعضو يختلف عن ناتج جمع حركات عهده المقبولة.',
+    why: 'قد ينتج عن تعديل يدوي على الرصيد، أو حركة عهدة عُدّلت/حُذفت بعد قبولها.',
+    fix: 'افتح صفحة العضو وراجع سجل حركاته، ثم سجّل حركة تسوية تعيد الرصيد لمطابقة الواقع.',
+    ai: 'الأسلم محاسبياً ألا تُعدّل رصيد العضو يدوياً، بل تسجّل حركة "تسوية/إرجاع" أو "خصم" — هكذا يبقى الرصيد دائماً قابلاً للتتبّع.',
+    action: firstMismatch ? { label: 'عرض الأعضاء', page: 'projectDetail', projId: firstMismatch.projectId } : undefined,
+  });
 
   // 3. orphan records (project deleted)
-  const orphans = [
+  const orphanList = [
     ...transactions.filter(t => !projIds.has(t.projectId)),
     ...receivables.filter(r => !projIds.has(r.projectId)),
     ...commitments.filter(c => !projIds.has(c.projectId)),
     ...assets.filter(a => !projIds.has(a.projectId)),
-  ].length;
-  if (orphans === 0) issues.push({ level: 'ok', title: 'لا سجلات يتيمة', detail: 'كل العمليات والذمم والالتزامات والأصول مرتبطة بمشاريع قائمة.' });
-  else issues.push({ level: 'error', title: 'سجلات يتيمة', detail: `${orphans} سجل مرتبط بمشروع محذوف. يُنصح بمراجعتها.` });
+  ];
+  if (orphanList.length === 0) issues.push({ level: 'ok', title: 'لا سجلات يتيمة', detail: 'كل العمليات والذمم والالتزامات والأصول مرتبطة بمشاريع قائمة.', ai: 'بنية بياناتك سليمة — لا توجد سجلات معلّقة بلا مشروع.' });
+  else issues.push({
+    level: 'error', title: 'سجلات يتيمة', detail: `${orphanList.length} سجل مرتبط بمشروع محذوف.`,
+    cause: 'سجلات (عمليات/ذمم/التزامات/أصول) تشير إلى مشروع لم يعد موجوداً.',
+    why: 'حُذف المشروع دون حذف أو نقل سجلاته المرتبطة، فبقيت معلّقة بلا أب.',
+    fix: 'أنشئ مشروعاً بديلاً وأعد إسناد هذه السجلات إليه، أو احذفها إن لم تعد مطلوبة.',
+    ai: 'أنصح بشدة بمعالجة هذا النوع أولاً — السجلات اليتيمة تشوّه التقارير والإجماليات لأنها لا تظهر تحت أي مشروع.',
+    action: { label: 'إدارة المشاريع', page: 'projects' },
+  });
 
-  // 4. receivable payments not exceeding amount
-  const overpaid = receivables.filter(r => recvPaid(r) > r.amount + 1).length;
-  if (overpaid === 0) issues.push({ level: 'ok', title: 'مدفوعات الذمم سليمة', detail: 'لا توجد ذمة سُدّد فيها أكثر من قيمتها.' });
-  else issues.push({ level: 'warning', title: 'ذمم مدفوعة بزيادة', detail: `${overpaid} ذمة تجاوز إجمالي سدادها قيمتها الأصلية.` });
+  // 4. receivable overpayment
+  const overpaidList = receivables.filter(r => recvPaid(r) > r.amount + 1);
+  if (overpaidList.length === 0) issues.push({ level: 'ok', title: 'مدفوعات الذمم سليمة', detail: 'لا توجد ذمة سُدّد فيها أكثر من قيمتها.', ai: 'سدادات ذممك منضبطة ولا تتجاوز المبالغ الأصلية.' });
+  else issues.push({
+    level: 'warning', title: 'ذمم مدفوعة بزيادة', detail: `${overpaidList.length} ذمة تجاوز إجمالي سدادها قيمتها الأصلية.`,
+    cause: 'مجموع الدفعات المسجّلة على الذمة أكبر من قيمتها الأصلية.',
+    why: 'قد يكون نتيجة تسجيل دفعة مكررة، أو إدخال مبلغ دفعة أكبر من المتبقي.',
+    fix: 'افتح الذمة المعنية وراجع دفعاتها، واحذف الدفعة الزائدة أو صحّح مبلغها.',
+    ai: 'راجع دفعات هذه الذمة — غالباً توجد دفعة مكررة. حذفها يعيد الرصيد لصحته دون التأثير على بقية العمليات.',
+    action: { label: 'عرض الذمم', page: 'receivables', itemId: overpaidList[0].id, projId: overpaidList[0].projectId },
+  });
 
   // 5. commitment paid count integrity
-  const badCommit = commitments.filter(c => c.totalCount != null && c.paidCount > c.totalCount).length;
-  if (badCommit === 0) issues.push({ level: 'ok', title: 'عدّادات الالتزامات سليمة', detail: 'لا يوجد التزام تجاوزت دفعاته المسددة إجماليه.' });
-  else issues.push({ level: 'warning', title: 'عدّادات التزامات خاطئة', detail: `${badCommit} التزام عدد دفعاته المسددة يتجاوز الإجمالي المحدّد.` });
+  const badCommitList = commitments.filter(c => c.totalCount != null && c.paidCount > c.totalCount);
+  if (badCommitList.length === 0) issues.push({ level: 'ok', title: 'عدّادات الالتزامات سليمة', detail: 'لا يوجد التزام تجاوزت دفعاته المسددة إجماليه.', ai: 'عدّادات أقساطك والتزاماتك دقيقة.' });
+  else issues.push({
+    level: 'warning', title: 'عدّادات التزامات خاطئة', detail: `${badCommitList.length} التزام عدد دفعاته المسددة يتجاوز الإجمالي المحدّد.`,
+    cause: 'عدد الدفعات المسددة أكبر من إجمالي عدد الدفعات المحدّد للالتزام.',
+    why: 'قد يكون إجمالي الدفعات أُدخل أقل من الواقع، أو سُجّلت دفعات إضافية بعد اكتمال الالتزام.',
+    fix: 'افتح الالتزام وعدّل إجمالي عدد الدفعات ليطابق الواقع، أو راجع الدفعات الزائدة.',
+    ai: 'صحّح إجمالي عدد الدفعات في هذا الالتزام — هذا أبسط من حذف الدفعات ويحافظ على سجل السداد كاملاً.',
+    action: { label: 'عرض الالتزامات', page: 'commitments', itemId: badCommitList[0].id, projId: badCommitList[0].projectId },
+  });
 
   // 6. negative-amount records
-  const negatives = transactions.filter(t => t.amount < 0).length + receivables.filter(r => r.amount < 0).length;
-  if (negatives === 0) issues.push({ level: 'ok', title: 'لا مبالغ سالبة', detail: 'كل المبالغ المسجّلة موجبة كما هو متوقّع.' });
-  else issues.push({ level: 'warning', title: 'مبالغ سالبة', detail: `${negatives} سجل بمبلغ سالب. تحقّق من صحة الإدخال.` });
+  const negTx = transactions.filter(t => t.amount < 0);
+  const negRecv = receivables.filter(r => r.amount < 0);
+  if (negTx.length + negRecv.length === 0) issues.push({ level: 'ok', title: 'لا مبالغ سالبة', detail: 'كل المبالغ المسجّلة موجبة كما هو متوقّع.', ai: 'كل مبالغك موجبة — الاتجاه (دخل/خرج) يُحدّد بنوع العملية لا بإشارة المبلغ، وهذا صحيح.' });
+  else issues.push({
+    level: 'warning', title: 'مبالغ سالبة', detail: `${negTx.length + negRecv.length} سجل بمبلغ سالب.`,
+    cause: 'سجلات تحمل مبلغاً بقيمة سالبة.',
+    why: 'في موازين الاتجاه يُحدَّد بنوع العملية (دخل/خرج)، لا بإشارة المبلغ — فالمبلغ السالب غالباً خطأ إدخال.',
+    fix: 'افتح السجل المعني وأدخل المبلغ كقيمة موجبة، مع اختيار النوع الصحيح (مصروف/إيراد).',
+    ai: 'حوّل المبلغ السالب إلى موجب واضبط نوع العملية — هذا يصحّح التقارير دون التأثير على الرصيد النهائي.',
+    action: negTx[0] ? { label: 'عرض العملية في المالية', page: 'finance', itemId: negTx[0].id, projId: negTx[0].projectId } : { label: 'عرض الذمم', page: 'receivables', itemId: negRecv[0]?.id, projId: negRecv[0]?.projectId },
+  });
 
   return issues;
 }
 
-function HealthCheck({ data, onNav }: { data: Parameters<typeof runHealthCheck>[0]; onNav: (p: Page) => void }) {
+function HealthCheck({ data, onNavigate }: { data: Parameters<typeof runHealthCheck>[0]; onNavigate: (p: Page, itemId?: string, projId?: string) => void }) {
   const [issues, setIssues] = useState<HealthIssue[] | null>(null);
   const [running, setRunning] = useState(false);
-  const run = () => { setRunning(true); setTimeout(() => { setIssues(runHealthCheck(data)); setRunning(false); }, 700); };
+  const [expanded, setExpanded] = useState<number | null>(null);
+  const run = () => { setRunning(true); setExpanded(null); setTimeout(() => { setIssues(runHealthCheck(data)); setRunning(false); }, 700); };
 
   const errors = issues?.filter(i => i.level === 'error').length ?? 0;
   const warnings = issues?.filter(i => i.level === 'warning').length ?? 0;
@@ -5972,13 +6024,40 @@ function HealthCheck({ data, onNav }: { data: Parameters<typeof runHealthCheck>[
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {issues.map((i, idx) => {
               const mt = meta(i.level);
+              const hasDetail = i.level !== 'ok' && (i.cause || i.why || i.fix);
+              const isOpen = expanded === idx;
               return (
-                <div key={idx} style={{ display: 'flex', gap: 12, padding: '12px 14px', background: mt.bg, borderRadius: 10 }}>
-                  <span style={{ fontSize: 16, flexShrink: 0 }}>{mt.icon}</span>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: mt.c }}>{i.title}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2, lineHeight: 1.6 }}>{i.detail}</div>
+                <div key={idx} style={{ background: mt.bg, borderRadius: 10, overflow: 'hidden' }}>
+                  <div
+                    onClick={() => (hasDetail || i.ai) ? setExpanded(isOpen ? null : idx) : undefined}
+                    style={{ display: 'flex', gap: 12, padding: '12px 14px', cursor: (hasDetail || i.ai) ? 'pointer' : 'default', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>{mt.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: mt.c }}>{i.title}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2, lineHeight: 1.6 }}>{i.detail}</div>
+                    </div>
+                    {(hasDetail || i.ai) && <span style={{ color: 'var(--text-3)', fontSize: 11, flexShrink: 0, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>}
                   </div>
+
+                  {isOpen && (
+                    <div style={{ padding: '0 14px 14px 14px', display: 'flex', flexDirection: 'column', gap: 10, animation: 'mzFade .2s ease' }}>
+                      {i.cause && <ExplainRow icon="🔎" title="السبب" body={i.cause} />}
+                      {i.why && <ExplainRow icon="❓" title="لماذا حدث" body={i.why} />}
+                      {i.fix && <ExplainRow icon="🛠️" title="طريقة المعالجة" body={i.fix} />}
+                      {i.ai && (
+                        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '11px 13px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+                            <span style={{ fontSize: 15 }}>🤖</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--purple-text)' }}>توصية المساعد الذكي</span>
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.7 }}>{i.ai}</div>
+                        </div>
+                      )}
+                      {i.action && (
+                        <Btn size="sm" onClick={() => i.action && onNavigate(i.action.page, i.action.itemId, i.action.projId)} style={{ alignSelf: 'flex-start' }}>↗ {i.action.label}</Btn>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -5989,6 +6068,17 @@ function HealthCheck({ data, onNav }: { data: Parameters<typeof runHealthCheck>[
         </div>
       )}
     </Card>
+  );
+}
+function ExplainRow({ icon, title, body }: { icon: string; title: string; body: string }) {
+  return (
+    <div style={{ display: 'flex', gap: 9 }}>
+      <span style={{ fontSize: 14, flexShrink: 0 }}>{icon}</span>
+      <div>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text)' }}>{title}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6, marginTop: 1 }}>{body}</div>
+      </div>
+    </div>
   );
 }
 
@@ -6685,7 +6775,7 @@ export default function App() {
       case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} helpEntry={help.requests} />;
       case 'notifications': return <Notifications notifs={notifs} projects={projects} members={members} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} onNavigate={navigateTo} />;
       case 'audit': return <AuditLog audit={audit} onNav={setPage} />;
-      case 'customize': return <Customize lists={lists} onChange={setLists} help={help} onHelpChange={setHelp} healthData={{ projects, transactions, receivables, commitments, assets, members, memberTxns }} onNav={setPage} />;
+      case 'customize': return <Customize lists={lists} onChange={setLists} help={help} onHelpChange={setHelp} healthData={{ projects, transactions, receivables, commitments, assets, members, memberTxns }} onNav={setPage} onNavigate={navigateTo} />;
       case 'integrations': return <Integrations onBack={() => setPage('settings')} />;
       case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => { logAudit('تسجيل خروج', 'النظام', 'تم تسجيل الخروج'); setAuthed(false); }} prefs={prefs} onPrefs={setPrefs} />;
       case 'subscription': return <Subscription current={plan} onChoose={setPlan} />;
