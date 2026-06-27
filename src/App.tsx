@@ -588,20 +588,28 @@ function Sheet({ open, onClose, title, children, footer }: {
 }) {
   const [dragY, setDragY] = useState(0);
   const dragRef = React.useRef<{ startY: number; dragging: boolean }>({ startY: 0, dragging: false });
+  const bodyRef = React.useRef<HTMLDivElement>(null);
 
-  useEffect(() => { if (open) setDragY(0); }, [open]);
+  // reset position + scroll to top whenever a sheet opens (user always starts from the top of content)
+  useEffect(() => {
+    if (open) {
+      setDragY(0);
+      requestAnimationFrame(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; });
+    }
+  }, [open]);
   if (!open) return null;
 
   const onStart = (clientY: number) => { dragRef.current = { startY: clientY, dragging: true }; setDragY(0); };
   const onMove = (clientY: number) => {
     if (!dragRef.current.dragging) return;
     const delta = clientY - dragRef.current.startY;
-    if (delta > 0) setDragY(delta);
+    // only allow downward drag; apply mild resistance for a natural feel
+    if (delta > 0) setDragY(delta < 200 ? delta : 200 + (delta - 200) * 0.3);
   };
   const onEnd = () => {
     if (!dragRef.current.dragging) return;
     dragRef.current.dragging = false;
-    if (dragY > 90) onClose(); else setDragY(0);
+    if (dragY > 110) onClose(); else setDragY(0);
   };
 
   // shared drag handlers for the whole header area (grabber + title row)
@@ -617,37 +625,39 @@ function Sheet({ open, onClose, title, children, footer }: {
     },
   };
 
+  const closing = dragY > 110;
+
   return (
     <div
       onClick={onClose}
       style={{
-        position: 'fixed', inset: 0, background: 'rgba(15,17,23,.45)', zIndex: 1000,
+        position: 'fixed', inset: 0, background: `rgba(15,17,23,${Math.max(0.15, 0.45 - dragY / 600)})`, zIndex: 1000,
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-        animation: 'mzFade .2s ease',
+        animation: 'mzFade .2s ease', transition: dragRef.current.dragging ? 'none' : 'background .2s ease',
       }}
     >
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: 'var(--surface)', width: '100%', maxWidth: 560, maxHeight: '92vh',
+          background: 'var(--surface)', width: '100%', maxWidth: 560, maxHeight: '92vh', minHeight: 200,
           borderRadius: '22px 22px 0 0', display: 'flex', flexDirection: 'column',
-          animation: dragY === 0 && !dragRef.current.dragging ? 'mzSlideUp .28s cubic-bezier(.16,1,.3,1)' : 'none',
-          transform: `translateY(${dragY}px)`, transition: dragRef.current.dragging ? 'none' : 'transform .25s ease',
+          animation: dragY === 0 && !dragRef.current.dragging ? 'mzSlideUp .3s cubic-bezier(.16,1,.3,1)' : 'none',
+          transform: `translateY(${dragY}px)`, transition: dragRef.current.dragging ? 'none' : 'transform .28s cubic-bezier(.16,1,.3,1)',
           boxShadow: '0 -8px 40px rgba(0,0,0,.18)',
         }}
       >
         {/* drag zone: grabber + header together (easy to grab on mobile) */}
         <div {...dragHandlers} style={{ touchAction: 'none', cursor: 'grab', flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 8 }}>
-            <div style={{ width: 44, height: 5, borderRadius: 99, background: 'var(--border)' }} />
+            <div style={{ width: closing ? 56 : 44, height: 5, borderRadius: 99, background: closing ? 'var(--text-3)' : 'var(--border)', transition: 'all .15s ease' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 20px 14px', borderBottom: '1px solid var(--border)' }}>
             <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{title}</div>
             <button onClick={onClose} onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: 'var(--text-3)', flexShrink: 0 }}>✕</button>
           </div>
         </div>
-        {/* body */}
-        <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>{children}</div>
+        {/* body — always starts scrolled to top */}
+        <div ref={bodyRef} style={{ padding: 20, overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}>{children}</div>
         {/* footer */}
         {footer && <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10 }}>{footer}</div>}
       </div>
