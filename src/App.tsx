@@ -2579,7 +2579,9 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {projDocs.slice(0, 4).map(d => (
                       <div key={d.id} onClick={() => onViewDoc(d)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 9, background: 'var(--surface-2)', cursor: 'pointer' }}>
-                        <span style={{ fontSize: 18 }}>{d.attachments?.find(a => a.kind === 'image' && a.preview) ? '🖼️' : '📄'}</span>
+                        {d.attachments && d.attachments.length > 0
+                          ? <div onClick={e => e.stopPropagation()}><AttachmentThumb items={d.attachments} /></div>
+                          : <span style={{ fontSize: 18 }}>📄</span>}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{d.type} · {d.date}</div>
@@ -3811,7 +3813,9 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
         {filteredDocs.map(d => (
           <Card key={d.id} style={{ padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div style={{ width: 40, height: 48, background: 'var(--surface-3)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>📄</div>
+              <div style={{ width: 40, height: 48, background: 'var(--surface-3)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, overflow: 'hidden', flexShrink: 0 }}>
+                {(() => { const img = d.attachments?.find(a => a.kind === 'image' && a.preview); return img ? <img src={img.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span>{d.attachments && d.attachments.length > 0 ? fileIcon(d.attachments[0]) : '📄'}</span>; })()}
+              </div>
               {d.aiRead && <span style={{ fontSize: 10, background: '#f5f3ff', color: 'var(--purple-text)', padding: '2px 7px', borderRadius: 99, fontWeight: 500 }}>✨ AI</span>}
             </div>
             <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
