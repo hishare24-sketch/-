@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 // ═══════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════
-type Page = 'overview' | 'tasks' | 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'reports' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'assets' | 'requests' | 'notifications' | 'settings' | 'integrations' | 'subscription' | 'memberDetail' | 'audit' | 'customize' | 'colorCustomize';
+type Page = 'overview' | 'tasks' | 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'reports' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'assets' | 'requests' | 'notifications' | 'settings' | 'integrations' | 'subscription' | 'memberDetail' | 'audit' | 'customize' | 'colorCustomize' | 'surveys';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 // unified attachment (image/file) — preview kept in-session, real upload later via backend
@@ -75,6 +75,14 @@ type Transaction = { id: string; projectId: string; type: TxType; description: s
 type Tracking = { id: string; name: string; type: string; icon: string; status: TrackingStatus; daysLeft: number; expiryDate: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
 type RequestItem = { id: string; title: string; amount: number; requestedBy: string; status: RequestStatus; date: string; type: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
 type DocItem = { id: string; name: string; type: string; date: string; size: string; status: string; projectId: string; aiRead: boolean; attachments?: Attachment[]; createdBy?: string };
+// ── surveys ──
+type SurveyQuestion = { id: string; text: string; kind: 'single' | 'multi' | 'rating' | 'text'; options?: string[] };
+type SurveyResponse = { id: string; answers: Record<string, string | string[] | number>; submittedAt: string; respondent?: string };
+type Survey = {
+  id: string; title: string; description?: string; surveyType: string;
+  projectId?: string; questions: SurveyQuestion[]; responses: SurveyResponse[];
+  status: 'draft' | 'active' | 'closed'; createdAt: string; maxResponses?: number; closeDate?: string;
+};
 type Notif = { id: string; type: string; title: string; body: string; time: string; read: boolean; link?: Page; projectId?: string; section?: string; memberId?: string; itemId?: string; ts?: string };
 // audit log entry — records every important event in the app
 type AuditEntry = { id: string; action: string; entity: string; detail: string; user: string; ts: string };
@@ -179,6 +187,72 @@ const DEFAULT_LISTS: CustomLists = {
   docTypes: DEFAULT_DOC_TYPES,
   partyTypes: DEFAULT_PARTY_TYPES,
 };
+
+// ── survey templates (5 ready-made types) ──
+const SURVEY_TEMPLATES: { id: string; name: string; icon: string; desc: string; questions: Omit<SurveyQuestion, 'id'>[] }[] = [
+  {
+    id: 'customer', name: 'رضا العملاء', icon: '😊', desc: 'قياس رضا العملاء عن الخدمة',
+    questions: [
+      { text: 'ما مدى رضاك العام عن خدمتنا؟', kind: 'rating' },
+      { text: 'كيف تقيّم سرعة الاستجابة؟', kind: 'single', options: ['ممتازة', 'جيدة', 'مقبولة', 'ضعيفة'] },
+      { text: 'هل تنصح بنا أصدقاءك؟', kind: 'single', options: ['نعم بالتأكيد', 'ربما', 'لا'] },
+      { text: 'ملاحظات أو اقتراحات للتحسين', kind: 'text' },
+    ],
+  },
+  {
+    id: 'supplier', name: 'تقييم الموردين', icon: '🏭', desc: 'تقييم أداء الموردين والشركاء',
+    questions: [
+      { text: 'جودة المنتجات/الخدمات المقدّمة', kind: 'rating' },
+      { text: 'الالتزام بمواعيد التسليم', kind: 'single', options: ['دائماً', 'غالباً', 'أحياناً', 'نادراً'] },
+      { text: 'أي جوانب تحتاج تحسيناً؟', kind: 'multi', options: ['السعر', 'الجودة', 'التواصل', 'التسليم', 'الدعم'] },
+      { text: 'ملاحظات إضافية', kind: 'text' },
+    ],
+  },
+  {
+    id: 'employee', name: 'استبيان الموظفين', icon: '👥', desc: 'قياس رضا وتفاعل الموظفين',
+    questions: [
+      { text: 'مدى رضاك عن بيئة العمل', kind: 'rating' },
+      { text: 'هل تشعر بالتقدير في عملك؟', kind: 'single', options: ['دائماً', 'أحياناً', 'نادراً'] },
+      { text: 'ما الذي يحفّزك أكثر؟', kind: 'multi', options: ['الراتب', 'التطوّر المهني', 'بيئة العمل', 'المرونة', 'التقدير'] },
+      { text: 'اقتراحاتك لتحسين بيئة العمل', kind: 'text' },
+    ],
+  },
+  {
+    id: 'project', name: 'رأي حول مشروع/خدمة', icon: '💡', desc: 'جمع الآراء حول مشروع أو خدمة',
+    questions: [
+      { text: 'ما تقييمك العام للمشروع؟', kind: 'rating' },
+      { text: 'ما أكثر ما أعجبك؟', kind: 'text' },
+      { text: 'ما الذي يمكن تحسينه؟', kind: 'text' },
+    ],
+  },
+  {
+    id: 'rfq', name: 'طلب عروض أسعار', icon: '💰', desc: 'جمع عروض الأسعار من المورّدين',
+    questions: [
+      { text: 'اسم الشركة/المورّد', kind: 'text' },
+      { text: 'السعر المقترح (ر.س)', kind: 'text' },
+      { text: 'مدة التنفيذ المتوقّعة', kind: 'single', options: ['أسبوع', 'أسبوعان', 'شهر', 'أكثر من شهر'] },
+      { text: 'ما الذي يشمله العرض؟', kind: 'text' },
+    ],
+  },
+];
+
+const INITIAL_SURVEYS: Survey[] = [
+  {
+    id: 'sv1', title: 'استبيان رضا عملاء يونيو', surveyType: 'customer', projectId: 'p1',
+    status: 'active', createdAt: '2025-06-15', maxResponses: 100,
+    questions: [
+      { id: 'q1', text: 'ما مدى رضاك العام عن خدمتنا؟', kind: 'rating' },
+      { id: 'q2', text: 'كيف تقيّم سرعة الاستجابة؟', kind: 'single', options: ['ممتازة', 'جيدة', 'مقبولة', 'ضعيفة'] },
+      { id: 'q3', text: 'ملاحظات أو اقتراحات', kind: 'text' },
+    ],
+    responses: [
+      { id: 'r1', answers: { q1: 5, q2: 'ممتازة', q3: 'خدمة رائعة' }, submittedAt: '2025-06-16', respondent: 'عميل 1' },
+      { id: 'r2', answers: { q1: 4, q2: 'جيدة', q3: '' }, submittedAt: '2025-06-17', respondent: 'عميل 2' },
+      { id: 'r3', answers: { q1: 5, q2: 'ممتازة', q3: 'سريعون جداً' }, submittedAt: '2025-06-18', respondent: 'عميل 3' },
+    ],
+  },
+];
+
 
 // ── contextual help (شرح نموذج العمل لكل قسم) ──
 // editable + toggleable from the التخصيص page
@@ -1238,6 +1312,7 @@ const NAV = [
   { id: 'trackings',     icon: '◷',  label: 'المتابعات والضمانات' },
   { id: 'assets',        icon: '⬚',  label: 'الأصول' },
   { id: 'requests',      icon: '◫',  label: 'الطلبات والموافقات' },
+  { id: 'surveys',       icon: '◰',  label: 'الاستبيانات' },
   { id: 'notifications', icon: '◌',  label: 'الإشعارات' },
   { id: 'audit',         icon: '⊟',  label: 'سجل العمليات' },
   { id: 'customize',     icon: '⚙',  label: 'التخصيص' },
@@ -4873,6 +4948,284 @@ function Integrations({ onBack }: { onBack: () => void }) {
 }
 
 // color customization panel: presets + per-variable color pickers + reset
+// ── Surveys: list, create from template, customize questions, fill (respond), view results ──
+function Surveys({ surveys, projects, onSave, onDelete, openCreate, onCloseCreate, onOpenCreate }: {
+  surveys: Survey[]; projects: Project[];
+  onSave: (s: Survey) => void; onDelete: (id: string) => void;
+  openCreate: boolean; onCloseCreate: () => void; onOpenCreate: () => void;
+}) {
+  const [view, setView] = useState<null | { mode: 'results' | 'fill' | 'share'; survey: Survey }>(null);
+  const [builder, setBuilder] = useState<null | Survey>(null); // survey being built/edited
+
+  const projName = (id?: string) => projects.find(p => p.id === id)?.name ?? 'عام';
+  const statusInfo = (s: Survey['status']) => s === 'active' ? { l: 'نشط', c: 'var(--ok-text)', bg: 'var(--ok-bg)' } : s === 'closed' ? { l: 'مغلق', c: 'var(--text-3)', bg: 'var(--surface-3)' } : { l: 'مسودّة', c: 'var(--warn-text)', bg: 'var(--warn-bg)' };
+
+  // start a new survey from a template
+  const startFromTemplate = (tpl: typeof SURVEY_TEMPLATES[number]) => {
+    setBuilder({
+      id: uid('sv'), title: tpl.name, surveyType: tpl.id, description: tpl.desc,
+      questions: tpl.questions.map((q, i) => ({ ...q, id: `q${i + 1}` })),
+      responses: [], status: 'draft', createdAt: today(),
+    });
+    onCloseCreate();
+  };
+  const startBlank = () => {
+    setBuilder({ id: uid('sv'), title: '', surveyType: 'custom', questions: [{ id: 'q1', text: '', kind: 'text' }], responses: [], status: 'draft', createdAt: today() });
+    onCloseCreate();
+  };
+
+  return (
+    <div style={{ padding: 24 }}>
+      <PageHeader title="الاستبيانات" subtitle="أنشئ استبيانات، شاركها داخلياً، وحلّل النتائج" action={<Btn size="sm" onClick={onOpenCreate}>+ استبيان جديد</Btn>} />
+
+      {surveys.length === 0 ? (
+        <EmptyState icon="📊" title="لا توجد استبيانات بعد" desc="أنشئ أول استبيان من قالب جاهز أو من الصفر." />
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+          {surveys.map(s => {
+            const si = statusInfo(s.status);
+            const tpl = SURVEY_TEMPLATES.find(t => t.id === s.surveyType);
+            return (
+              <Card key={s.id} style={{ padding: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <span style={{ fontSize: 26 }}>{tpl?.icon ?? '📋'}</span>
+                  <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, background: si.bg, color: si.c, fontWeight: 600 }}>{si.l}</span>
+                </div>
+                <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>{s.title}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>{projName(s.projectId)} · {s.questions.length} أسئلة</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                  <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent, #2563eb)' }}>{s.responses.length}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>إجابة{s.maxResponses ? ` / ${s.maxResponses}` : ''}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <Btn size="sm" variant="outline" style={{ flex: 1, fontSize: 11.5 }} onClick={() => setView({ mode: 'results', survey: s })}>📊 النتائج</Btn>
+                  <Btn size="sm" style={{ flex: 1, fontSize: 11.5 }} onClick={() => setView({ mode: 'fill', survey: s })}>✍️ إجابة</Btn>
+                  <Btn size="sm" variant="outline" style={{ fontSize: 11.5 }} onClick={() => setView({ mode: 'share', survey: s })}>🔗</Btn>
+                  <Btn size="sm" variant="outline" style={{ fontSize: 11.5 }} onClick={() => setBuilder(s)}>✎</Btn>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* create: choose template */}
+      <Sheet open={openCreate} onClose={onCloseCreate} title="استبيان جديد">
+        <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 14 }}>اختر قالباً جاهزاً للبدء سريعاً، أو ابدأ من الصفر:</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {SURVEY_TEMPLATES.map(tpl => (
+            <button key={tpl.id} onClick={() => startFromTemplate(tpl)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'right' }}>
+              <span style={{ fontSize: 26 }}>{tpl.icon}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{tpl.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{tpl.desc} · {tpl.questions.length} أسئلة</div>
+              </div>
+              <span style={{ color: 'var(--text-3)' }}>‹</span>
+            </button>
+          ))}
+          <button onClick={startBlank} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, borderRadius: 12, border: '1.5px dashed var(--border)', background: 'var(--surface-2)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'right' }}>
+            <span style={{ fontSize: 26 }}>➕</span>
+            <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>من الصفر</div><div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>أنشئ استبياناً بأسئلتك الخاصة</div></div>
+          </button>
+        </div>
+      </Sheet>
+
+      {/* builder */}
+      {builder && <SurveyBuilder survey={builder} projects={projects} onClose={() => setBuilder(null)} onSave={(s) => { onSave(s); setBuilder(null); }} onDelete={(id) => { onDelete(id); setBuilder(null); }} />}
+
+      {/* results / fill / share */}
+      {view?.mode === 'results' && <SurveyResults survey={view.survey} onClose={() => setView(null)} />}
+      {view?.mode === 'fill' && <SurveyFill survey={view.survey} onClose={() => setView(null)} onSubmit={(resp) => { onSave({ ...view.survey, responses: [...view.survey.responses, resp] }); setView(null); }} />}
+      {view?.mode === 'share' && <SurveyShare survey={view.survey} onClose={() => setView(null)} />}
+    </div>
+  );
+}
+
+// survey builder: edit title, questions (add/remove/reorder kinds), settings
+function SurveyBuilder({ survey, projects, onClose, onSave, onDelete }: { survey: Survey; projects: Project[]; onClose: () => void; onSave: (s: Survey) => void; onDelete: (id: string) => void }) {
+  const [title, setTitle] = useState(survey.title);
+  const [projectId, setProjectId] = useState(survey.projectId ?? '');
+  const [status, setStatus] = useState<Survey['status']>(survey.status);
+  const [questions, setQuestions] = useState<SurveyQuestion[]>(survey.questions);
+  const [maxResp, setMaxResp] = useState<number | ''>(survey.maxResponses ?? '');
+
+  const addQ = () => setQuestions(qs => [...qs, { id: uid('q'), text: '', kind: 'text' }]);
+  const updateQ = (id: string, patch: Partial<SurveyQuestion>) => setQuestions(qs => qs.map(q => q.id === id ? { ...q, ...patch } : q));
+  const removeQ = (id: string) => setQuestions(qs => qs.filter(q => q.id !== id));
+  const kindLabel = { single: 'اختيار واحد', multi: 'متعدّد', rating: 'تقييم (نجوم)', text: 'نص حر' };
+
+  return (
+    <Sheet open onClose={onClose} title={survey.responses.length > 0 ? 'تعديل الاستبيان' : 'بناء الاستبيان'}>
+      <Field label="عنوان الاستبيان"><TextInput value={title} onChange={setTitle} placeholder="مثال: استبيان رضا العملاء" /></Field>
+      <Field label="المشروع (اختياري)">
+        <Select value={projectId} onChange={setProjectId} options={[{ v: '', l: 'عام (بدون مشروع)' }, ...projects.map(p => ({ v: p.id, l: p.name }))]} />
+      </Field>
+      <Field label="الحالة">
+        <Select value={status} onChange={v => setStatus(v as Survey['status'])} options={[{ v: 'draft', l: 'مسودّة' }, { v: 'active', l: 'نشط' }, { v: 'closed', l: 'مغلق' }]} />
+      </Field>
+      <Field label="حد أقصى للإجابات (اختياري)"><NumInput value={maxResp} onChange={setMaxResp} placeholder="بدون حد" /></Field>
+
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', margin: '16px 0 10px' }}>الأسئلة ({questions.length})</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {questions.map((q, i) => (
+          <div key={q.id} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', flexShrink: 0 }}>{i + 1}.</span>
+              <input value={q.text} onChange={e => updateQ(q.id, { text: e.target.value })} placeholder="نص السؤال" style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, background: 'var(--surface)', color: 'var(--text)' }} />
+              <button onClick={() => removeQ(q.id)} style={{ background: 'var(--danger-bg)', border: 'none', borderRadius: 7, width: 30, height: 30, cursor: 'pointer', color: 'var(--danger-text)', flexShrink: 0 }}>🗑️</button>
+            </div>
+            <Select value={q.kind} onChange={v => updateQ(q.id, { kind: v as SurveyQuestion['kind'], options: (v === 'single' || v === 'multi') ? (q.options ?? ['خيار 1', 'خيار 2']) : undefined })} options={Object.entries(kindLabel).map(([v, l]) => ({ v, l }))} />
+            {(q.kind === 'single' || q.kind === 'multi') && (
+              <div style={{ marginTop: 8 }}>
+                <input value={(q.options ?? []).join('، ')} onChange={e => updateQ(q.id, { options: e.target.value.split('،').map(x => x.trim()).filter(Boolean) })} placeholder="الخيارات مفصولة بفاصلة عربية ،" style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 12, background: 'var(--surface-2)', color: 'var(--text-2)', boxSizing: 'border-box' }} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <Btn size="sm" variant="outline" style={{ width: '100%', marginTop: 10 }} onClick={addQ}>+ إضافة سؤال</Btn>
+
+      <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+        {survey.responses.length === 0 && <Btn variant="outline" onClick={() => onDelete(survey.id)} style={{ color: 'var(--danger-text)' }}>حذف</Btn>}
+        <Btn variant="outline" style={{ flex: 1 }} onClick={onClose}>إلغاء</Btn>
+        <Btn style={{ flex: 1 }} disabled={!title.trim() || questions.some(q => !q.text.trim())} onClick={() => onSave({ ...survey, title: title.trim(), projectId: projectId || undefined, status, questions, maxResponses: maxResp === '' ? undefined : maxResp })}>حفظ</Btn>
+      </div>
+    </Sheet>
+  );
+}
+
+// fill a survey (the interactive respondent experience)
+function SurveyFill({ survey, onClose, onSubmit }: { survey: Survey; onClose: () => void; onSubmit: (r: SurveyResponse) => void }) {
+  const [answers, setAnswers] = useState<Record<string, string | string[] | number>>({});
+  const setA = (qid: string, v: string | string[] | number) => setAnswers(a => ({ ...a, [qid]: v }));
+  const toggleMulti = (qid: string, opt: string) => {
+    const cur = (answers[qid] as string[]) ?? [];
+    setA(qid, cur.includes(opt) ? cur.filter(x => x !== opt) : [...cur, opt]);
+  };
+
+  return (
+    <Sheet open onClose={onClose} title={survey.title}>
+      {survey.description && <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>{survey.description}</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        {survey.questions.map((q, i) => (
+          <div key={q.id}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 10 }}>{i + 1}. {q.text}</div>
+            {q.kind === 'rating' && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button key={n} onClick={() => setA(q.id, n)} style={{ fontSize: 28, background: 'none', border: 'none', cursor: 'pointer', opacity: (answers[q.id] as number ?? 0) >= n ? 1 : 0.3 }}>⭐</button>
+                ))}
+              </div>
+            )}
+            {q.kind === 'single' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {(q.options ?? []).map(opt => (
+                  <button key={opt} onClick={() => setA(q.id, opt)} style={{ textAlign: 'right', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, border: `1.5px solid ${answers[q.id] === opt ? 'var(--accent, #2563eb)' : 'var(--border)'}`, background: answers[q.id] === opt ? 'var(--info-bg)' : 'var(--surface)', color: 'var(--text-2)', fontWeight: answers[q.id] === opt ? 700 : 500 }}>{opt}</button>
+                ))}
+              </div>
+            )}
+            {q.kind === 'multi' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {(q.options ?? []).map(opt => {
+                  const sel = ((answers[q.id] as string[]) ?? []).includes(opt);
+                  return <button key={opt} onClick={() => toggleMulti(q.id, opt)} style={{ textAlign: 'right', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, border: `1.5px solid ${sel ? 'var(--accent, #2563eb)' : 'var(--border)'}`, background: sel ? 'var(--info-bg)' : 'var(--surface)', color: 'var(--text-2)', fontWeight: sel ? 700 : 500 }}>{sel ? '☑' : '☐'} {opt}</button>;
+                })}
+              </div>
+            )}
+            {q.kind === 'text' && (
+              <TextArea value={(answers[q.id] as string) ?? ''} onChange={v => setA(q.id, v)} placeholder="اكتب إجابتك…" />
+            )}
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+        <Btn variant="outline" style={{ flex: 1 }} onClick={onClose}>إلغاء</Btn>
+        <Btn style={{ flex: 1 }} onClick={() => onSubmit({ id: uid('r'), answers, submittedAt: today(), respondent: 'مستجيب' })}>إرسال الإجابة</Btn>
+      </div>
+    </Sheet>
+  );
+}
+
+// view aggregated results
+function SurveyResults({ survey, onClose }: { survey: Survey; onClose: () => void }) {
+  return (
+    <Sheet open onClose={onClose} title={`نتائج: ${survey.title}`}>
+      <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 16, marginBottom: 18, textAlign: 'center' }}>
+        <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--accent, #2563eb)' }}>{survey.responses.length}</div>
+        <div style={{ fontSize: 13, color: 'var(--text-3)' }}>إجمالي الإجابات</div>
+      </div>
+      {survey.responses.length === 0 ? (
+        <EmptyState icon="📊" title="لا توجد إجابات بعد" desc="شارك الاستبيان لجمع الإجابات." />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {survey.questions.map((q, i) => {
+            const ans = survey.responses.map(r => r.answers[q.id]).filter(a => a !== undefined && a !== '');
+            return (
+              <div key={q.id}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>{i + 1}. {q.text}</div>
+                {q.kind === 'rating' && ans.length > 0 && (
+                  <div style={{ fontSize: 13, color: 'var(--text-2)' }}>المتوسّط: <b style={{ color: 'var(--accent, #2563eb)' }}>{(ans.reduce((s, a) => s + (a as number), 0) / ans.length).toFixed(1)} ⭐</b> من {ans.length} تقييم</div>
+                )}
+                {(q.kind === 'single' || q.kind === 'multi') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {(q.options ?? []).map(opt => {
+                      const count = ans.filter(a => Array.isArray(a) ? a.includes(opt) : a === opt).length;
+                      const pct = ans.length ? Math.round((count / survey.responses.length) * 100) : 0;
+                      return (
+                        <div key={opt}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-2)', marginBottom: 3 }}><span>{opt}</span><span>{count} ({pct}%)</span></div>
+                          <div style={{ height: 7, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}><div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent, #2563eb)' }} /></div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {q.kind === 'text' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {ans.length === 0 ? <span style={{ fontSize: 12, color: 'var(--text-3)' }}>لا إجابات نصّية</span> : ans.map((a, j) => (
+                      <div key={j} style={{ fontSize: 12.5, color: 'var(--text-2)', background: 'var(--surface-2)', borderRadius: 8, padding: '8px 10px' }}>“{a as string}”</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
+// share (internal link + simulated external)
+function SurveyShare({ survey, onClose }: { survey: Survey; onClose: () => void }) {
+  const internalLink = `موازين › الاستبيانات › ${survey.title}`;
+  const externalLink = `https://mazeen.app/s/${survey.id}`;
+  const [copied, setCopied] = useState<string | null>(null);
+  const copy = (text: string, which: string) => { try { navigator.clipboard?.writeText(text); } catch { /* */ } setCopied(which); setTimeout(() => setCopied(null), 1500); };
+
+  return (
+    <Sheet open onClose={onClose} title="مشاركة الاستبيان">
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>🔗 رابط داخلي</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ flex: 1, padding: '10px 12px', borderRadius: 10, background: 'var(--surface-2)', fontSize: 12, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{internalLink}</div>
+          <Btn size="sm" onClick={() => copy(internalLink, 'int')}>{copied === 'int' ? '✓' : 'نسخ'}</Btn>
+        </div>
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>🌐 رابط خارجي (للمشاركة عبر واتساب/إيميل)</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ flex: 1, padding: '10px 12px', borderRadius: 10, background: 'var(--surface-2)', fontSize: 12, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{externalLink}</div>
+          <Btn size="sm" onClick={() => copy(externalLink, 'ext')}>{copied === 'ext' ? '✓' : 'نسخ'}</Btn>
+        </div>
+      </div>
+      <div style={{ background: 'var(--warn-bg)', borderRadius: 10, padding: 12, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.7 }}>
+        📌 الرابط الخارجي والمشاركة عبر واتساب/إيميل تعمل فعلياً عند ربط الخادم (Backend). حالياً الرابط الداخلي يعمل داخل النظام.
+      </div>
+    </Sheet>
+  );
+}
+
 function ColorCustomize({ theme, onToggleTheme, custom, onCustom, onNav }: {
   theme: 'light' | 'dark'; onToggleTheme: () => void;
   custom: CustomTheme; onCustom: (c: CustomTheme) => void; onNav: (p: Page) => void;
@@ -7480,6 +7833,7 @@ export default function App() {
   const [assets, setAssets] = usePersist<Asset[]>('mz_assets', INITIAL_ASSETS);
   const [requests, setRequests] = usePersist<RequestItem[]>('mz_requests', INITIAL_REQUESTS);
   const [documents, setDocuments] = usePersist<DocItem[]>('mz_documents', INITIAL_DOCUMENTS);
+  const [surveys, setSurveys] = usePersist<Survey[]>('mz_surveys', INITIAL_SURVEYS);
   const [notifs, setNotifs] = usePersist<Notif[]>('mz_notifs', INITIAL_NOTIFS);
   const [members, setMembers] = usePersist<Member[]>('mz_members', INITIAL_MEMBERS);
   const [memberTxns, setMemberTxns] = usePersist<MemberTxn[]>('mz_member_txns', INITIAL_MEMBER_TXNS);
@@ -7496,6 +7850,7 @@ export default function App() {
   // create-sheet flags triggered by FAB / headers
   const [createTx, setCreateTx] = useState(false);
   const [createDoc, setCreateDoc] = useState(false);
+  const [createSurvey, setCreateSurvey] = useState(false);
   const [pendingDocId, setPendingDocId] = useState<string | null>(null);
   const [createTracking, setCreateTracking] = useState(false);
   const [createRequest, setCreateRequest] = useState(false);
@@ -7717,6 +8072,12 @@ export default function App() {
     setDocuments(list => d.id ? list.map(x => x.id === d.id ? { ...x, ...d } as DocItem : x) : [{ ...d, id: uid('d'), createdBy: CURRENT_USER }, ...list]);
   const deleteDoc = (id: string) => setDocuments(l => l.filter(x => x.id !== id));
 
+  const saveSurvey = (s: Survey) => {
+    setSurveys(list => list.some(x => x.id === s.id) ? list.map(x => x.id === s.id ? s : x) : [s, ...list]);
+    logAudit(surveys.some(x => x.id === s.id) ? 'تعديل' : 'إنشاء', 'استبيان', s.title);
+  };
+  const deleteSurvey = (id: string) => { const sv = surveys.find(x => x.id === id); logAudit('حذف', 'استبيان', sv?.title ?? ''); setSurveys(l => l.filter(x => x.id !== id)); };
+
   const saveMember = (m: Omit<Member, 'id'> & { id?: string }) =>
     setMembers(list => m.id ? list.map(x => x.id === m.id ? { ...x, ...m } as Member : x) : [...list, { ...m, id: uid('m') }]);
   const deleteMember = (id: string) => setMembers(l => l.filter(x => x.id !== id));
@@ -7782,6 +8143,7 @@ export default function App() {
       case 'audit': return <AuditLog audit={audit} onNav={setPage} />;
       case 'customize': return <Customize lists={lists} onChange={setLists} help={help} onHelpChange={setHelp} healthData={{ projects, transactions, receivables, commitments, assets, members, memberTxns }} onNav={setPage} onNavigate={navigateTo} documents={documents} />;
       case 'colorCustomize': return <ColorCustomize theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} custom={customTheme} onCustom={setCustomTheme} onNav={setPage} />;
+      case 'surveys': return <Surveys surveys={surveys} projects={projects} onSave={saveSurvey} onDelete={deleteSurvey} openCreate={createSurvey} onOpenCreate={() => setCreateSurvey(true)} onCloseCreate={() => setCreateSurvey(false)} />;
       case 'integrations': return <Integrations onBack={() => setPage('settings')} />;
       case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => { logAudit('تسجيل خروج', 'النظام', 'تم تسجيل الخروج'); setAuthed(false); }} prefs={prefs} onPrefs={setPrefs} />;
       case 'subscription': return <Subscription current={plan} onChoose={setPlan} />;
