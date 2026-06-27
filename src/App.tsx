@@ -2802,7 +2802,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                     </div>
                     <div style={{ textAlign: 'left', flexShrink: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: isIn ? '#15803d' : '#b91c1c' }}>{isIn ? '+' : '−'}{fmtNum(t.amount)}</div>
-                      {t.attachments && t.attachments.length > 0 && <div style={{ fontSize: 10, color: 'var(--text-3)' }}>📎 {t.attachments.length}</div>}
+                      {t.attachments && t.attachments.length > 0 && <div style={{ marginTop: 4 }} onClick={e => e.stopPropagation()}><AttachmentThumb items={t.attachments} /></div>}
                     </div>
                   </div>
                 );
