@@ -58,7 +58,7 @@ type Commitment = {
 };
 // tangible assets (الأصول الملموسة) — independent lifecycle: purchase, warranty, maintenance, usage
 type AssetCategory = 'vehicle' | 'device' | 'equipment' | 'furniture' | 'property' | 'other';
-type MaintenanceEntry = { id: string; date: string; type: 'صيانة' | 'عطل' | 'فحص'; cost: number; note: string; createdBy?: string };
+type MaintenanceEntry = { id: string; date: string; type: 'صيانة' | 'عطل' | 'فحص'; cost: number; note: string; createdBy?: string; attachments?: Attachment[] };
 type Asset = {
   id: string; projectId: string; name: string; category: AssetCategory;
   purchaseDate: string; purchaseValue: number; supplier?: string;
@@ -801,17 +801,29 @@ function AttachmentPicker({ value, onChange }: { value: Attachment[]; onChange: 
 function AttachmentView({ items }: { items?: Attachment[] }) {
   const [zoom, setZoom] = useState<string | null>(null);
   if (!items || items.length === 0) return null;
+  const download = (a: Attachment) => {
+    if (a.preview) {
+      const link = document.createElement('a');
+      link.href = a.preview; link.download = a.name;
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    } else {
+      alert(`سيتم تنزيل «${a.name}» عند ربط التخزين السحابي (Backend).`);
+    }
+  };
   return (
     <div style={{ marginTop: 8 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {items.map(a => (
           <div key={a.id} style={{ width: 76 }}>
-            <div
-              onClick={() => a.kind === 'image' && a.preview && setZoom(a.preview)}
-              style={{ width: 76, height: 76, borderRadius: 10, overflow: 'hidden', background: 'var(--surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)', cursor: a.kind === 'image' && a.preview ? 'pointer' : 'default' }}>
-              {a.kind === 'image' && a.preview
-                ? <img src={a.preview} alt={a.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <span style={{ fontSize: 26 }}>{a.kind === 'image' ? '🖼️' : '📄'}</span>}
+            <div style={{ position: 'relative' }}>
+              <div
+                onClick={() => a.kind === 'image' && a.preview && setZoom(a.preview)}
+                style={{ width: 76, height: 76, borderRadius: 10, overflow: 'hidden', background: 'var(--surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)', cursor: a.kind === 'image' && a.preview ? 'pointer' : 'default' }}>
+                {a.kind === 'image' && a.preview
+                  ? <img src={a.preview} alt={a.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span style={{ fontSize: 26 }}>{a.kind === 'image' ? '🖼️' : '📄'}</span>}
+              </div>
+              <button onClick={(e) => { e.stopPropagation(); download(a); }} title="تنزيل" style={{ position: 'absolute', bottom: 3, left: 3, width: 22, height: 22, borderRadius: 7, background: 'rgba(0,0,0,.6)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⬇</button>
             </div>
             <div style={{ fontSize: 9, color: 'var(--text-3)', textAlign: 'center', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div>
           </div>
@@ -1474,25 +1486,7 @@ function Overview({ projects, transactions, trackings, requests, receivables, co
         { label: 'إجمالي الإيرادات', value: fmtNum(Math.round(totalIncome)), color: 'var(--ok-text)', bg: 'var(--ok-bg)', icon: '↓' },
         { label: 'إجمالي المصروفات', value: fmtNum(Math.round(totalExpense)), color: 'var(--danger-text)', bg: 'var(--danger-bg)', icon: '↑' },
         { label: 'صافي الذمم', value: fmtNum(Math.round(recvOpen - payOpen)), color: recvOpen - payOpen >= 0 ? '#7c3aed' : '#b91c1c', bg: 'var(--purple-bg)', icon: '⇄' },
-      ]} extras={balanceSegments.length > 0 ? [{
-        key: 'balance-donut',
-        node: (
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 10 }}>توزيع الأرصدة</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <Donut segments={balanceSegments} size={92} label="الرصيد" />
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {balanceSegments.slice(0, 4).map(s => (
-                  <div key={s.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11 }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-2)', minWidth: 0 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} /><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span></span>
-                    <span style={{ fontWeight: 600, color: 'var(--text-3)', flexShrink: 0 }}>{fmtNum(s.value)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ),
-      }] : undefined} />
+      ]} />
 
       {/* action alerts strip */}
       {(pendingReqs.length > 0 || urgentTrackings.length > 0 || overdueRecv.length > 0 || dueCommitments.length > 0) && (
@@ -5648,6 +5642,7 @@ function MaintenanceForm({ onSave, onCancel }: { onSave: (m: Omit<MaintenanceEnt
   const [date, setDate] = useState(today());
   const [cost, setCost] = useState<number | ''>('');
   const [note, setNote] = useState('');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   return (
     <>
       <Field label="النوع">
@@ -5664,12 +5659,15 @@ function MaintenanceForm({ onSave, onCancel }: { onSave: (m: Omit<MaintenanceEnt
       <Field label="الوصف">
         <TextArea value={note} onChange={setNote} placeholder="تفاصيل الصيانة أو العطل..." />
       </Field>
+      <Field label="المرفقات (فاتورة، تقرير فحص، صور، PDF)">
+        <AttachmentPicker value={attachments} onChange={setAttachments} />
+      </Field>
       <div style={{ background: 'var(--info-bg)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: 'var(--info-text)' }}>
         ℹ️ ستُسجّل التكلفة كمصروف فعلي في الإدارة المالية للمشروع.
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
-        <Btn disabled={cost === '' || Number(cost) < 0} style={{ flex: 1 }} onClick={() => onSave({ type, date, cost: cost === '' ? 0 : cost, note: note.trim(), createdBy: CURRENT_USER })}>تسجيل</Btn>
+        <Btn disabled={cost === '' || Number(cost) < 0} style={{ flex: 1 }} onClick={() => onSave({ type, date, cost: cost === '' ? 0 : cost, note: note.trim(), createdBy: CURRENT_USER, attachments })}>تسجيل</Btn>
       </div>
     </>
   );
@@ -5817,12 +5815,20 @@ function Assets({ projectId, projects, assets, members, onSave, onDelete, onAddM
                 {a.maintenance.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-3)', padding: '8px 0' }}>لا توجد سجلات بعد.</div>}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {[...a.maintenance].reverse().map(m => (
-                    <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 12px', background: 'var(--surface-2)', borderRadius: 8 }}>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>{m.type === 'صيانة' ? '🔧' : m.type === 'عطل' ? '⚠️' : '🔍'} {m.type} — {m.date}</div>
-                        {m.note && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{m.note}</div>}
+                    <div key={m.id} style={{ padding: '9px 12px', background: 'var(--surface-2)', borderRadius: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>{m.type === 'صيانة' ? '🔧' : m.type === 'عطل' ? '⚠️' : '🔍'} {m.type} — {m.date}</div>
+                          {m.note && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{m.note}</div>}
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger-text)', flexShrink: 0 }}>{fmtNum(m.cost)}</div>
                       </div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger-text)', flexShrink: 0 }}>{fmtNum(m.cost)}</div>
+                      {m.attachments && m.attachments.length > 0 && (
+                        <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                          <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginBottom: 4 }}>📎 {m.attachments.length} مرفق</div>
+                          <AttachmentView items={m.attachments} />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
