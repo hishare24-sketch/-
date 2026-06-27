@@ -123,8 +123,10 @@ type UserPrefs = {
   compactCards: boolean;
   showQuickActions: boolean;
   confirmDelete: boolean;
+  statsAutoScroll: boolean;
+  statsScrollSeconds: number;
 };
-const DEFAULT_PREFS: UserPrefs = { showStats: true, showCharts: true, defaultPeriod: '1m', compactCards: false, showQuickActions: true, confirmDelete: true };
+const DEFAULT_PREFS: UserPrefs = { showStats: true, showCharts: true, defaultPeriod: '1m', compactCards: false, showQuickActions: true, confirmDelete: true, statsAutoScroll: false, statsScrollSeconds: 4 };
 const PROJECT_COLORS = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#dc2626', '#0891b2'];
 
 const TX_TYPES: { id: TxType; label: string; icon: string }[] = [
@@ -877,16 +879,89 @@ function StatBars({ bars }: { bars: { label: string; value: number; color: strin
 }
 
 // small stat number cards row
-function StatCards({ cards }: { cards: { label: string; value: string | number; color: string; bg: string; icon?: string }[] }) {
+function StatCards({ cards, prefs }: { cards: { label: string; value: string | number; color: string; bg: string; icon?: string }[]; prefs?: UserPrefs }) {
+  const isMobile = useIsMobile();
+  const trackRef = React.useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(0);
+  // prefer passed prefs; otherwise read the shared prefs from storage so the setting works everywhere
+  const storedPrefs = (() => {
+    if (prefs) return prefs;
+    try { const raw = dataLayer.read('mz_prefs'); return raw ? JSON.parse(raw) as UserPrefs : DEFAULT_PREFS; } catch { return DEFAULT_PREFS; }
+  })();
+  const autoScroll = storedPrefs.statsAutoScroll ?? false;
+  const seconds = storedPrefs.statsScrollSeconds ?? 4;
+
+  // track which card is centered (for pagination dots)
+  const onScroll = () => {
+    const el = trackRef.current;
+    if (!el) return;
+    const cardW = el.scrollWidth / cards.length;
+    const idx = Math.round(el.scrollLeft / cardW);
+    setActive(Math.max(0, Math.min(cards.length - 1, idx)));
+  };
+
+  // auto-scroll loop (mobile + enabled). RTL-aware: scrollLeft goes negative.
+  useEffect(() => {
+    if (!isMobile || !autoScroll || cards.length <= 1) return;
+    const timer = setInterval(() => {
+      const el = trackRef.current;
+      if (!el) return;
+      const cardW = el.scrollWidth / cards.length;
+      const next = (Math.round(Math.abs(el.scrollLeft) / cardW) + 1) % cards.length;
+      el.scrollTo({ left: (el.scrollLeft < 0 ? -1 : 1) * next * cardW, behavior: 'smooth' });
+    }, Math.max(2, seconds) * 1000);
+    return () => clearInterval(timer);
+  }, [isMobile, autoScroll, seconds, cards.length]);
+
+  // Desktop: keep the original responsive grid
+  if (!isMobile) {
+    return (
+      <div className="mz-statgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 12, marginBottom: 16 }}>
+        {cards.map(c => (
+          <div key={c.label} style={{ background: c.bg, borderRadius: 14, padding: 14 }}>
+            {c.icon && <div style={{ fontSize: 16, marginBottom: 3 }}>{c.icon}</div>}
+            <div style={{ fontSize: 19, fontWeight: 800, color: c.color }}>{c.value}</div>
+            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{c.label}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Mobile: horizontal carousel with snap + pagination dots
   return (
-    <div className="mz-statgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 12, marginBottom: 16 }}>
-      {cards.map(c => (
-        <div key={c.label} style={{ background: c.bg, borderRadius: 14, padding: 14 }}>
-          {c.icon && <div style={{ fontSize: 16, marginBottom: 3 }}>{c.icon}</div>}
-          <div style={{ fontSize: 19, fontWeight: 800, color: c.color }}>{c.value}</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{c.label}</div>
+    <div style={{ marginBottom: 16 }}>
+      <div
+        ref={trackRef}
+        onScroll={onScroll}
+        style={{
+          display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory',
+          paddingBottom: 4, scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch',
+        }}
+        className="mz-hide-scroll"
+      >
+        {cards.map(c => (
+          <div key={c.label} style={{ background: c.bg, borderRadius: 14, padding: 16, scrollSnapAlign: 'center', flex: '0 0 78%', minWidth: 0 }}>
+            {c.icon && <div style={{ fontSize: 18, marginBottom: 4 }}>{c.icon}</div>}
+            <div style={{ fontSize: 22, fontWeight: 800, color: c.color }}>{c.value}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{c.label}</div>
+          </div>
+        ))}
+      </div>
+      {cards.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+          {cards.map((c, i) => (
+            <button
+              key={c.label}
+              onClick={() => { const el = trackRef.current; if (el) { const cardW = el.scrollWidth / cards.length; el.scrollTo({ left: (el.scrollLeft < 0 ? -1 : 1) * i * cardW, behavior: 'smooth' }); } }}
+              style={{
+                width: active === i ? 20 : 7, height: 7, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 0,
+                background: active === i ? '#2563eb' : 'var(--border)', transition: 'all .25s ease',
+              }}
+            />
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -4149,6 +4224,15 @@ function Settings({ theme, onToggleTheme, onNav, onLogout, prefs, onPrefs }: { t
             {PERIOD_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
+        <Row title="تمرير الإحصائيات تلقائياً" desc="تمرير بطاقات الأرقام أفقياً على الجوال" k="statsAutoScroll" />
+        {prefs.statsAutoScroll && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0 4px', gap: 12 }}>
+            <div><div style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>مدة الانتقال</div><div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>الزمن بين كل بطاقة وأخرى</div></div>
+            <select value={prefs.statsScrollSeconds} onChange={e => onPrefs({ ...prefs, statsScrollSeconds: Number(e.target.value) })} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', background: 'var(--surface)', color: 'var(--text)' }}>
+              {[2, 3, 4, 5, 7, 10].map(s => <option key={s} value={s}>{s} ثوانٍ</option>)}
+            </select>
+          </div>
+        )}
       </Card>
 
       {/* Subscription shortcut */}
@@ -6135,7 +6219,9 @@ const KEYFRAMES = `
 @media (max-width: 420px) {
   .mz-mobile .mz-statgrid { grid-template-columns: 1fr 1fr !important; }
 }
-input, select, textarea { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }`;
+input, select, textarea { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
+.mz-hide-scroll::-webkit-scrollbar { display: none; }
+.mz-hide-scroll { -ms-overflow-style: none; }`;
 
 // ═══════════════════════════════════════════
 //  GLOBAL SEARCH (البحث الشامل)
