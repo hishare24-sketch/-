@@ -948,8 +948,7 @@ function StatCards({ cards, prefs, extras }: { cards: { label: string; value: st
   // HORIZONTAL layout: carousel with snap + pagination dots (mobile = peek next card, desktop = wider cards)
   const cardBasis = isMobile ? '0 0 78%' : '0 0 220px';
   const chartBasis = isMobile ? '0 0 88%' : '0 0 320px';
-  const extras = extrasList;
-  const totalSlides = cards.length + extras.length;
+  const totalSlides = cards.length + extrasList.length;
   return (
     <div style={{ marginBottom: 16 }}>
       <div
@@ -965,7 +964,7 @@ function StatCards({ cards, prefs, extras }: { cards: { label: string; value: st
             <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{c.label}</div>
           </div>
         ))}
-        {extras.map(ex => (
+        {extrasList.map(ex => (
           <div key={ex.key} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, scrollSnapAlign: 'center', flex: chartBasis, minWidth: 0 }}>
             {ex.node}
           </div>
