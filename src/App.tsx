@@ -75,7 +75,7 @@ type Transaction = { id: string; projectId: string; type: TxType; description: s
 type Tracking = { id: string; name: string; type: string; icon: string; status: TrackingStatus; daysLeft: number; expiryDate: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
 type RequestItem = { id: string; title: string; amount: number; requestedBy: string; status: RequestStatus; date: string; type: string; projectId: string; note?: string; memberId?: string; attachments?: Attachment[]; createdBy?: string };
 type DocItem = { id: string; name: string; type: string; date: string; size: string; status: string; projectId: string; aiRead: boolean; attachments?: Attachment[]; createdBy?: string };
-type Notif = { id: string; type: string; title: string; body: string; time: string; read: boolean; link?: Page; projectId?: string; section?: string; memberId?: string; ts?: string };
+type Notif = { id: string; type: string; title: string; body: string; time: string; read: boolean; link?: Page; projectId?: string; section?: string; memberId?: string; itemId?: string; ts?: string };
 // audit log entry — records every important event in the app
 type AuditEntry = { id: string; action: string; entity: string; detail: string; user: string; ts: string };
 
@@ -291,8 +291,8 @@ const INITIAL_DOCUMENTS: DocItem[] = [
 ];
 
 const INITIAL_NOTIFS: Notif[] = [
-  { id: 'n1', type: 'danger', title: 'تأمين السيارة منتهي', body: 'انتهى تأمين السيارة منذ 5 أيام. يرجى التجديد عبر قسم المتابعات والضمانات.', time: 'قبل ساعة', read: false, link: 'trackings', projectId: 'p1', section: 'trackings', ts: '2025-06-26 08:30' },
-  { id: 'n2', type: 'warning', title: 'ضمان يوشك على الانتهاء', body: 'ضمان ثلاجة المطبخ ينتهي خلال 12 يوم. الطرف: مؤسسة الإلكترونيات الحديثة.', time: 'قبل 3 ساعات', read: false, link: 'trackings', projectId: 'p1', section: 'trackings', ts: '2025-06-26 06:15' },
+  { id: 'n1', type: 'danger', title: 'تأمين السيارة منتهي', body: 'انتهى تأمين السيارة منذ 5 أيام. يرجى التجديد عبر قسم المتابعات والضمانات.', time: 'قبل ساعة', read: false, link: 'trackings', projectId: 'p1', section: 'trackings', itemId: 'tr4', ts: '2025-06-26 08:30' },
+  { id: 'n2', type: 'warning', title: 'ضمان يوشك على الانتهاء', body: 'ضمان ثلاجة المطبخ ينتهي خلال 12 يوم. الطرف: مؤسسة الإلكترونيات الحديثة.', time: 'قبل 3 ساعات', read: false, link: 'trackings', projectId: 'p1', section: 'trackings', itemId: 'tr1', ts: '2025-06-26 06:15' },
   { id: 'n3', type: 'info', title: 'طلب جديد بانتظار موافقتك', body: 'طلب صرف مصروفات السفر بمبلغ 3,200 ر.س — مقدّم الطلب: أحمد العلي.', time: 'أمس', read: false, link: 'requests', projectId: 'p2', section: 'requests', ts: '2025-06-25 14:00' },
   { id: 'n4', type: 'success', title: 'تمت معالجة مستند', body: 'تمت قراءة فاتورة مورد يونيو بنجاح بواسطة محمد العمري.', time: 'أمس', read: true, link: 'documents', projectId: 'p1', section: 'documents', ts: '2025-06-25 10:20' },
 ];
@@ -464,6 +464,22 @@ function useIsMobile(breakpoint = 768): boolean {
   return isMobile;
 }
 
+// shared deep-link highlight: scrolls to the matching element and flashes it
+function useHighlight(highlightId: string | null) {
+  useEffect(() => {
+    if (!highlightId) return;
+    const el = document.querySelector(`[data-hl="${highlightId}"]`) as HTMLElement | null;
+    if (!el) return;
+    // wait a frame so layout is ready, then scroll into view + flash
+    const t = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('mz-flash');
+      window.setTimeout(() => el.classList.remove('mz-flash'), 2200);
+    }, 120);
+    return () => window.clearTimeout(t);
+  }, [highlightId]);
+}
+
 function computeBalance(project: Project, transactions: Transaction[]): number {
   let bal = project.balance; // opening balance
   for (const t of transactions) {
@@ -496,9 +512,9 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function Card({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function Card({ children, style = {}, dataHl }: { children: React.ReactNode; style?: React.CSSProperties; dataHl?: string }) {
   return (
-    <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border)', padding: 20, ...style }}>
+    <div data-hl={dataHl} style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border)', padding: 20, ...style }}>
       {children}
     </div>
   );
@@ -2773,7 +2789,7 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
             <tbody>
               {filtered.length === 0 && <tr><td colSpan={5} style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-3)' }}>لا توجد عمليات مطابقة</td></tr>}
               {filtered.map(t => (
-                <tr key={t.id} onClick={() => setSheet({ mode: 'view', tx: t })} style={{ cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
+                <tr key={t.id} data-hl={t.id} onClick={() => setSheet({ mode: 'view', tx: t })} style={{ cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 30, height: 30, borderRadius: 8, background: t.type === 'income' ? 'var(--ok-bg)' : t.type === 'expense' ? 'var(--danger-bg)' : 'var(--info-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
@@ -2853,8 +2869,8 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
 // ═══════════════════════════════════════════
 //  FINANCIAL LEDGER (سجل العمليات + تحليل التدفقات)
 // ═══════════════════════════════════════════
-function Ledger({ projects, transactions, members, memberTxns, helpEntry }: {
-  projects: Project[]; transactions: Transaction[]; members: Member[]; memberTxns: MemberTxn[]; helpEntry?: HelpEntry;
+function Ledger({ projects, transactions, members, memberTxns, helpEntry, onNavigate }: {
+  projects: Project[]; transactions: Transaction[]; members: Member[]; memberTxns: MemberTxn[]; helpEntry?: HelpEntry; onNavigate: (p: Page, itemId?: string, projId?: string) => void;
 }) {
   const [view, setView] = useState<'log' | 'flows'>('log');
   const [fType, setFType] = useState('all');
@@ -3115,6 +3131,9 @@ function Ledger({ projects, transactions, members, memberTxns, helpEntry }: {
                 <span style={{ fontWeight: 600, color: 'var(--text)', textAlign: 'left' }}>{v}</span>
               </div>
             ))}
+            {detail.id && (
+              <Btn variant="outline" onClick={() => { setDetail(null); onNavigate('finance', detail.id, detail.projectId); }} style={{ marginTop: 14 }}>↗ عرض العملية في الإدارة المالية</Btn>
+            )}
           </div>
         )}
       </Sheet>
@@ -3610,7 +3629,7 @@ function Trackings({ projectId, projects, trackings, members, onSave, onDelete, 
           const pct = t.status === 'expired' ? 0 : Math.min(100, Math.max(2, Math.round((t.daysLeft / 365) * 100)));
           const barColor = t.status === 'expired' ? '#ef4444' : t.status === 'expiring' ? '#f59e0b' : '#22c55e';
           return (
-            <Card key={t.id} style={{ padding: 18 }}>
+            <Card key={t.id} dataHl={t.id} style={{ padding: 18 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 24 }}>{t.icon}</span>
@@ -3919,7 +3938,7 @@ function Requests({ projectId, projects, requests, members, onDecide, onSave, on
 // ═══════════════════════════════════════════
 //  NOTIFICATIONS
 // ═══════════════════════════════════════════
-function Notifications({ notifs, projects, members, onMarkRead, onMarkAll, onNav }: { notifs: Notif[]; projects: Project[]; members: Member[]; onMarkRead: (id: string) => void; onMarkAll: () => void; onNav: (p: Page) => void }) {
+function Notifications({ notifs, projects, members, onMarkRead, onMarkAll, onNav, onNavigate }: { notifs: Notif[]; projects: Project[]; members: Member[]; onMarkRead: (id: string) => void; onMarkAll: () => void; onNav: (p: Page) => void; onNavigate: (p: Page, itemId?: string, projId?: string) => void }) {
   const icons: Record<string, string> = { warning: '⚠️', info: 'ℹ️', danger: '🔴', success: '✅' };
   const colors: Record<string, string> = { warning: 'var(--warn-bg)', info: 'var(--info-bg)', danger: 'var(--danger-bg)', success: 'var(--ok-bg)' };
   const linkLabel: Record<string, string> = { trackings: 'المتابعات', requests: 'الطلبات', documents: 'المستندات', finance: 'المالية', projects: 'المشاريع', projectDetail: 'المشروع' };
@@ -4010,7 +4029,7 @@ function Notifications({ notifs, projects, members, onMarkRead, onMarkAll, onNav
               )}
               <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                 {n.link && (
-                  <button onClick={() => { onMarkRead(n.id); onNav(n.link!); }} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '5px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <button onClick={() => { onMarkRead(n.id); onNavigate(n.link!, n.itemId, n.projectId); }} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '5px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
                     استعراض في {linkLabel[n.link] ?? 'القسم'} ‹
                   </button>
                 )}
@@ -6273,6 +6292,12 @@ const KEYFRAMES = `
 }
 @keyframes mzFade { from { opacity: 0 } to { opacity: 1 } }
 @keyframes mzSlideUp { from { transform: translateY(100%) } to { transform: translateY(0) } }
+@keyframes mzFlash {
+  0% { box-shadow: 0 0 0 0 rgba(37,99,235,0); background-color: rgba(37,99,235,0); }
+  15% { box-shadow: 0 0 0 3px rgba(37,99,235,.55); background-color: rgba(37,99,235,.10); }
+  100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); background-color: rgba(37,99,235,0); }
+}
+.mz-flash { animation: mzFlash 2.2s ease; border-radius: 12px; }
 @keyframes mzPop { from { opacity: 0; transform: translateY(8px) scale(.9) } to { opacity: 1; transform: translateY(0) scale(1) } }
 @keyframes mzPulse { 0%,100% { box-shadow: 0 6px 22px rgba(37,99,235,.45) } 50% { box-shadow: 0 6px 30px rgba(37,99,235,.7) } }
 @keyframes mzProgress { from { width: 0% } to { width: 100% } }
@@ -6371,9 +6396,21 @@ export default function App() {
   const [history, setHistory] = useState<Page[]>([]);
   const setPage = (p: Page) => { setHistory(h => [...h, page]); setPageRaw(p); };
   const goBack = () => setHistory(h => { if (h.length === 0) return h; const prev = h[h.length - 1]; setPageRaw(prev); return h.slice(0, -1); });
+  // shared deep-link target: navigate to a page and highlight a specific item by id
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const navigateTo = (p: Page, itemId?: string, projId?: string) => {
+    if (projId) setProjectId(projId);
+    setPage(p);
+    if (itemId) {
+      setHighlightId(itemId);
+      // clear after the highlight animation finishes so it can retrigger later
+      window.setTimeout(() => setHighlightId(cur => cur === itemId ? null : cur), 2600);
+    }
+  };
   const canGoBack = history.length > 0;
   const [projectId, setProjectId] = useState('p1');
   const isMobile = useIsMobile();
+  useHighlight(highlightId);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = usePersist<boolean>('mz_sidebar_projects_open', false);
   const [fabSheet, setFabSheet] = useState(false);
@@ -6638,7 +6675,7 @@ export default function App() {
       case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} onQuickAction={fabAction} prefs={prefs} />;
       case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} receivables={receivables} commitments={commitments} requests={requests} onBack={goBack} onNav={setPage} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} txCategories={lists.txCategories} helpEntry={help.finance} />;
-      case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} helpEntry={help.ledger} />;
+      case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} helpEntry={help.ledger} onNavigate={navigateTo} />;
       case 'reports': return <Reports projects={projects} transactions={transactions} receivables={receivables} commitments={commitments} trackings={trackings} requests={requests} members={members} />;
       case 'receivables': return <Receivables projectId={projectId} projects={projects} receivables={receivables} members={members} onSave={saveReceivable} onPay={payReceivable} onDelete={deleteReceivable} openCreate={createReceivable} onOpenCreate={() => setCreateReceivable(true)} onCloseCreate={() => setCreateReceivable(false)} helpEntry={help.receivables} />;
       case 'commitments': return <Commitments projectId={projectId} projects={projects} commitments={commitments} members={members} onSave={saveCommitment} onPay={payCommitment} onToggle={toggleCommitment} onDelete={deleteCommitment} openCreate={createCommitment} onOpenCreate={() => setCreateCommitment(true)} onCloseCreate={() => setCreateCommitment(false)} helpEntry={help.commitments} />;
@@ -6646,7 +6683,7 @@ export default function App() {
       case 'trackings': return <Trackings projectId={projectId} projects={projects} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} helpEntry={help.trackings} />;
       case 'assets': return <Assets projectId={projectId} projects={projects} assets={assets} members={members} onSave={saveAsset} onDelete={deleteAsset} onAddMaintenance={addMaintenance} openCreate={createAsset} onOpenCreate={() => setCreateAsset(true)} onCloseCreate={() => setCreateAsset(false)} />;
       case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} helpEntry={help.requests} />;
-      case 'notifications': return <Notifications notifs={notifs} projects={projects} members={members} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} />;
+      case 'notifications': return <Notifications notifs={notifs} projects={projects} members={members} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} onNavigate={navigateTo} />;
       case 'audit': return <AuditLog audit={audit} onNav={setPage} />;
       case 'customize': return <Customize lists={lists} onChange={setLists} help={help} onHelpChange={setHelp} healthData={{ projects, transactions, receivables, commitments, assets, members, memberTxns }} onNav={setPage} />;
       case 'integrations': return <Integrations onBack={() => setPage('settings')} />;
