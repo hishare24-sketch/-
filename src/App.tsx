@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 // ═══════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════
-type Page = 'overview' | 'tasks' | 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'reports' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'assets' | 'requests' | 'notifications' | 'settings' | 'integrations' | 'subscription' | 'memberDetail' | 'audit' | 'customize';
+type Page = 'overview' | 'tasks' | 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'reports' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'assets' | 'requests' | 'notifications' | 'settings' | 'integrations' | 'subscription' | 'memberDetail' | 'audit' | 'customize' | 'colorCustomize';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 // unified attachment (image/file) — preview kept in-session, real upload later via backend
@@ -422,6 +422,17 @@ const statusFromDays = (d: number): TrackingStatus => d < 0 ? 'expired' : d <= 3
 // ── localStorage-backed state (replaceable by a real DB later) ──
 // data version: bump this whenever seed/initial data changes,
 // so stale localStorage from older versions is cleared automatically (one-time).
+// user-customizable theme colors (override CSS vars at runtime). null = use theme default.
+type CustomTheme = { primary?: string; bg?: string; surface?: string; text?: string; border?: string };
+const DEFAULT_CUSTOM_THEME: CustomTheme = {};
+const THEME_PRESETS: { id: string; name: string; primary: string; swatch: string[] }[] = [
+  { id: 'blue', name: 'الأزرق (افتراضي)', primary: '#2563eb', swatch: ['#2563eb', '#1d4ed8'] },
+  { id: 'emerald', name: 'الزمردي', primary: '#059669', swatch: ['#059669', '#047857'] },
+  { id: 'violet', name: 'البنفسجي', primary: '#7c3aed', swatch: ['#7c3aed', '#6d28d9'] },
+  { id: 'rose', name: 'الوردي', primary: '#e11d48', swatch: ['#e11d48', '#be123c'] },
+  { id: 'amber', name: 'الكهرماني', primary: '#d97706', swatch: ['#d97706', '#b45309'] },
+  { id: 'slate', name: 'الرمادي', primary: '#475569', swatch: ['#475569', '#334155'] },
+];
 const DATA_VERSION = '7';
 (() => {
   try {
@@ -623,7 +634,7 @@ function Btn({ children, variant = 'primary', onClick, size = 'md', style = {}, 
     fontSize: size === 'sm' ? 13 : 14,
   };
   const variants: Record<string, React.CSSProperties> = {
-    primary: { background: '#2563eb', color: '#fff' },
+    primary: { background: 'var(--accent, #2563eb)', color: '#fff' },
     outline: { background: 'var(--surface)', color: 'var(--text-2)', border: '1px solid var(--border)' },
     ghost:   { background: 'transparent', color: 'var(--text-3)' },
     danger:  { background: 'var(--danger-bg-2)', color: 'var(--danger-text)' },
@@ -4861,6 +4872,93 @@ function Integrations({ onBack }: { onBack: () => void }) {
   );
 }
 
+// color customization panel: presets + per-variable color pickers + reset
+function ColorCustomize({ theme, onToggleTheme, custom, onCustom, onNav }: {
+  theme: 'light' | 'dark'; onToggleTheme: () => void;
+  custom: CustomTheme; onCustom: (c: CustomTheme) => void; onNav: (p: Page) => void;
+}) {
+  const set = (k: keyof CustomTheme, v: string | undefined) => onCustom({ ...custom, [k]: v });
+  const swatches: { key: keyof CustomTheme; label: string; fallback: string }[] = [
+    { key: 'primary', label: 'اللون الأساسي', fallback: '#2563eb' },
+    { key: 'bg', label: 'لون الخلفية', fallback: theme === 'dark' ? '#0b0f17' : '#f4f6fa' },
+    { key: 'surface', label: 'لون البطاقات', fallback: theme === 'dark' ? '#161b26' : '#ffffff' },
+    { key: 'text', label: 'لون النصوص', fallback: theme === 'dark' ? '#f1f5f9' : '#0b1120' },
+    { key: 'border', label: 'لون الحدود', fallback: theme === 'dark' ? '#2a3346' : '#e2e8f0' },
+  ];
+  const hasCustom = Object.values(custom).some(Boolean);
+
+  return (
+    <div style={{ padding: 24, maxWidth: 640 }}>
+      <PageHeader title="تخصيص الألوان" subtitle="غيّر مظهر النظام بما يناسبك — يُحفظ تلقائياً" />
+
+      {/* light / dark */}
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>الوضع العام</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{theme === 'dark' ? '🌙 الوضع الليلي' : '☀️ الوضع النهاري'}</div>
+          </div>
+          <button onClick={onToggleTheme} style={{ width: 52, height: 28, borderRadius: 99, border: 'none', background: theme === 'dark' ? '#2563eb' : '#cbd5e1', position: 'relative', cursor: 'pointer' }}>
+            <span style={{ position: 'absolute', top: 3, [theme === 'dark' ? 'left' : 'right']: 3, width: 22, height: 22, borderRadius: 99, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 } as React.CSSProperties}>{theme === 'dark' ? '🌙' : '☀️'}</span>
+          </button>
+        </div>
+      </Card>
+
+      {/* primary presets */}
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', marginBottom: 4 }}>🎨 لوحات جاهزة</div>
+        <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 14 }}>اختر لوناً أساسياً جاهزاً بنقرة واحدة</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {THEME_PRESETS.map(p => {
+            const selected = (custom.primary ?? '#2563eb') === p.primary;
+            return (
+              <button key={p.id} onClick={() => set('primary', p.id === 'blue' ? undefined : p.primary)} style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 99, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5,
+                border: `2px solid ${selected ? p.primary : 'var(--border)'}`, background: selected ? p.primary + '15' : 'var(--surface)', color: 'var(--text-2)', fontWeight: selected ? 700 : 500,
+              }}>
+                <span style={{ width: 18, height: 18, borderRadius: 99, background: `linear-gradient(135deg, ${p.swatch[0]}, ${p.swatch[1]})`, flexShrink: 0 }} />
+                {p.name}
+              </button>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* fine-grained color pickers */}
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', marginBottom: 4 }}>🛠️ تخصيص دقيق</div>
+        <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 14 }}>تحكّم بكل لون على حدة</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {swatches.map(s => (
+            <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <span style={{ fontSize: 13.5, color: 'var(--text-2)', fontWeight: 500 }}>{s.label}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {custom[s.key] && <button onClick={() => set(s.key, undefined)} title="إعادة هذا اللون للافتراضي" style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 7, width: 26, height: 26, cursor: 'pointer', fontSize: 12, color: 'var(--text-3)' }}>↺</button>}
+                <input type="color" value={custom[s.key] ?? s.fallback} onChange={e => set(s.key, e.target.value)} style={{ width: 44, height: 32, borderRadius: 8, border: '1px solid var(--border)', cursor: 'pointer', background: 'none', padding: 2 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* live preview */}
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 12 }}>معاينة حيّة</div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ background: custom.primary ?? '#2563eb', color: '#fff', padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 600 }}>زر أساسي</span>
+          <span style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)', padding: '8px 18px', borderRadius: 10, fontSize: 13 }}>بطاقة</span>
+          <span style={{ color: custom.primary ?? '#2563eb', fontSize: 13, fontWeight: 600 }}>رابط ملوّن</span>
+        </div>
+      </Card>
+
+      {/* reset all */}
+      <Btn variant="outline" disabled={!hasCustom} style={{ width: '100%' }} onClick={() => onCustom(DEFAULT_CUSTOM_THEME)}>
+        ↺ العودة للألوان الافتراضية
+      </Btn>
+    </div>
+  );
+}
+
 function Settings({ theme, onToggleTheme, onNav, onLogout, prefs, onPrefs }: { theme: 'light' | 'dark'; onToggleTheme: () => void; onNav: (p: Page) => void; onLogout: () => void; prefs: UserPrefs; onPrefs: (p: UserPrefs) => void }) {
   const toggle = (k: keyof UserPrefs) => onPrefs({ ...prefs, [k]: !prefs[k] });
   const Switch = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
@@ -4891,6 +4989,13 @@ function Settings({ theme, onToggleTheme, onNav, onLogout, prefs, onPrefs }: { t
             <span style={{ position: 'absolute', top: 3, [theme === 'dark' ? 'left' : 'right']: 3, width: 22, height: 22, borderRadius: 99, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 } as React.CSSProperties}>{theme === 'dark' ? '🌙' : '☀️'}</span>
           </button>
         </div>
+        <button onClick={() => onNav('colorCustomize')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>🎨 تخصيص الألوان</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>لوحات جاهزة وتحكّم دقيق بالألوان</div>
+          </div>
+          <span style={{ color: 'var(--text-3)', fontSize: 16 }}>‹</span>
+        </button>
       </Card>
 
       {/* Display preferences — control how data appears across all sections */}
@@ -7353,6 +7458,19 @@ export default function App() {
   const [aiOpen, setAiOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [theme, setTheme] = usePersist<'light' | 'dark'>('mz_theme', 'light');
+  const [customTheme, setCustomTheme] = usePersist<CustomTheme>('mz_custom_theme', DEFAULT_CUSTOM_THEME);
+  // apply user color overrides as CSS variables on the root element
+  useEffect(() => {
+    const root = document.documentElement;
+    const map: [string, string | undefined][] = [
+      ['--primary-user', customTheme.primary], ['--bg', customTheme.bg], ['--surface', customTheme.surface],
+      ['--text', customTheme.text], ['--border', customTheme.border],
+    ];
+    map.forEach(([k, v]) => { if (v) root.style.setProperty(k, v); else root.style.removeProperty(k); });
+    // primary drives buttons/accents — expose as --accent used across the app
+    if (customTheme.primary) root.style.setProperty('--accent', customTheme.primary);
+    else root.style.removeProperty('--accent');
+  }, [customTheme, theme]);
   const [authed, setAuthed] = usePersist<boolean>('mz_authed', false);
   const [plan, setPlan] = usePersist<string>('mz_plan', 'free');
 
@@ -7663,6 +7781,7 @@ export default function App() {
       case 'notifications': return <Notifications notifs={notifs} projects={projects} members={members} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} onNavigate={navigateTo} />;
       case 'audit': return <AuditLog audit={audit} onNav={setPage} />;
       case 'customize': return <Customize lists={lists} onChange={setLists} help={help} onHelpChange={setHelp} healthData={{ projects, transactions, receivables, commitments, assets, members, memberTxns }} onNav={setPage} onNavigate={navigateTo} documents={documents} />;
+      case 'colorCustomize': return <ColorCustomize theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} custom={customTheme} onCustom={setCustomTheme} onNav={setPage} />;
       case 'integrations': return <Integrations onBack={() => setPage('settings')} />;
       case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => { logAudit('تسجيل خروج', 'النظام', 'تم تسجيل الخروج'); setAuthed(false); }} prefs={prefs} onPrefs={setPrefs} />;
       case 'subscription': return <Subscription current={plan} onChoose={setPlan} />;
