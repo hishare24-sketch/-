@@ -472,6 +472,32 @@ const INITIAL_COMMITMENTS: Commitment[] = [
 // ═══════════════════════════════════════════
 const fmt = (n: number) => n.toLocaleString('ar-SA') + ' ر.س';
 const fmtNum = (n: number) => n.toLocaleString('ar-SA');
+
+// ── Excel export (real .xlsx files via SheetJS, loaded on-demand from CDN) ──
+let _xlsxPromise: Promise<any> | null = null;
+function loadXLSX(): Promise<any> {
+  if ((window as any).XLSX) return Promise.resolve((window as any).XLSX);
+  if (_xlsxPromise) return _xlsxPromise;
+  _xlsxPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = () => resolve((window as any).XLSX);
+    s.onerror = () => reject(new Error('تعذّر تحميل مكتبة Excel'));
+    document.head.appendChild(s);
+  });
+  return _xlsxPromise;
+}
+// export one or more named sheets (each: rows of objects) to a single .xlsx file
+async function exportXLSX(fileName: string, sheets: { name: string; rows: Record<string, any>[] }[]): Promise<void> {
+  const XLSX = await loadXLSX();
+  const wb = XLSX.utils.book_new();
+  sheets.forEach(sh => {
+    const ws = XLSX.utils.json_to_sheet(sh.rows.length ? sh.rows : [{ '—': 'لا توجد بيانات' }]);
+    XLSX.utils.book_append_sheet(wb, ws, sh.name.slice(0, 31)); // sheet name max 31 chars
+  });
+  XLSX.writeFile(wb, fileName.endsWith('.xlsx') ? fileName : fileName + '.xlsx');
+}
+
 // remaining balance on a receivable (original − payments)
 const recvPaid = (r: Receivable) => r.payments.reduce((s, p) => s + p.amount, 0);
 const recvRemaining = (r: Receivable) => Math.max(0, r.amount - recvPaid(r));
@@ -3286,7 +3312,12 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
       <PageHeader help={helpEntry} title="الإدارة المالية" subtitle={project.name}
-        action={<div style={{ display: 'flex', gap: 8 }}><Btn variant="outline" size="sm" onClick={() => onNav('projectDetail')}>👥 تحويل لعضو</Btn><Btn size="sm" onClick={onOpenCreate}>+ عملية جديدة</Btn></div>}
+        action={<div style={{ display: 'flex', gap: 8 }}><Btn variant="outline" size="sm" onClick={() => {
+          exportXLSX(`عمليات_${project.name}`, [{ name: 'العمليات', rows: filtered.map(t => ({
+            'الوصف': t.description, 'النوع': t.type === 'income' ? 'إيراد' : t.type === 'expense' ? 'مصروف' : 'تحويل',
+            'التصنيف': t.category, 'المبلغ': t.amount, 'التاريخ': t.date, 'المصدر/الجهة': t.source ?? '—', 'بواسطة': t.createdBy ?? CURRENT_USER,
+          })) }]).catch(e => alert(e.message));
+        }}>⬇ Excel</Btn><Btn variant="outline" size="sm" onClick={() => onNav('projectDetail')}>👥 تحويل لعضو</Btn><Btn size="sm" onClick={onOpenCreate}>+ عملية جديدة</Btn></div>}
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 16, marginBottom: 24 }}>
@@ -3583,7 +3614,15 @@ function Ledger({ projects, transactions, members, memberTxns, helpEntry, onNavi
 
   return (
     <div style={{ padding: 24, maxWidth: 1200 }}>
-      <PageHeader help={helpEntry} title="السجل المالي" subtitle="سجل موحّد لكل العمليات والتدفقات عبر المشاريع والأعضاء" />
+      <PageHeader help={helpEntry} title="السجل المالي" subtitle="سجل موحّد لكل العمليات والتدفقات عبر المشاريع والأعضاء" action={
+        <Btn size="sm" variant="outline" onClick={() => {
+          exportXLSX('السجل_المالي', [{ name: 'السجل المالي', rows: filtered.map(r => ({
+            'المرجع': r.num, 'النوع': r.kind, 'التصنيف': r.nature, 'المشروع': projName(r.projectId),
+            'الطرف': r.memberId ? memName(r.memberId) : (r.source ?? '—'),
+            'الاتجاه': r.dir === 'in' ? 'وارد' : 'صادر', 'المبلغ': r.amount, 'التاريخ': r.date, 'الحالة': r.status,
+          })) }]).catch(e => alert(e.message));
+        }}>⬇ تصدير Excel</Btn>
+      } />
 
       {/* view switch */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 18, background: 'var(--surface-3)', padding: 4, borderRadius: 12, width: 'fit-content' }}>
@@ -5150,10 +5189,19 @@ function SurveyFill({ survey, onClose, onSubmit }: { survey: Survey; onClose: ()
 function SurveyResults({ survey, onClose }: { survey: Survey; onClose: () => void }) {
   return (
     <Sheet open onClose={onClose} title={`نتائج: ${survey.title}`}>
-      <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 16, marginBottom: 18, textAlign: 'center' }}>
+      <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 16, marginBottom: 14, textAlign: 'center' }}>
         <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--accent, #2563eb)' }}>{survey.responses.length}</div>
         <div style={{ fontSize: 13, color: 'var(--text-3)' }}>إجمالي الإجابات</div>
       </div>
+      {survey.responses.length > 0 && (
+        <Btn size="sm" variant="outline" style={{ width: '100%', marginBottom: 16 }} onClick={() => {
+          exportXLSX(`نتائج_${survey.title}`, [{ name: 'الإجابات', rows: survey.responses.map((r, i) => {
+            const row: Record<string, any> = { 'م': i + 1, 'التاريخ': r.submittedAt, 'المستجيب': r.respondent ?? '—' };
+            survey.questions.forEach(q => { const a = r.answers[q.id]; row[q.text] = Array.isArray(a) ? a.join('، ') : (a ?? ''); });
+            return row;
+          }) }]).catch(e => alert(e.message));
+        }}>⬇ تصدير الإجابات Excel</Btn>
+      )}
       {survey.responses.length === 0 ? (
         <EmptyState icon="📊" title="لا توجد إجابات بعد" hint="شارك الاستبيان لجمع الإجابات." />
       ) : (
