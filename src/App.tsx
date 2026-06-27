@@ -2691,13 +2691,17 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
             <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
               {[...txns].sort((a, b) => b.date.localeCompare(a.date)).map(t => {
                 const isIn = t.type === 'income' || (t.type === 'transfer' && t.transferDir === 'in');
+                const hasErr = txErrors(t, { project, transactions }).length > 0;
                 return (
-                  <div key={t.id} onClick={() => onViewTx(t)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 12px', borderRadius: 10, cursor: 'pointer', borderRight: `3px solid ${isIn ? '#22c55e' : '#f87171'}`, background: 'var(--surface-2)' }}>
+                  <div key={t.id} data-hl={t.id} onClick={() => onViewTx(t)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 12px', borderRadius: 10, cursor: 'pointer', borderRight: `3px solid ${hasErr ? 'var(--danger-text)' : isIn ? '#22c55e' : '#f87171'}`, background: hasErr ? 'var(--danger-bg)' : 'var(--surface-2)' }}>
                     <div style={{ width: 36, height: 36, borderRadius: 99, background: isIn ? 'var(--ok-bg)' : 'var(--danger-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
                       {t.type === 'income' ? '↓' : t.type === 'expense' ? '↑' : '↔'}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description}</span>
+                        <TxIssueBadge tx={t} project={project} transactions={transactions} />
+                      </div>
                       <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
                         {t.category} · {t.date}{t.source ? ` · ${t.source}` : ''} · بواسطة {t.createdBy ?? CURRENT_USER}
                       </div>
@@ -2796,6 +2800,34 @@ function analyzeTx(
 // the "blocking" issues that should flag a saved transaction red in lists
 function txErrors(tx: Transaction, ctx: { project?: Project; transactions: Transaction[] }): TxWarning[] {
   return analyzeTx(tx, ctx).filter(w => w.level === 'error' || (w.level === 'warning' && w.title === 'المصروف يتجاوز الرصيد'));
+}
+// reusable inline issue badge: a ⚠️ chip that pops an explanation of the tx's accounting problems.
+// self-contained (own open state) so it can be dropped anywhere a transaction is listed.
+function TxIssueBadge({ tx, project, transactions, onEdit }: { tx: Transaction; project?: Project; transactions: Transaction[]; onEdit?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const errs = txErrors(tx, { project, transactions });
+  if (errs.length === 0) return null;
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex' }}>
+      <button onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }} title="مشكلة محاسبية" style={{ background: 'var(--danger-text)', color: '#fff', border: 'none', borderRadius: 99, width: 20, height: 20, cursor: 'pointer', fontSize: 11, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>⚠️</button>
+      {open && (
+        <>
+          <div onClick={(e) => { e.stopPropagation(); setOpen(false); }} style={{ position: 'fixed', inset: 0, zIndex: 60 }} />
+          <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: 26, right: 0, zIndex: 61, width: 260, background: 'var(--surface)', border: '1px solid var(--danger-text)', borderRadius: 12, padding: 12, boxShadow: '0 8px 30px rgba(0,0,0,.18)', textAlign: 'right' }}>
+            {errs.map((w, i) => (
+              <div key={i} style={{ marginTop: i === 0 ? 0 : 10 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--danger-text)', marginBottom: 3 }}>⚠️ {w.title}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--text-2)', lineHeight: 1.6 }}>{w.detail}</div>
+                {w.consequence && <div style={{ fontSize: 11.5, color: 'var(--text-2)', lineHeight: 1.6, marginTop: 3 }}><b>ماذا يترتب:</b> {w.consequence}</div>}
+                {w.fix && <div style={{ fontSize: 11.5, color: 'var(--danger-text)', lineHeight: 1.6, marginTop: 3 }}><b>الحل:</b> {w.fix}</div>}
+              </div>
+            ))}
+            {onEdit && <Btn size="sm" variant="outline" style={{ marginTop: 10, width: '100%' }} onClick={() => { setOpen(false); onEdit(); }}>✎ تعديل للتصحيح</Btn>}
+          </div>
+        </>
+      )}
+    </span>
+  );
 }
 
 function TxForm({ initial, projectId, projects, onSave, onCancel, txCategories = DEFAULT_TX_CATEGORIES, allTransactions = [] }: {
@@ -3281,10 +3313,17 @@ function Ledger({ projects, transactions, members, memberTxns, helpEntry, onNavi
                 {filtered.map(r => {
                   const before = balBefore[r.id] ?? 0;
                   const after = before + (r.dir === 'in' ? r.amount : -r.amount);
+                  const srcTx = transactions.find(t => t.id === r.id);
+                  const errs = srcTx ? txErrors(srcTx, { project: projects.find(p => p.id === srcTx.projectId), transactions }) : [];
                   return (
-                    <tr key={r.id} onClick={() => setDetail({ ...r, before, after })} style={{ cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
+                    <tr key={r.id} data-hl={r.id} onClick={() => setDetail({ ...r, before, after })} style={{ cursor: 'pointer', borderBottom: '1px solid var(--border)', background: errs.length > 0 ? 'var(--danger-bg)' : 'transparent' }}>
                       <td style={{ padding: '10px 12px', color: 'var(--text-3)', fontFamily: 'monospace', fontSize: 11 }}>{r.num}</td>
-                      <td style={{ padding: '10px 12px' }}><span style={{ color: r.dir === 'in' ? '#15803d' : '#b91c1c', fontWeight: 600 }}>{r.dir === 'in' ? '↓' : '↑'} {r.kind}</span></td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ color: r.dir === 'in' ? '#15803d' : '#b91c1c', fontWeight: 600 }}>{r.dir === 'in' ? '↓' : '↑'} {r.kind}</span>
+                          {srcTx && <TxIssueBadge tx={srcTx} project={projects.find(p => p.id === srcTx.projectId)} transactions={transactions} />}
+                        </span>
+                      </td>
                       <td style={{ padding: '10px 12px', color: 'var(--text-3)' }}>{r.nature}</td>
                       <td style={{ padding: '10px 12px', color: 'var(--text-2)' }}>{projName(r.projectId)}</td>
                       <td style={{ padding: '10px 12px', color: 'var(--text-3)' }}>{r.memberId ? memName(r.memberId) : (r.source ?? '—')}</td>
