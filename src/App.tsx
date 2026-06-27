@@ -239,6 +239,16 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
   // العائلة
   { id: 't19', projectId: 'p6', type: 'expense', description: 'مصاريف المدارس', amount: 4800, category: 'أخرى', date: '2025-06-12', hasDoc: true, createdBy: 'محمد العمري' },
   { id: 't20', projectId: 'p6', type: 'expense', description: 'تسوق البقالة الشهري', amount: 2300, category: 'أخرى', date: '2025-06-09', hasDoc: false, createdBy: 'منى العمري' },
+  { id: 't21', projectId: 'p2', type: 'expense', description: 'فاتورة الكهرباء', amount: 680, category: 'فواتير', date: '2025-06-05', hasDoc: true, source: 'شركة الكهرباء', createdBy: 'محمد العمري' },
+  { id: 't22', projectId: 'p2', type: 'expense', description: 'صيانة التكييف', amount: 450, category: 'صيانة', date: '2025-06-12', hasDoc: true, source: 'مؤسسة التبريد', createdBy: 'محمد العمري' },
+  { id: 't23', projectId: 'p2', type: 'expense', description: 'أثاث غرفة المعيشة', amount: 5800, category: 'أثاث', date: '2025-05-28', hasDoc: true, source: 'معرض الديار', createdBy: 'محمد العمري' },
+  { id: 't24', projectId: 'p2', type: 'income', description: 'دخل إيجار شقة', amount: 3500, category: 'إيجار', date: '2025-06-01', hasDoc: false, source: 'مستأجر', createdBy: 'محمد العمري' },
+  { id: 't25', projectId: 'p2', type: 'expense', description: 'فاتورة الإنترنت', amount: 320, category: 'فواتير', date: '2025-06-08', hasDoc: false, source: 'مزوّد الخدمة', createdBy: 'محمد العمري' },
+  { id: 't26', projectId: 'p6', type: 'income', description: 'راتب الشهر', amount: 18000, category: 'راتب', date: '2025-06-01', hasDoc: false, createdBy: 'منى العمري' },
+  { id: 't27', projectId: 'p6', type: 'expense', description: 'قسط المدرسة', amount: 4200, category: 'تعليم', date: '2025-06-03', hasDoc: true, source: 'مدرسة النموذج', createdBy: 'منى العمري' },
+  { id: 't28', projectId: 'p6', type: 'expense', description: 'وقود السيارة', amount: 600, category: 'مواصلات', date: '2025-06-15', hasDoc: false, createdBy: 'منى العمري' },
+  { id: 't29', projectId: 'p6', type: 'expense', description: 'فاتورة الجوال', amount: 280, category: 'فواتير', date: '2025-06-10', hasDoc: false, createdBy: 'منى العمري' },
+  { id: 't30', projectId: 'p6', type: 'expense', description: 'مطعم عائلي', amount: 520, category: 'ترفيه', date: '2025-06-20', hasDoc: false, createdBy: 'منى العمري' },
 ];
 
 const INITIAL_TRACKINGS: Tracking[] = [
@@ -297,6 +307,14 @@ const INITIAL_NOTIFS: Notif[] = [
   { id: 'n2', type: 'warning', title: 'ضمان يوشك على الانتهاء', body: 'ضمان ثلاجة المطبخ ينتهي خلال 12 يوم. الطرف: مؤسسة الإلكترونيات الحديثة.', time: 'قبل 3 ساعات', read: false, link: 'trackings', projectId: 'p1', section: 'trackings', itemId: 'tr1', ts: '2025-06-26 06:15' },
   { id: 'n3', type: 'info', title: 'طلب جديد بانتظار موافقتك', body: 'طلب صرف مصروفات السفر بمبلغ 3,200 ر.س — مقدّم الطلب: أحمد العلي.', time: 'أمس', read: false, link: 'requests', projectId: 'p2', section: 'requests', ts: '2025-06-25 14:00' },
   { id: 'n4', type: 'success', title: 'تمت معالجة مستند', body: 'تمت قراءة فاتورة مورد يونيو بنجاح بواسطة محمد العمري.', time: 'أمس', read: true, link: 'documents', projectId: 'p1', section: 'documents', ts: '2025-06-25 10:20' },
+  { id: 'n5', type: 'warning', title: 'عقد إيجار المكتب يقترب من الانتهاء', body: 'عقد إيجار المكتب ينتهي خلال 24 يوم. يُنصح بمراجعة شروط التجديد مبكراً.', time: 'أمس', read: false, link: 'trackings', projectId: 'p1', section: 'trackings', itemId: 'tr2', ts: '2025-06-25 09:10' },
+  { id: 'n6', type: 'danger', title: 'رخصة السجل التجاري منتهية', body: 'رخصة السجل التجاري تجاوزت تاريخ الانتهاء. التجديد مطلوب لتفادي الغرامات.', time: 'قبل يومين', read: false, link: 'trackings', projectId: 'p1', section: 'trackings', itemId: 'tr3', ts: '2025-06-24 11:45' },
+  { id: 'n7', type: 'info', title: 'استحقاق دفعة التزام', body: 'قسط تمويل المعدات بمبلغ 4,500 ر.س يُستحق خلال 3 أيام.', time: 'قبل يومين', read: false, link: 'commitments', projectId: 'p4', section: 'commitments', ts: '2025-06-24 08:00' },
+  { id: 'n8', type: 'warning', title: 'ذمة مستحقة القبض تأخرت', body: 'ذمة بمبلغ 12,000 ر.س على عميل (مجموعة الرواد) تجاوزت تاريخ الاستحقاق.', time: 'قبل 3 أيام', read: true, link: 'receivables', projectId: 'p1', section: 'receivables', ts: '2025-06-23 13:30' },
+  { id: 'n9', type: 'success', title: 'تمت الموافقة على طلب', body: 'تمت الموافقة على طلب تعزيز عهدة الصندوق بمبلغ 5,000 ر.س.', time: 'قبل 3 أيام', read: true, link: 'requests', projectId: 'p1', section: 'requests', ts: '2025-06-23 10:00' },
+  { id: 'n10', type: 'info', title: 'اشتراك Adobe يُجدّد تلقائياً', body: 'اشتراك Adobe Creative Cloud سيُجدّد خلال 8 أيام بمبلغ 240 ر.س شهرياً.', time: 'قبل 4 أيام', read: true, link: 'trackings', projectId: 'p1', section: 'trackings', itemId: 'tr5', ts: '2025-06-22 16:20' },
+  { id: 'n11', type: 'warning', title: 'موعد صيانة أصل', body: 'سيارة المشروع (تويوتا هايلكس) تستحق صيانة دورية حسب عداد الاستخدام.', time: 'قبل 5 أيام', read: true, link: 'assets', projectId: 'p1', section: 'assets', ts: '2025-06-21 09:30' },
+  { id: 'n12', type: 'danger', title: 'عملية بمبلغ غير صحيح', body: 'رُصدت عملية بمبلغ سالب في الإدارة المالية. يُرجى مراجعتها وتصحيحها.', time: 'قبل 5 أيام', read: false, link: 'finance', projectId: 'p1', section: 'finance', itemId: 'tErr1', ts: '2025-06-21 08:15' },
 ];
 
 const INITIAL_AUDIT: AuditEntry[] = [
@@ -404,7 +422,7 @@ const statusFromDays = (d: number): TrackingStatus => d < 0 ? 'expired' : d <= 3
 // ── localStorage-backed state (replaceable by a real DB later) ──
 // data version: bump this whenever seed/initial data changes,
 // so stale localStorage from older versions is cleared automatically (one-time).
-const DATA_VERSION = '6';
+const DATA_VERSION = '7';
 (() => {
   try {
     const stored = localStorage.getItem('mz_data_version');
