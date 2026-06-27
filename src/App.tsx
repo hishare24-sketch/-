@@ -2737,9 +2737,70 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
 // ═══════════════════════════════════════════
 //  FINANCE  (create / view / edit transaction by type)
 // ═══════════════════════════════════════════
-function TxForm({ initial, projectId, projects, onSave, onCancel, txCategories = DEFAULT_TX_CATEGORIES }: {
+// ── accounting sanity analysis ──────────────────────────────
+// returns warnings/notes for a proposed (or saved) transaction so the user
+// understands consequences before/after confirming.
+type TxWarning = { level: 'error' | 'warning' | 'info'; title: string; detail: string; consequence?: string; fix?: string };
+function analyzeTx(
+  tx: { type: TxType; amount: number; projectId: string; toProject?: string; date: string; description: string; category?: string; id?: string },
+  ctx: { project?: Project; transactions: Transaction[] }
+): TxWarning[] {
+  const out: TxWarning[] = [];
+  const amt = Number(tx.amount) || 0;
+
+  // 1. negative / zero amount
+  if (amt < 0) out.push({ level: 'error', title: 'مبلغ سالب', detail: 'المبلغ المُدخل سالب.', consequence: 'في موازين يُحدَّد الاتجاه بنوع العملية لا بإشارة المبلغ، فالقيمة السالبة ستشوّه التقارير.', fix: 'أدخل المبلغ موجباً واختر النوع الصحيح (مصروف/إيراد).' });
+  else if (amt === 0) out.push({ level: 'warning', title: 'مبلغ صفري', detail: 'قيمة العملية صفر.', consequence: 'لن تؤثّر على الرصيد، وقد تكون أُدخلت بالخطأ.' });
+
+  // 2. transfer to same project
+  if (tx.type === 'transfer' && tx.toProject && tx.toProject === tx.projectId) {
+    out.push({ level: 'error', title: 'تحويل لنفس المشروع', detail: 'المشروع المصدر والوجهة متطابقان.', consequence: 'تحويل بلا أثر فعلي، وسيُنشئ طرفين متعارضين في نفس المشروع.', fix: 'اختر مشروع وجهة مختلفاً عن المصدر.' });
+  }
+
+  // 3. expense exceeding current balance (would go negative)
+  if (tx.type === 'expense' && ctx.project) {
+    const bal = computeBalance(ctx.project, ctx.transactions.filter(t => t.id !== tx.id));
+    if (amt > bal) {
+      out.push({
+        level: 'warning', title: 'المصروف يتجاوز الرصيد',
+        detail: `رصيد المشروع الحالي ${fmtNum(bal)} ر.س، والمصروف ${fmtNum(amt)} ر.س.`,
+        consequence: `سيصبح رصيد المشروع سالباً (${fmtNum(bal - amt)} ر.س) بعد هذه العملية.`,
+        fix: 'تأكّد من توفّر السيولة، أو سجّل إيراداً/تحويلاً وارداً أولاً، أو راجع المبلغ.',
+      });
+    }
+  }
+
+  // 4. future-dated transaction
+  if (tx.date > today()) {
+    out.push({ level: 'info', title: 'تاريخ مستقبلي', detail: `تاريخ العملية (${tx.date}) في المستقبل.`, consequence: 'ستظهر ضمن الفترات القادمة وقد لا تُحتسب في تقارير اليوم.' });
+  }
+
+  // 5. unusually large amount vs project history (> 5× average of same type)
+  if ((tx.type === 'expense' || tx.type === 'income') && ctx.project) {
+    const same = ctx.transactions.filter(t => t.projectId === tx.projectId && t.type === tx.type && t.id !== tx.id);
+    if (same.length >= 3) {
+      const avg = same.reduce((s, t) => s + t.amount, 0) / same.length;
+      if (avg > 0 && amt > avg * 5) {
+        out.push({ level: 'info', title: 'مبلغ غير معتاد', detail: `المبلغ أكبر بكثير من متوسط ${tx.type === 'expense' ? 'مصروفات' : 'إيرادات'} المشروع (${fmtNum(Math.round(avg))} ر.س).`, consequence: 'قد يكون إدخالاً خاطئاً (أصفار زائدة مثلاً). تأكّد من صحة المبلغ.' });
+      }
+    }
+  }
+
+  // 6. very short / missing description
+  if (tx.description.trim().length > 0 && tx.description.trim().length < 3) {
+    out.push({ level: 'info', title: 'وصف قصير', detail: 'وصف العملية قصير جداً.', consequence: 'وصف واضح يسهّل المراجعة والتقارير لاحقاً.' });
+  }
+
+  return out;
+}
+// the "blocking" issues that should flag a saved transaction red in lists
+function txErrors(tx: Transaction, ctx: { project?: Project; transactions: Transaction[] }): TxWarning[] {
+  return analyzeTx(tx, ctx).filter(w => w.level === 'error' || (w.level === 'warning' && w.title === 'المصروف يتجاوز الرصيد'));
+}
+
+function TxForm({ initial, projectId, projects, onSave, onCancel, txCategories = DEFAULT_TX_CATEGORIES, allTransactions = [] }: {
   initial?: Transaction; projectId: string; projects: Project[];
-  onSave: (t: Omit<Transaction, 'id'> & { id?: string }) => void; onCancel: () => void; txCategories?: string[];
+  onSave: (t: Omit<Transaction, 'id'> & { id?: string }) => void; onCancel: () => void; txCategories?: string[]; allTransactions?: Transaction[];
 }) {
   const [type, setType] = useState<TxType>(initial?.type ?? 'expense');
   const [targetProject, setTargetProject] = useState(initial?.projectId ?? projectId);
@@ -2752,6 +2813,15 @@ function TxForm({ initial, projectId, projects, onSave, onCancel, txCategories =
   const [note, setNote] = useState(initial?.note ?? '');
   const [attachments, setAttachments] = useState<Attachment[]>(initial?.attachments ?? []);
   const valid = description.trim().length > 0 && amount !== '' && Number(amount) > 0;
+
+  // live accounting analysis of the in-progress entry
+  const proposedProject = projects.find(p => p.id === targetProject);
+  const warnings = (amount !== '' && Number(amount) >= 0) ? analyzeTx(
+    { type, amount: Number(amount), projectId: targetProject, toProject: type === 'transfer' ? toProject : undefined, date, description, category, id: initial?.id },
+    { project: proposedProject, transactions: allTransactions }
+  ) : [];
+  const wMeta = (l: TxWarning['level']) => l === 'error' ? { c: 'var(--danger-text)', bg: 'var(--danger-bg)', icon: '🔴' } : l === 'warning' ? { c: 'var(--warn-text)', bg: 'var(--warn-bg)', icon: '🟠' } : { c: 'var(--info-text)', bg: 'var(--info-bg)', icon: 'ℹ️' };
+  const hasError = warnings.some(w => w.level === 'error');
 
   return (
     <>
@@ -2788,14 +2858,35 @@ function TxForm({ initial, projectId, projects, onSave, onCancel, txCategories =
       <Field label="المرفقات (صور / ملفات)">
         <AttachmentPicker value={attachments} onChange={setAttachments} />
       </Field>
+
+      {/* live accounting hints */}
+      {warnings.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+          {warnings.map((w, i) => {
+            const m = wMeta(w.level);
+            return (
+              <div key={i} style={{ background: m.bg, borderRadius: 10, padding: '11px 13px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                  <span style={{ fontSize: 14 }}>{m.icon}</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: m.c }}>{w.title}</span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6 }}>{w.detail}</div>
+                {w.consequence && <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6, marginTop: 4 }}><b>ماذا يترتب:</b> {w.consequence}</div>}
+                {w.fix && <div style={{ fontSize: 12, color: m.c, lineHeight: 1.6, marginTop: 4 }}><b>الحل:</b> {w.fix}</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: 10 }}>
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
-        <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
+        <Btn disabled={!valid || hasError} style={{ flex: 1 }} onClick={() => onSave({
           id: initial?.id, projectId: targetProject, type, description: description.trim(),
           amount: amount === '' ? 0 : amount, category: type === 'transfer' ? 'تحويل' : category,
           date, hasDoc: attachments.length > 0 || (initial?.hasDoc ?? false), note, source: source.trim() || undefined,
           attachments, toProject: type === 'transfer' ? toProject : undefined,
-        })}>{initial ? 'حفظ التعديلات' : 'إضافة العملية'}</Btn>
+        })}>{hasError ? 'صحّح الأخطاء أولاً' : initial ? 'حفظ التعديلات' : 'إضافة العملية'}</Btn>
       </div>
     </>
   );
@@ -2811,6 +2902,7 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
   const [catFilter, setCatFilter] = useState('all');
   const [sort, setSort] = useState('newest');
   const [sheet, setSheet] = useState<null | { mode: 'edit' | 'view'; tx: Transaction }>(null);
+  const [errTx, setErrTx] = useState<string | null>(null);
   const project = projects.find(p => p.id === projectId)!;
   const txns = transactions.filter(t => t.projectId === projectId);
   const cats = Array.from(new Set(txns.map(t => t.category)));
@@ -2924,14 +3016,19 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
             </thead>
             <tbody>
               {filtered.length === 0 && <tr><td colSpan={5} style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-3)' }}>لا توجد عمليات مطابقة</td></tr>}
-              {filtered.map(t => (
-                <tr key={t.id} data-hl={t.id} onClick={() => setSheet({ mode: 'view', tx: t })} style={{ cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
+              {filtered.map(t => {
+                const errs = txErrors(t, { project, transactions });
+                const open = errTx === t.id;
+                return (
+                <React.Fragment key={t.id}>
+                <tr data-hl={t.id} onClick={() => setSheet({ mode: 'view', tx: t })} style={{ cursor: 'pointer', borderBottom: open ? 'none' : '1px solid var(--border)', background: errs.length > 0 ? 'var(--danger-bg)' : 'transparent' }}>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 30, height: 30, borderRadius: 8, background: t.type === 'income' ? 'var(--ok-bg)' : t.type === 'expense' ? 'var(--danger-bg)' : 'var(--info-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
                         {t.type === 'income' ? '↑' : t.type === 'expense' ? '↓' : '↔'}
                       </div>
                       <span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{t.description}</span>
+                      {errs.length > 0 && <button onClick={(e) => { e.stopPropagation(); setErrTx(open ? null : t.id); }} title="مشكلة محاسبية" style={{ background: 'var(--danger-text)', color: '#fff', border: 'none', borderRadius: 99, width: 20, height: 20, cursor: 'pointer', fontSize: 11, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>⚠️</button>}
                     </div>
                   </td>
                   <td style={{ padding: '12px 16px', color: 'var(--text-3)' }}>{t.category}</td>
@@ -2941,7 +3038,24 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
                     {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : t.transferDir === 'in' ? '+' : '-'}{fmtNum(t.amount)} ر.س
                   </td>
                 </tr>
-              ))}
+                {open && errs.length > 0 && (
+                  <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--danger-bg)' }}>
+                    <td colSpan={5} style={{ padding: '0 16px 14px 16px' }}>
+                      {errs.map((w, i) => (
+                        <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--danger-text)', borderRadius: 10, padding: '11px 13px', marginTop: i === 0 ? 0 : 8 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--danger-text)', marginBottom: 4 }}>⚠️ {w.title}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6 }}>{w.detail}</div>
+                          {w.consequence && <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6, marginTop: 4 }}><b>ماذا يترتب:</b> {w.consequence}</div>}
+                          {w.fix && <div style={{ fontSize: 12, color: 'var(--danger-text)', lineHeight: 1.6, marginTop: 4 }}><b>الحل:</b> {w.fix}</div>}
+                          <Btn size="sm" variant="outline" style={{ marginTop: 8 }} onClick={(e?: any) => { e?.stopPropagation?.(); setSheet({ mode: 'edit', tx: t }); setErrTx(null); }}>✎ تعديل العملية للتصحيح</Btn>
+                        </div>
+                      ))}
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
+              );
+              })}
             </tbody>
           </table>
         </div>
@@ -2949,13 +3063,13 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
 
       {/* Create */}
       <Sheet open={openCreate} onClose={onCloseCreate} title="عملية جديدة">
-        <TxForm projectId={projectId} projects={projects} txCategories={txCategories} onSave={(t) => { onSave(t); onCloseCreate(); }} onCancel={onCloseCreate} />
+        <TxForm projectId={projectId} projects={projects} txCategories={txCategories} allTransactions={transactions} onSave={(t) => { onSave(t); onCloseCreate(); }} onCancel={onCloseCreate} />
       </Sheet>
 
       {/* Edit */}
       <Sheet open={sheet?.mode === 'edit'} onClose={() => setSheet(null)} title="تعديل العملية">
         {sheet?.mode === 'edit' && (
-          <TxForm key={sheet.tx.id} initial={sheet.tx} projectId={projectId} projects={projects} txCategories={txCategories}
+          <TxForm key={sheet.tx.id} initial={sheet.tx} projectId={projectId} projects={projects} txCategories={txCategories} allTransactions={transactions}
             onSave={(t) => { onSave(t); setSheet(null); }} onCancel={() => setSheet(null)} />
         )}
       </Sheet>
@@ -7029,7 +7143,7 @@ export default function App() {
 
         {/* global quick-create: navigates only on save, cancel stays put */}
         <Sheet open={quickCreate === 'tx'} onClose={() => setQuickCreate(null)} title="عملية مالية جديدة">
-          {quickCreate === 'tx' && <TxForm projectId={projectId} projects={projects} txCategories={lists.txCategories} onSave={(t) => { saveTx(t); setQuickCreate(null); setProjectId(t.projectId); setPage('finance'); }} onCancel={() => setQuickCreate(null)} />}
+          {quickCreate === 'tx' && <TxForm projectId={projectId} projects={projects} txCategories={lists.txCategories} allTransactions={transactions} onSave={(t) => { saveTx(t); setQuickCreate(null); setProjectId(t.projectId); setPage('finance'); }} onCancel={() => setQuickCreate(null)} />}
         </Sheet>
         <Sheet open={quickCreate === 'doc'} onClose={() => setQuickCreate(null)} title="رفع مستند جديد">
           {quickCreate === 'doc' && <DocForm projectId={projectId} projects={projects} docTypes={lists.docTypes} onSave={(d) => { saveDoc(d); setQuickCreate(null); setProjectId(d.projectId); setPage('documents'); }} onCancel={() => setQuickCreate(null)} />}
