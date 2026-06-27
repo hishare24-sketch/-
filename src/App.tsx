@@ -5914,6 +5914,7 @@ type HealthIssue = {
   level: 'error' | 'warning' | 'ok'; title: string; detail: string;
   cause?: string; why?: string; fix?: string; ai?: string;
   action?: { label: string; page: Page; itemId?: string; projId?: string };
+  actions?: { label: string; page: Page; itemId?: string; projId?: string }[];
 };
 function runHealthCheck(data: {
   projects: Project[]; transactions: Transaction[]; receivables: Receivable[];
@@ -5949,21 +5950,23 @@ function runHealthCheck(data: {
   }
 
   // 2. member balance consistency
-  let mismatchMembers = 0; let firstMismatch: Member | undefined;
+  const mismatchList: Member[] = [];
   members.forEach(m => {
     const accepted = memberTxns.filter(t => t.memberId === m.id && t.status === 'accepted');
     const computed = accepted.reduce((s, t) => s + (t.direction === 'to_member' ? t.amount : -t.amount), 0);
     const stored = m.balance ?? 0;
-    if (Math.abs(computed - stored) > 1) { mismatchMembers++; firstMismatch = firstMismatch ?? m; }
+    if (Math.abs(computed - stored) > 1) mismatchList.push(m);
   });
-  if (mismatchMembers === 0) issues.push({ level: 'ok', title: 'أرصدة الأعضاء متطابقة', detail: 'رصيد كل عضو يساوي مجموع حركات عهده المقبولة.', ai: 'أرصدة العهد لدى أعضائك دقيقة ومطابقة لحركاتهم. لا حاجة لأي تسوية.' });
+  if (mismatchList.length === 0) issues.push({ level: 'ok', title: 'أرصدة الأعضاء متطابقة', detail: 'رصيد كل عضو يساوي مجموع حركات عهده المقبولة.', ai: 'أرصدة العهد لدى أعضائك دقيقة ومطابقة لحركاتهم. لا حاجة لأي تسوية.' });
   else issues.push({
-    level: 'warning', title: 'أرصدة أعضاء غير متطابقة', detail: `${mismatchMembers} عضو رصيده المخزّن لا يطابق مجموع حركاته المقبولة.`,
+    level: 'warning', title: 'أرصدة أعضاء غير متطابقة', detail: `${mismatchList.length} عضو رصيده المخزّن لا يطابق مجموع حركاته المقبولة: ${mismatchList.map(m => m.name).join('، ')}.`,
     cause: 'الرصيد المحفوظ للعضو يختلف عن ناتج جمع حركات عهده المقبولة.',
     why: 'قد ينتج عن تعديل يدوي على الرصيد، أو حركة عهدة عُدّلت/حُذفت بعد قبولها.',
-    fix: 'افتح صفحة العضو وراجع سجل حركاته، ثم سجّل حركة تسوية تعيد الرصيد لمطابقة الواقع.',
-    ai: 'الأسلم محاسبياً ألا تُعدّل رصيد العضو يدوياً، بل تسجّل حركة "تسوية/إرجاع" أو "خصم" — هكذا يبقى الرصيد دائماً قابلاً للتتبّع.',
-    action: firstMismatch ? { label: 'عرض العضو في المشروع', page: 'projectDetail', itemId: firstMismatch.id, projId: firstMismatch.projectId } : undefined,
+    fix: 'افتح صفحة كل عضو وراجع سجل حركاته، ثم سجّل حركة تسوية تعيد الرصيد لمطابقة الواقع.',
+    ai: mismatchList.length > 1
+      ? `يوجد ${mismatchList.length} أعضاء بحاجة لتسوية. أنصح بمعالجتهم واحداً تلو الآخر — استخدم أزرار الانتقال أدناه للوصول لكل عضو على حدة. الأسلم تسجيل حركة "تسوية/إرجاع" أو "خصم" بدل تعديل الرصيد يدوياً.`
+      : 'الأسلم محاسبياً ألا تُعدّل رصيد العضو يدوياً، بل تسجّل حركة "تسوية/إرجاع" أو "خصم" — هكذا يبقى الرصيد دائماً قابلاً للتتبّع.',
+    actions: mismatchList.map(m => ({ label: `عرض «${m.name}» في المشروع`, page: 'projectDetail' as Page, itemId: m.id, projId: m.projectId })),
   });
 
   // 3. orphan records (project deleted)
@@ -6088,6 +6091,13 @@ function HealthCheck({ data, onNavigate }: { data: Parameters<typeof runHealthCh
                       )}
                       {i.action && (
                         <Btn size="sm" onClick={() => i.action && onNavigate(i.action.page, i.action.itemId, i.action.projId)} style={{ alignSelf: 'flex-start' }}>↗ {i.action.label}</Btn>
+                      )}
+                      {i.actions && i.actions.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                          {i.actions.map((act, ai) => (
+                            <Btn key={ai} size="sm" variant="outline" onClick={() => onNavigate(act.page, act.itemId, act.projId)} style={{ alignSelf: 'flex-start' }}>↗ {act.label}</Btn>
+                          ))}
+                        </div>
                       )}
                     </div>
                   )}
