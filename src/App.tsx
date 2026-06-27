@@ -2183,7 +2183,7 @@ function InviteForm({ projectId, onInvite, onCancel }: {
   );
 }
 
-function ProjectDetail({ projectId, projects, transactions, trackings, requests, documents, members, memberTxns, notifs, onNav, onSaveMember, onDeleteMember, onSaveMemberTxn, onDecideMemberTxn, onOpenMember, onSaveProject, onDeleteProject, onViewTx, onViewDoc, onViewTracking, onQuickAction, prefs }: {
+function ProjectDetail({ projectId, projects, transactions, trackings, requests, documents, members, memberTxns, notifs, onNav, onSaveMember, onDeleteMember, onSaveMemberTxn, onDecideMemberTxn, onOpenMember, onSaveProject, onDeleteProject, onViewTx, onViewDoc, onViewTracking, onQuickAction, prefs, highlightId }: {
   projectId: string; projects: Project[]; transactions: Transaction[]; trackings: Tracking[];
   requests: RequestItem[]; documents: DocItem[]; members: Member[]; memberTxns: MemberTxn[]; notifs: Notif[];
   onNav: (p: Page) => void;
@@ -2194,6 +2194,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
   onViewTx: (t: Transaction) => void; onViewDoc: (d: DocItem) => void; onViewTracking: (t: Tracking) => void;
   onQuickAction: (a: 'tx' | 'doc' | 'tracking' | 'request') => void;
   prefs: UserPrefs;
+  highlightId?: string | null;
 }) {
   const [tab, setTab] = useState<'overview' | 'members' | 'cashflow'>('overview');
   const [sheet, setSheet] = useState<null | { mode: 'add' } | { mode: 'edit'; member: Member } | { mode: 'txn' } | { mode: 'invite' } | { mode: 'editProject' } | { mode: 'deleteProject' }>(null);
@@ -2207,6 +2208,19 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
   const transfersIn = txns.filter(t => t.type === 'transfer' && t.transferDir === 'in').reduce((s, t) => s + t.amount, 0);
   const balance = computeBalance(project, transactions);
   const projMembers = members.filter(m => m.projectId === projectId);
+  // detect members whose stored balance ≠ sum of accepted custody txns (for inline issue badge)
+  const memberIssue = (m: Member): string | null => {
+    const accepted = memberTxns.filter(t => t.memberId === m.id && t.status === 'accepted');
+    const computed = accepted.reduce((s, t) => s + (t.direction === 'to_member' ? t.amount : -t.amount), 0);
+    const stored = m.balance ?? 0;
+    if (Math.abs(computed - stored) > 1) return `الرصيد المخزّن (${fmtNum(stored)}) لا يطابق مجموع الحركات المقبولة (${fmtNum(computed)}). الفرق: ${fmtNum(Math.abs(computed - stored))}. الحل: سجّل حركة تسوية تعيد الرصيد لمطابقة الواقع.`;
+    return null;
+  };
+  const [issueMember, setIssueMember] = useState<string | null>(null);
+  // if a deep-link highlights a member of this project, open the members tab so it becomes visible
+  useEffect(() => {
+    if (highlightId && projMembers.some(m => m.id === highlightId)) { setTab('members'); setIssueMember(highlightId); }
+  }, [highlightId]);
   const projTrackings = trackings.filter(t => t.projectId === projectId);
   const projDocs = documents.filter(d => d.projectId === projectId);
   const projReqs = requests.filter(r => r.projectId === projectId);
@@ -2452,8 +2466,9 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {projMembers.map(m => {
               const roleInfo = ROLES.find(r => r.id === m.role)!;
+              const issue = memberIssue(m);
               return (
-                <Card key={m.id} style={{ padding: 16 }}>
+                <Card key={m.id} dataHl={m.id} style={{ padding: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 99, background: roleInfo.color + '20', color: roleInfo.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
                       {m.name.charAt(0)}
@@ -2462,6 +2477,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                       <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
                         {m.name}
                         {m.status === 'invited' && <span style={{ fontSize: 10, background: 'var(--warn-bg-2)', color: 'var(--warn-text-2)', padding: '1px 7px', borderRadius: 99 }}>دعوة معلّقة</span>}
+                        {issue && <button onClick={() => setIssueMember(issueMember === m.id ? null : m.id)} title="مشكلة في الرصيد" style={{ background: 'var(--danger-bg)', color: 'var(--danger-text)', border: 'none', borderRadius: 99, width: 22, height: 22, cursor: 'pointer', fontSize: 12, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>⚠️</button>}
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{m.email}</div>
                     </div>
@@ -2471,6 +2487,16 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                       <button onClick={() => setSheet({ mode: 'edit', member: m })} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: 'var(--text-3)', flexShrink: 0 }}>✎</button>
                     )}
                   </div>
+                  {issue && issueMember === m.id && (
+                    <div style={{ marginTop: 12, padding: '12px 14px', background: 'var(--danger-bg)', borderRadius: 10, animation: 'mzFade .2s ease' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+                        <span style={{ fontSize: 15 }}>⚠️</span>
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--danger-text)' }}>عدم تطابق في رصيد العهدة</span>
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.7, marginBottom: 10 }}>{issue}</div>
+                      <Btn size="sm" onClick={() => onOpenMember(m.id)}>↗ فتح ملف العضو لتسجيل تسوية</Btn>
+                    </div>
+                  )}
                   {m.role !== 'owner' && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
                       <span style={{ fontSize: 12, color: 'var(--text-3)' }}>رصيد العضو (عُهد)</span>
@@ -5937,7 +5963,7 @@ function runHealthCheck(data: {
     why: 'قد ينتج عن تعديل يدوي على الرصيد، أو حركة عهدة عُدّلت/حُذفت بعد قبولها.',
     fix: 'افتح صفحة العضو وراجع سجل حركاته، ثم سجّل حركة تسوية تعيد الرصيد لمطابقة الواقع.',
     ai: 'الأسلم محاسبياً ألا تُعدّل رصيد العضو يدوياً، بل تسجّل حركة "تسوية/إرجاع" أو "خصم" — هكذا يبقى الرصيد دائماً قابلاً للتتبّع.',
-    action: firstMismatch ? { label: 'عرض الأعضاء', page: 'projectDetail', projId: firstMismatch.projectId } : undefined,
+    action: firstMismatch ? { label: 'عرض العضو في المشروع', page: 'projectDetail', itemId: firstMismatch.id, projId: firstMismatch.projectId } : undefined,
   });
 
   // 3. orphan records (project deleted)
@@ -6769,7 +6795,7 @@ export default function App() {
       case 'tasks': return <Tasks projects={projects} requests={requests} receivables={receivables} commitments={commitments} trackings={trackings} memberTxns={memberTxns} members={members} onDecideRequest={decideRequest} onPayReceivable={payReceivable} onPayCommitment={payCommitment} onDecideMemberTxn={decideMemberTxn} onNav={setPage} />;
       case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} prefs={prefs} helpEntry={help.dashboard} />;
       case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} openCreate={createProject} onCloseCreate={() => setCreateProject(false)} prefs={prefs} projectTypes={lists.projectTypes} helpEntry={help.projects} />;
-      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} onQuickAction={fabAction} prefs={prefs} />;
+      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} onQuickAction={fabAction} prefs={prefs} highlightId={highlightId} />;
       case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} receivables={receivables} commitments={commitments} requests={requests} onBack={goBack} onNav={setPage} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} txCategories={lists.txCategories} helpEntry={help.finance} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} helpEntry={help.ledger} onNavigate={navigateTo} />;
