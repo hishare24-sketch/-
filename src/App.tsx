@@ -8,7 +8,7 @@ type Page = 'overview' | 'tasks' | 'dashboard' | 'projects' | 'projectDetail' | 
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 // unified attachment (image/file) — preview kept in-session, real upload later via backend
-type Attachment = { id: string; name: string; kind: 'image' | 'file'; size: string; preview?: string };
+type Attachment = { id: string; name: string; kind: 'image' | 'file'; size: string; preview?: string; fileType?: string; uploadDate?: string };
 type RequestStatus = 'pending' | 'approved' | 'rejected';
 
 type Project = { id: string; name: string; icon: string; balance: number; color: string; type?: string; description?: string; image?: string; gallery?: string[] };
@@ -800,7 +800,7 @@ function AttachmentPicker({ value, onChange }: { value: Attachment[]; onChange: 
     let pending = arr.length;
     const next: Attachment[] = [];
     arr.forEach(f => {
-      const att: Attachment = { id: uid('att'), name: f.name, kind: f.type.startsWith('image') ? 'image' : kind, size: humanSize(f.size) };
+      const att: Attachment = { id: uid('att'), name: f.name, kind: f.type.startsWith('image') ? 'image' : kind, size: humanSize(f.size), fileType: f.type || f.name.split('.').pop(), uploadDate: today() };
       // generate a small preview for images (kept in-session)
       if (att.kind === 'image') {
         const reader = new FileReader();
@@ -914,8 +914,17 @@ function ImageGalleryPicker({ value, onChange, max = 3 }: { value: string[]; onC
 }
 
 // read-only attachments display (in view sheets)
+// infer a file-type icon from extension / fileType
+function fileIcon(a: Attachment): string {
+  const n = (a.fileType || a.name || '').toLowerCase();
+  if (a.kind === 'image' || /\.(png|jpg|jpeg|gif|webp)$/.test(n) || n.includes('image')) return '🖼️';
+  if (/\.pdf$/.test(n) || n.includes('pdf')) return '📕';
+  if (/\.(xlsx|xls|csv)$/.test(n) || n.includes('sheet') || n.includes('excel')) return '📊';
+  if (/\.(docx?|txt)$/.test(n) || n.includes('word')) return '📄';
+  return '📎';
+}
 function AttachmentView({ items }: { items?: Attachment[] }) {
-  const [zoom, setZoom] = useState<string | null>(null);
+  const [idx, setIdx] = useState<number | null>(null); // index of item open in large preview
   if (!items || items.length === 0) return null;
   const download = (a: Attachment) => {
     if (a.preview) {
@@ -926,18 +935,21 @@ function AttachmentView({ items }: { items?: Attachment[] }) {
       alert(`سيتم تنزيل «${a.name}» عند ربط التخزين السحابي (Backend).`);
     }
   };
+  const open = idx !== null ? items[idx] : null;
+  const go = (dir: number) => { if (idx === null) return; setIdx((idx + dir + items.length) % items.length); };
+
   return (
     <div style={{ marginTop: 8 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        {items.map(a => (
+        {items.map((a, i) => (
           <div key={a.id} style={{ width: 76 }}>
             <div style={{ position: 'relative' }}>
               <div
-                onClick={() => a.kind === 'image' && a.preview && setZoom(a.preview)}
-                style={{ width: 76, height: 76, borderRadius: 10, overflow: 'hidden', background: 'var(--surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)', cursor: a.kind === 'image' && a.preview ? 'pointer' : 'default' }}>
+                onClick={() => setIdx(i)}
+                style={{ width: 76, height: 76, borderRadius: 10, overflow: 'hidden', background: 'var(--surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)', cursor: 'pointer' }}>
                 {a.kind === 'image' && a.preview
                   ? <img src={a.preview} alt={a.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <span style={{ fontSize: 26 }}>{a.kind === 'image' ? '🖼️' : '📄'}</span>}
+                  : <span style={{ fontSize: 26 }}>{fileIcon(a)}</span>}
               </div>
               <button onClick={(e) => { e.stopPropagation(); download(a); }} title="تنزيل" style={{ position: 'absolute', bottom: 3, left: 3, width: 22, height: 22, borderRadius: 7, background: 'rgba(0,0,0,.6)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⬇</button>
             </div>
@@ -945,17 +957,79 @@ function AttachmentView({ items }: { items?: Attachment[] }) {
           </div>
         ))}
       </div>
-      {zoom && (
-        <div onClick={() => setZoom(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'mzFade .2s ease' }}>
-          <img src={zoom} alt="معاينة" style={{ maxWidth: '92%', maxHeight: '88%', borderRadius: 12 }} />
+
+      {/* large preview popup with left/right navigation */}
+      {open && (
+        <div onClick={() => setIdx(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.88)', zIndex: 1200, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', animation: 'mzFade .2s ease', padding: 20 }}>
+          {/* close */}
+          <button onClick={(e) => { e.stopPropagation(); setIdx(null); }} style={{ position: 'absolute', top: 16, left: 16, background: 'rgba(255,255,255,.15)', color: '#fff', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', fontSize: 18 }}>✕</button>
+          {/* counter */}
+          <div style={{ position: 'absolute', top: 22, color: '#fff', fontSize: 13, opacity: .85 }}>{idx! + 1} / {items.length}</div>
+
+          {/* nav arrows (only if >1) */}
+          {items.length > 1 && (
+            <>
+              <button onClick={(e) => { e.stopPropagation(); go(1); }} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', color: '#fff', border: 'none', borderRadius: 99, width: 48, height: 48, cursor: 'pointer', fontSize: 24 }}>›</button>
+              <button onClick={(e) => { e.stopPropagation(); go(-1); }} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', color: '#fff', border: 'none', borderRadius: 99, width: 48, height: 48, cursor: 'pointer', fontSize: 24 }}>‹</button>
+            </>
+          )}
+
+          {/* content */}
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: '92%', maxHeight: '78%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {open.kind === 'image' && open.preview
+              ? <img src={open.preview} alt={open.name} style={{ maxWidth: '100%', maxHeight: '70vh', borderRadius: 12, objectFit: 'contain' }} />
+              : (
+                <div style={{ background: 'var(--surface)', borderRadius: 16, padding: '40px 32px', textAlign: 'center', minWidth: 240 }}>
+                  <div style={{ fontSize: 60, marginBottom: 12 }}>{fileIcon(open)}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{open.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)' }}>معاينة هذا النوع تتوفّر عند ربط التخزين السحابي</div>
+                  <Btn size="sm" style={{ marginTop: 16 }} onClick={() => download(open)}>⬇ تنزيل الملف</Btn>
+                </div>
+              )}
+          </div>
+
+          {/* meta bar: name + size + date */}
+          <div onClick={e => e.stopPropagation()} style={{ marginTop: 18, background: 'rgba(255,255,255,.1)', borderRadius: 12, padding: '10px 18px', color: '#fff', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '92%' }}>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>{fileIcon(open)} {open.name}</span>
+            <span style={{ fontSize: 12, opacity: .8 }}>📦 {open.size}</span>
+            {open.uploadDate && <span style={{ fontSize: 12, opacity: .8 }}>📅 {open.uploadDate}</span>}
+            <button onClick={() => download(open)} style={{ background: 'rgba(255,255,255,.2)', color: '#fff', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>⬇ تنزيل</button>
+          </div>
         </div>
       )}
     </div>
   );
 }
-// ═══════════════════════════════════════════
-//  STAT CHARTS (lightweight CSS donut + bars)
-// ═══════════════════════════════════════════
+// compact attachment indicator for list rows: first attachment thumbnail/icon + total count.
+// clicking opens the full AttachmentView gallery (via a small popup).
+function AttachmentThumb({ items }: { items?: Attachment[] }) {
+  const [openGallery, setOpenGallery] = useState(false);
+  if (!items || items.length === 0) return null;
+  const first = items[0];
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+      <button onClick={(e) => { e.stopPropagation(); setOpenGallery(true); }} title={`${items.length} مرفقات`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: 8, padding: '3px 8px 3px 4px', cursor: 'pointer', fontFamily: 'inherit' }}>
+        <span style={{ width: 24, height: 24, borderRadius: 6, overflow: 'hidden', background: 'var(--surface)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          {first.kind === 'image' && first.preview
+            ? <img src={first.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <span style={{ fontSize: 13 }}>{fileIcon(first)}</span>}
+        </span>
+        <span style={{ fontSize: 11.5, color: 'var(--text-2)', fontWeight: 600 }}>{items.length} {items.length === 1 ? 'مرفق' : 'مرفقات'}</span>
+      </button>
+      {openGallery && (
+        <div onClick={(e) => { e.stopPropagation(); setOpenGallery(false); }} style={{ position: 'fixed', inset: 0, background: 'rgba(15,17,23,.45)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'mzFade .2s ease', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: 16, padding: 20, maxWidth: 480, width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>المرفقات ({items.length})</span>
+              <button onClick={() => setOpenGallery(false)} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', fontSize: 15, color: 'var(--text-3)' }}>✕</button>
+            </div>
+            <AttachmentView items={items} />
+          </div>
+        </div>
+      )}
+    </span>
+  );
+}
 // donut chart from segments (uses conic-gradient)
 function Donut({ segments, size = 120, label }: { segments: { value: number; color: string; label: string }[]; size?: number; label?: string }) {
   const total = segments.reduce((s, x) => s + x.value, 0) || 1;
@@ -3164,7 +3238,7 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
                   </td>
                   <td style={{ padding: '12px 16px', color: 'var(--text-3)' }}>{t.category}</td>
                   <td style={{ padding: '12px 16px', color: 'var(--text-3)' }}>{t.date}</td>
-                  <td style={{ padding: '12px 16px' }}>{t.hasDoc ? <span style={{ color: 'var(--info-text)', fontSize: 12 }}>📎 مرفق</span> : <span style={{ color: '#d1d5db', fontSize: 12 }}>—</span>}</td>
+                  <td style={{ padding: '12px 16px' }}>{t.attachments && t.attachments.length > 0 ? <AttachmentThumb items={t.attachments} /> : t.hasDoc ? <span style={{ color: 'var(--info-text)', fontSize: 12 }}>📎 مرفق</span> : <span style={{ color: '#d1d5db', fontSize: 12 }}>—</span>}</td>
                   <td style={{ padding: '12px 16px', fontWeight: 600, color: t.type === 'income' ? '#15803d' : t.type === 'expense' ? '#b91c1c' : '#1d4ed8' }}>
                     {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : t.transferDir === 'in' ? '+' : '-'}{fmtNum(t.amount)} ر.س
                   </td>
