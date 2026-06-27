@@ -2821,9 +2821,31 @@ function analyzeTx(
 function txErrors(tx: Transaction, ctx: { project?: Project; transactions: Transaction[] }): TxWarning[] {
   return analyzeTx(tx, ctx).filter(w => w.level === 'error' || (w.level === 'warning' && w.title === 'المصروف يتجاوز الرصيد'));
 }
+// contextual fix options for a flagged transaction. Each option = a suggested resolution
+// kind: 'edit' opens the editor; 'reverse'/'delete'/'reassign' are simulated operations the app can apply.
+type TxFix = { id: string; label: string; icon: string; desc: string; kind: 'edit' | 'delete' | 'reverse' | 'fixAmount' | 'reassign' };
+function txFixOptions(tx: Transaction, errs: TxWarning[]): TxFix[] {
+  const titles = errs.map(e => e.title);
+  const fixes: TxFix[] = [];
+  if (titles.includes('مبلغ سالب')) {
+    fixes.push({ id: 'abs', label: 'تصحيح المبلغ (جعله موجباً)', icon: '✏️', desc: `تحويل المبلغ من ${fmtNum(tx.amount)} إلى ${fmtNum(Math.abs(tx.amount))} ر.س مع إبقاء النوع كما هو.`, kind: 'fixAmount' });
+  }
+  if (titles.includes('المصروف يتجاوز الرصيد')) {
+    fixes.push({ id: 'edit-amt', label: 'تصحيح المبلغ', icon: '✏️', desc: 'فتح المحرّر لتعديل المبلغ ليتناسب مع السيولة المتاحة.', kind: 'edit' });
+    fixes.push({ id: 'reassign', label: 'تغيير المشروع / الإسناد', icon: '🔀', desc: 'نقل العملية لمشروع آخر لديه رصيد كافٍ.', kind: 'reassign' });
+  }
+  if (titles.includes('تحويل لنفس المشروع')) {
+    fixes.push({ id: 'edit-tr', label: 'تصحيح وجهة التحويل', icon: '✏️', desc: 'فتح المحرّر لاختيار مشروع وجهة مختلف عن المصدر.', kind: 'edit' });
+  }
+  // universal options
+  fixes.push({ id: 'reverse', label: 'إرجاع المبلغ (عملية عكسية)', icon: '↩️', desc: `إنشاء عملية عكسية بنفس المبلغ تُلغي الأثر المالي دون حذف السجل (للتدقيق).`, kind: 'reverse' });
+  fixes.push({ id: 'edit', label: 'تعديل العملية يدوياً', icon: '✎', desc: 'فتح محرّر العملية لتصحيح أي حقل.', kind: 'edit' });
+  fixes.push({ id: 'delete', label: 'إلغاء/حذف العملية', icon: '🗑️', desc: 'حذف العملية نهائياً من السجل (لا يُنصح إن كانت موثّقة).', kind: 'delete' });
+  return fixes;
+}
 // reusable inline issue badge: a ⚠️ chip that pops an explanation of the tx's accounting problems.
 // self-contained (own open state) so it can be dropped anywhere a transaction is listed.
-function TxIssueBadge({ tx, project, transactions, onEdit }: { tx: Transaction; project?: Project; transactions: Transaction[]; onEdit?: () => void }) {
+function TxIssueBadge({ tx, project, transactions, onEdit, onFix }: { tx: Transaction; project?: Project; transactions: Transaction[]; onEdit?: () => void; onFix?: () => void }) {
   const [open, setOpen] = useState(false);
   const errs = txErrors(tx, { project, transactions });
   if (errs.length === 0) return null;
@@ -2842,11 +2864,68 @@ function TxIssueBadge({ tx, project, transactions, onEdit }: { tx: Transaction; 
                 {w.fix && <div style={{ fontSize: 11.5, color: 'var(--danger-text)', lineHeight: 1.6, marginTop: 3 }}><b>الحل:</b> {w.fix}</div>}
               </div>
             ))}
-            {onEdit && <Btn size="sm" variant="outline" style={{ marginTop: 10, width: '100%' }} onClick={() => { setOpen(false); onEdit(); }}>✎ تعديل للتصحيح</Btn>}
+            {onFix && <Btn size="sm" style={{ marginTop: 10, width: '100%' }} onClick={() => { setOpen(false); onFix(); }}>🔧 معالجة بمساعدة الذكاء</Btn>}
+            {onEdit && <Btn size="sm" variant="outline" style={{ marginTop: 7, width: '100%' }} onClick={() => { setOpen(false); onEdit(); }}>✎ تعديل يدوي</Btn>}
           </div>
         </>
       )}
     </span>
+  );
+}
+
+// AI-assisted resolution sheet: lists contextual fix options for a flagged transaction and applies them.
+function TxFixSheet({ tx, project, transactions, projects, onClose, onEdit, onApply }: {
+  tx: Transaction; project?: Project; transactions: Transaction[]; projects: Project[];
+  onClose: () => void; onEdit: () => void;
+  onApply: (action: TxFix['kind'], payload?: { toProject?: string }) => void;
+}) {
+  const errs = txErrors(tx, { project, transactions });
+  const fixes = txFixOptions(tx, errs);
+  const [reassignTo, setReassignTo] = useState('');
+  const [picking, setPicking] = useState<string | null>(null);
+  const otherProjects = projects.filter(p => p.id !== tx.projectId);
+
+  return (
+    <Sheet open onClose={onClose} title="معالجة العملية بمساعدة الذكاء">
+      <div style={{ background: 'var(--purple-bg)', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <span style={{ fontSize: 16 }}>🤖</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--purple-text)' }}>تحليل المساعد الذكي</span>
+        </div>
+        <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.7 }}>
+          العملية «{tx.description}» ({fmtNum(tx.amount)} ر.س) بها {errs.length} مشكلة: {errs.map(e => e.title).join('، ')}.
+          <br />بناءً على السياق المحاسبي، إليك الحلول المقترحة مرتّبة من الأنسب:
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {fixes.map(f => (
+          <div key={f.id} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 5 }}>
+              <span style={{ fontSize: 17 }}>{f.icon}</span>
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{f.label}</span>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.6, marginBottom: 10 }}>{f.desc}</div>
+            {f.kind === 'reassign' ? (
+              picking === f.id ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <Select value={reassignTo} onChange={setReassignTo} options={[{ v: '', l: 'اختر المشروع الجديد…' }, ...otherProjects.map(p => ({ v: p.id, l: p.name }))]} />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Btn size="sm" variant="outline" style={{ flex: 1 }} onClick={() => setPicking(null)}>رجوع</Btn>
+                    <Btn size="sm" style={{ flex: 1 }} disabled={!reassignTo} onClick={() => onApply('reassign', { toProject: reassignTo })}>تأكيد النقل</Btn>
+                  </div>
+                </div>
+              ) : (
+                <Btn size="sm" variant="outline" onClick={() => setPicking(f.id)}>اختيار هذا الحل</Btn>
+              )
+            ) : (
+              <Btn size="sm" variant={f.kind === 'delete' ? 'outline' : 'primary'} onClick={() => { if (f.kind === 'edit') onEdit(); else onApply(f.kind); }}>تطبيق هذا الحل</Btn>
+            )}
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 14, textAlign: 'center' }}>💡 كل حل يوضّح أثره قبل التطبيق. يمكنك التراجع بإغلاق النافذة.</div>
+    </Sheet>
   );
 }
 
@@ -2944,10 +3023,10 @@ function TxForm({ initial, projectId, projects, onSave, onCancel, txCategories =
   );
 }
 
-function Finance({ projectId, projects, transactions, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate, onNav, txCategories = DEFAULT_TX_CATEGORIES, helpEntry }: {
+function Finance({ projectId, projects, transactions, onSave, onDelete, openCreate, onOpenCreate, onCloseCreate, onNav, txCategories = DEFAULT_TX_CATEGORIES, helpEntry, onFixTx }: {
   projectId: string; projects: Project[]; transactions: Transaction[];
   onSave: (t: Omit<Transaction, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
-  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; onNav: (p: Page) => void; txCategories?: string[]; helpEntry?: HelpEntry;
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; onNav: (p: Page) => void; txCategories?: string[]; helpEntry?: HelpEntry; onFixTx?: (t: Transaction) => void;
 }) {
   const [tab, setTab] = useState<'all' | TxType>('all');
   const [search, setSearch] = useState('');
@@ -3099,7 +3178,10 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
                           <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6 }}>{w.detail}</div>
                           {w.consequence && <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6, marginTop: 4 }}><b>ماذا يترتب:</b> {w.consequence}</div>}
                           {w.fix && <div style={{ fontSize: 12, color: 'var(--danger-text)', lineHeight: 1.6, marginTop: 4 }}><b>الحل:</b> {w.fix}</div>}
-                          <Btn size="sm" variant="outline" style={{ marginTop: 8 }} onClick={(e?: any) => { e?.stopPropagation?.(); setSheet({ mode: 'edit', tx: t }); setErrTx(null); }}>✎ تعديل العملية للتصحيح</Btn>
+                          <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                            {onFixTx && <Btn size="sm" onClick={(e?: any) => { e?.stopPropagation?.(); onFixTx(t); setErrTx(null); }}>🔧 معالجة بمساعدة الذكاء</Btn>}
+                            <Btn size="sm" variant="outline" onClick={(e?: any) => { e?.stopPropagation?.(); setSheet({ mode: 'edit', tx: t }); setErrTx(null); }}>✎ تعديل يدوي</Btn>
+                          </div>
                         </div>
                       ))}
                     </td>
@@ -6256,7 +6338,8 @@ const AI_PAGE_INFO: Partial<Record<Page, { label: string; prompts: string[] }>> 
 function fmtN(n: number) { return new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 0 }).format(Math.round(n)); }
 
 // generate a context-aware textual answer from the user's query + the data on the current page
-function aiRespond(query: string, ctx: AICtx): string {
+type AIReply = { text: string; link?: { label: string; page: Page; itemId?: string; projId?: string } };
+function aiRespond(query: string, ctx: AICtx): AIReply {
   const q = query.trim();
   const proj = ctx.projects.find(p => p.id === ctx.projectId);
   const projTx = ctx.transactions.filter(t => t.projectId === ctx.projectId);
@@ -6272,51 +6355,51 @@ function aiRespond(query: string, ctx: AICtx): string {
   // ── financial summary ──
   if (has('ملخّص', 'ملخص', 'وضعي', 'وضع المالي', 'الوضع المالي')) {
     const totalBal = ctx.projects.reduce((s, p) => s + computeBalance(p, ctx.transactions), 0);
-    return `إجمالي أرصدة مشاريعك ${fmtN(totalBal)} ر.س عبر ${ctx.projects.length} مشاريع.\nفي «${proj?.name ?? '—'}»: الإيرادات ${fmtN(income)} والمصروفات ${fmtN(expense)} ر.س (الصافي ${fmtN(income - expense)}).${badTx.length ? `\n⚠️ انتبه: لديك ${badTx.length} عملية تحتاج مراجعة محاسبية.` : ''}`;
+    return { text: `إجمالي أرصدة مشاريعك ${fmtN(totalBal)} ر.س عبر ${ctx.projects.length} مشاريع.\nفي «${proj?.name ?? '—'}»: الإيرادات ${fmtN(income)} والمصروفات ${fmtN(expense)} ر.س (الصافي ${fmtN(income - expense)}).${badTx.length ? `\n⚠️ انتبه: لديك ${badTx.length} عملية تحتاج مراجعة محاسبية.` : ''}`, link: badTx.length ? { label: 'مراجعة العمليات', page: 'finance', itemId: badTx[0].id, projId: badTx[0].projectId } : { label: 'فتح التقارير', page: 'reports' } };
   }
   // ── expenses analysis ──
   if (has('مصروف', 'المصروفات', 'الصرف', 'صرف', 'ارتفع')) {
     const byCat: Record<string, number> = {};
     projTx.filter(t => t.type === 'expense').forEach(t => { byCat[t.category] = (byCat[t.category] ?? 0) + t.amount; });
     const top = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 3);
-    if (top.length === 0) return `لا توجد مصروفات مسجّلة في «${proj?.name ?? 'هذا المشروع'}» بعد.`;
-    return `أكبر بنود الصرف في «${proj?.name}»:\n${top.map(([c, v], i) => `${i + 1}. ${c}: ${fmtN(v)} ر.س`).join('\n')}\nإجمالي المصروفات ${fmtN(expense)} ر.س.${top[0][1] > expense * 0.5 ? `\n💡 بند «${top[0][0]}» وحده يمثّل أكثر من نصف مصروفاتك — راجعه لفرص التوفير.` : ''}`;
+    if (top.length === 0) return { text: `لا توجد مصروفات مسجّلة في «${proj?.name ?? 'هذا المشروع'}» بعد.` };
+    return { text: `أكبر بنود الصرف في «${proj?.name}»:\n${top.map(([c, v], i) => `${i + 1}. ${c}: ${fmtN(v)} ر.س`).join('\n')}\nإجمالي المصروفات ${fmtN(expense)} ر.س.${top[0][1] > expense * 0.5 ? `\n💡 بند «${top[0][0]}» وحده يمثّل أكثر من نصف مصروفاتك — راجعه لفرص التوفير.` : ''}`, link: { label: 'فتح الإدارة المالية', page: 'finance' } };
   }
   // ── erroneous transactions ──
   if (has('خطأ', 'خاطئة', 'خاطئ', 'مشكلة', 'غير صحيح')) {
-    if (badTx.length === 0) return '✅ لا توجد عمليات خاطئة محاسبياً حالياً. كل العمليات سليمة.';
-    return `رصدت ${badTx.length} عملية تحتاج مراجعة:\n${badTx.slice(0, 4).map(t => `• ${t.description} (${fmtN(t.amount)} ر.س)`).join('\n')}\n💡 افتح الإدارة المالية — ستجدها مميّزة بالأحمر مع شرح المشكلة عند الضغط على ⚠️.`;
+    if (badTx.length === 0) return { text: '✅ لا توجد عمليات خاطئة محاسبياً حالياً. كل العمليات سليمة.' };
+    return { text: `رصدت ${badTx.length} عملية تحتاج مراجعة:\n${badTx.slice(0, 4).map(t => `• ${t.description} (${fmtN(t.amount)} ر.س)`).join('\n')}\n💡 افتح الإدارة المالية — ستجدها مميّزة بالأحمر مع زر «معالجة» عند الضغط على ⚠️.`, link: { label: 'الذهاب للعملية', page: 'finance', itemId: badTx[0].id, projId: badTx[0].projectId } };
   }
   // ── trackings / expiring ──
   if (has('ينتهي', 'انتهاء', 'يوشك', 'ضمان', 'تجديد', 'منتهي')) {
     const soon = ctx.trackings.filter(t => t.status === 'expiring' || t.status === 'expired');
-    if (soon.length === 0) return 'لا توجد متابعات أو ضمانات قريبة الانتهاء حالياً. كل شيء ضمن المدة.';
-    return `${soon.length} عنصر يحتاج انتباهك:\n${soon.slice(0, 5).map(t => `• ${t.name} — ${t.status === 'expired' ? 'منتهٍ' : `خلال ${t.daysLeft} يوم`}`).join('\n')}\n💡 راجعها في قسم المتابعات والضمانات وجدّد ما يلزم.`;
+    if (soon.length === 0) return { text: 'لا توجد متابعات أو ضمانات قريبة الانتهاء حالياً. كل شيء ضمن المدة.' };
+    return { text: `${soon.length} عنصر يحتاج انتباهك:\n${soon.slice(0, 5).map(t => `• ${t.name} — ${t.status === 'expired' ? 'منتهٍ' : `خلال ${t.daysLeft} يوم`}`).join('\n')}\n💡 راجعها في قسم المتابعات والضمانات وجدّد ما يلزم.`, link: { label: 'الذهاب للمتابعات', page: 'trackings', itemId: soon[0].id, projId: soon[0].projectId } };
   }
   // ── assets / maintenance ──
   if (has('أصول', 'أصل', 'صيانة', 'سيارة', 'معدات')) {
     const totalVal = ctx.assets.reduce((s, a) => s + a.purchaseValue, 0);
     const needMaint = ctx.assets.filter(a => a.status === 'maintenance');
-    return `لديك ${ctx.assets.length} أصل بقيمة شراء إجمالية ${fmtN(totalVal)} ر.س.${needMaint.length ? `\n🔧 ${needMaint.length} أصل في حالة صيانة: ${needMaint.map(a => a.name).join('، ')}.` : '\n✅ كل الأصول في حالة تشغيل جيدة.'}`;
+    return { text: `لديك ${ctx.assets.length} أصل بقيمة شراء إجمالية ${fmtN(totalVal)} ر.س.${needMaint.length ? `\n🔧 ${needMaint.length} أصل في حالة صيانة: ${needMaint.map(a => a.name).join('، ')}.` : '\n✅ كل الأصول في حالة تشغيل جيدة.'}`, link: { label: 'فتح الأصول', page: 'assets' } };
   }
   // ── receivables ──
   if (has('ذمم', 'ذمة', 'مستحق', 'لي', 'عليّ', 'علي ')) {
     const recv = ctx.receivables.filter(r => r.kind === 'receivable').reduce((s, r) => s + (r.amount - recvPaid(r)), 0);
     const pay = ctx.receivables.filter(r => r.kind === 'payable').reduce((s, r) => s + (r.amount - recvPaid(r)), 0);
-    return `الذمم المستحقة لك (لك): ${fmtN(recv)} ر.س.\nالذمم المستحقة عليك (عليك): ${fmtN(pay)} ر.س.\nالصافي: ${fmtN(recv - pay)} ر.س.${recv > pay ? '\n💡 وضعك إيجابي — لك أكثر مما عليك.' : ''}`;
+    return { text: `الذمم المستحقة لك (لك): ${fmtN(recv)} ر.س.\nالذمم المستحقة عليك (عليك): ${fmtN(pay)} ر.س.\nالصافي: ${fmtN(recv - pay)} ر.س.${recv > pay ? '\n💡 وضعك إيجابي — لك أكثر مما عليك.' : ''}`, link: { label: 'فتح الذمم', page: 'receivables' } };
   }
   // ── commitments ──
   if (has('التزام', 'أقساط', 'قسط', 'اشتراك')) {
     const active = ctx.commitments.filter(c => c.active);
     const monthly = active.reduce((s, c) => s + c.amount, 0);
-    return `لديك ${active.length} التزام نشط بإجمالي تقريبي ${fmtN(monthly)} ر.س لكل دورة.\n💡 راجع قسم الالتزامات لرؤية تواريخ الاستحقاق القادمة.`;
+    return { text: `لديك ${active.length} التزام نشط بإجمالي تقريبي ${fmtN(monthly)} ر.س لكل دورة.\n💡 راجع قسم الالتزامات لرؤية تواريخ الاستحقاق القادمة.`, link: { label: 'فتح الالتزامات', page: 'commitments' } };
   }
   // ── requests ──
   if (has('طلب', 'طلبات', 'موافق', 'معلّق', 'معلق')) {
     const pending = ctx.requests.filter(r => r.status === 'pending');
     const sum = pending.reduce((s, r) => s + r.amount, 0);
-    if (pending.length === 0) return 'لا توجد طلبات معلّقة بانتظار موافقتك حالياً.';
-    return `${pending.length} طلب معلّق بإجمالي ${fmtN(sum)} ر.س:\n${pending.slice(0, 4).map(r => `• ${r.title} — ${fmtN(r.amount)} ر.س (${r.requestedBy})`).join('\n')}`;
+    if (pending.length === 0) return { text: 'لا توجد طلبات معلّقة بانتظار موافقتك حالياً.' };
+    return { text: `${pending.length} طلب معلّق بإجمالي ${fmtN(sum)} ر.س:\n${pending.slice(0, 4).map(r => `• ${r.title} — ${fmtN(r.amount)} ر.س (${r.requestedBy})`).join('\n')}`, link: { label: 'فتح الطلبات', page: 'requests' } };
   }
   // ── which project needs attention ──
   if (has('انتباه', 'مشروع يحتاج', 'أي مشروع', 'انتباهي')) {
@@ -6325,23 +6408,24 @@ function aiRespond(query: string, ctx: AICtx): string {
       const bad = ctx.transactions.filter(t => t.projectId === p.id && txErrors(t, { project: p, transactions: ctx.transactions }).length > 0).length;
       return { p, bal, bad };
     }).filter(x => x.bal < 0 || x.bad > 0);
-    if (flagged.length === 0) return '✅ كل مشاريعك بحالة جيدة — لا أرصدة سالبة ولا عمليات خاطئة.';
-    return `مشاريع تحتاج انتباهك:\n${flagged.map(x => `• ${x.p.name}: ${x.bal < 0 ? `رصيد سالب (${fmtN(x.bal)})` : ''}${x.bad ? `${x.bal < 0 ? ' و' : ''}${x.bad} عملية خاطئة` : ''}`).join('\n')}`;
+    if (flagged.length === 0) return { text: '✅ كل مشاريعك بحالة جيدة — لا أرصدة سالبة ولا عمليات خاطئة.' };
+    return { text: `مشاريع تحتاج انتباهك:\n${flagged.map(x => `• ${x.p.name}: ${x.bal < 0 ? `رصيد سالب (${fmtN(x.bal)})` : ''}${x.bad ? `${x.bal < 0 ? ' و' : ''}${x.bad} عملية خاطئة` : ''}`).join('\n')}`, link: { label: `فتح ${flagged[0].p.name}`, page: 'finance', projId: flagged[0].p.id } };
   }
   // ── alerts / notifications ──
   if (has('تنبيه', 'تنبيهات', 'إشعار')) {
     const expiring = ctx.trackings.filter(t => t.status === 'expiring' || t.status === 'expired').length;
-    return `أبرز ما يحتاج انتباهك الآن:\n${expiring ? `• ${expiring} متابعة/ضمان قريب الانتهاء\n` : ''}${badTx.length ? `• ${badTx.length} عملية تحتاج مراجعة محاسبية\n` : ''}${ctx.requests.filter(r => r.status === 'pending').length ? `• ${ctx.requests.filter(r => r.status === 'pending').length} طلب بانتظار موافقتك` : ''}`.trim() || '✅ لا تنبيهات عاجلة — كل شيء تحت السيطرة.';
+    const txt = `أبرز ما يحتاج انتباهك الآن:\n${expiring ? `• ${expiring} متابعة/ضمان قريب الانتهاء\n` : ''}${badTx.length ? `• ${badTx.length} عملية تحتاج مراجعة محاسبية\n` : ''}${ctx.requests.filter(r => r.status === 'pending').length ? `• ${ctx.requests.filter(r => r.status === 'pending').length} طلب بانتظار موافقتك` : ''}`.trim();
+    return { text: txt || '✅ لا تنبيهات عاجلة — كل شيء تحت السيطرة.', link: { label: 'فتح الإشعارات', page: 'notifications' } };
   }
 
   // ── fallback: page-aware generic help ──
   const info = AI_PAGE_INFO[ctx.page];
-  return `أنا مساعدك الذكي في موازين، وأرى أنك في «${info?.label ?? 'النظام'}».\nيمكنني مساعدتك في تحليل بياناتك، تفسير الأرقام، واقتراح الإجراءات. جرّب أن تسألني:\n${(info?.prompts ?? ['ما ملخّص وضعي المالي؟']).map(p => `• ${p}`).join('\n')}`;
+  return { text: `أنا مساعدك الذكي في موازين، وأرى أنك في «${info?.label ?? 'النظام'}».\nيمكنني مساعدتك في تحليل بياناتك، تفسير الأرقام، واقتراح الإجراءات. جرّب أن تسألني:\n${(info?.prompts ?? ['ما ملخّص وضعي المالي؟']).map(p => `• ${p}`).join('\n')}` };
 }
 
-function AIAssistant({ ctx, onClose }: { ctx: AICtx; onClose: () => void }) {
+function AIAssistant({ ctx, onClose, onNavigate }: { ctx: AICtx; onClose: () => void; onNavigate: (p: Page, itemId?: string, projId?: string) => void }) {
   const info = AI_PAGE_INFO[ctx.page];
-  const [msgs, setMsgs] = useState<{ role: 'user' | 'ai'; text: string }[]>([
+  const [msgs, setMsgs] = useState<{ role: 'user' | 'ai'; text: string; link?: AIReply['link'] }[]>([
     { role: 'ai', text: `مرحباً! أنا مساعد موازين الذكي 🤖\nأنت الآن في «${info?.label ?? 'النظام'}». كيف أساعدك؟` },
   ]);
   const [input, setInput] = useState('');
@@ -6355,7 +6439,8 @@ function AIAssistant({ ctx, onClose }: { ctx: AICtx; onClose: () => void }) {
     setInput('');
     setTyping(true);
     setTimeout(() => {
-      setMsgs(m => [...m, { role: 'ai', text: aiRespond(q, ctx) }]);
+      const reply = aiRespond(q, ctx);
+      setMsgs(m => [...m, { role: 'ai', text: reply.text, link: reply.link }]);
       setTyping(false);
     }, 600);
   };
@@ -6378,8 +6463,11 @@ function AIAssistant({ ctx, onClose }: { ctx: AICtx; onClose: () => void }) {
         {/* messages */}
         <div ref={bodyRef} style={{ flex: 1, overflowY: 'auto', padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {msgs.map((m, i) => (
-            <div key={i} style={{ alignSelf: m.role === 'user' ? 'flex-start' : 'flex-end', maxWidth: '85%' }}>
+            <div key={i} style={{ alignSelf: m.role === 'user' ? 'flex-start' : 'flex-end', maxWidth: '85%', display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-start' : 'flex-end', gap: 6 }}>
               <div style={{ background: m.role === 'user' ? '#2563eb' : 'var(--surface-2)', color: m.role === 'user' ? '#fff' : 'var(--text)', padding: '10px 14px', borderRadius: m.role === 'user' ? '14px 14px 14px 4px' : '14px 14px 4px 14px', fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-line' }}>{m.text}</div>
+              {m.link && (
+                <button onClick={() => { onNavigate(m.link!.page, m.link!.itemId, m.link!.projId); onClose(); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--info-bg)', color: 'var(--info-text)', border: '1px solid var(--border)', borderRadius: 99, padding: '6px 13px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>↗ {m.link.label}</button>
+              )}
             </div>
           ))}
           {typing && <div style={{ alignSelf: 'flex-end', background: 'var(--surface-2)', padding: '10px 16px', borderRadius: 14, fontSize: 13, color: 'var(--text-3)' }}>يكتب…</div>}
@@ -7033,6 +7121,8 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = usePersist<boolean>('mz_sidebar_projects_open', false);
   const [fabSheet, setFabSheet] = useState(false);
+  const [fixTx, setFixTx] = useState<Transaction | null>(null);
+  const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [theme, setTheme] = usePersist<'light' | 'dark'>('mz_theme', 'light');
@@ -7138,6 +7228,29 @@ export default function App() {
     if (tx?.linkId) return list.filter(x => x.linkId !== tx.linkId); // delete both sides of a transfer
     return list.filter(x => x.id !== id);
   });
+  // apply an AI-suggested fix to a flagged transaction
+  const applyTxFix = (tx: Transaction, action: TxFix['kind'], payload?: { toProject?: string }) => {
+    if (action === 'delete') { deleteTx(tx.id); }
+    else if (action === 'fixAmount') {
+      setTransactions(list => list.map(x => x.id === tx.id ? { ...x, amount: Math.abs(x.amount) } : x));
+      logAudit('تصحيح', 'عملية مالية', `تصحيح مبلغ ${tx.description}`);
+    }
+    else if (action === 'reassign' && payload?.toProject) {
+      setTransactions(list => list.map(x => x.id === tx.id ? { ...x, projectId: payload.toProject! } : x));
+      logAudit('إعادة إسناد', 'عملية مالية', `نقل ${tx.description} لمشروع آخر`);
+    }
+    else if (action === 'reverse') {
+      const rev: Transaction = {
+        ...tx, id: uid('t'),
+        type: tx.type === 'income' ? 'expense' : tx.type === 'expense' ? 'income' : tx.type,
+        amount: Math.abs(tx.amount), description: `عكس: ${tx.description}`,
+        date: today(), linkId: undefined, createdBy: CURRENT_USER,
+      };
+      setTransactions(list => [rev, ...list]);
+      logAudit('إرجاع', 'عملية مالية', `عملية عكسية لـ ${tx.description}`);
+    }
+    setFixTx(null);
+  };
 
   const saveTracking = (t: Omit<Tracking, 'id'> & { id?: string }) => {
     logAudit(t.id ? 'تعديل' : 'إنشاء', 'متابعة', t.name);
@@ -7294,7 +7407,7 @@ export default function App() {
       case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} openCreate={createProject} onCloseCreate={() => setCreateProject(false)} prefs={prefs} projectTypes={lists.projectTypes} helpEntry={help.projects} />;
       case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} onQuickAction={fabAction} prefs={prefs} highlightId={highlightId} />;
       case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} receivables={receivables} commitments={commitments} requests={requests} onBack={goBack} onNav={setPage} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
-      case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} txCategories={lists.txCategories} helpEntry={help.finance} />;
+      case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} txCategories={lists.txCategories} helpEntry={help.finance} onFixTx={(t) => setFixTx(t)} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} helpEntry={help.ledger} onNavigate={navigateTo} />;
       case 'reports': return <Reports projects={projects} transactions={transactions} receivables={receivables} commitments={commitments} trackings={trackings} requests={requests} members={members} />;
       case 'receivables': return <Receivables projectId={projectId} projects={projects} receivables={receivables} members={members} onSave={saveReceivable} onPay={payReceivable} onDelete={deleteReceivable} openCreate={createReceivable} onOpenCreate={() => setCreateReceivable(true)} onCloseCreate={() => setCreateReceivable(false)} helpEntry={help.receivables} />;
@@ -7372,7 +7485,13 @@ export default function App() {
 
         {/* AI assistant: floating button + context-aware chat */}
         <button onClick={() => setAiOpen(true)} title="المساعد الذكي" style={{ position: 'fixed', bottom: isMobile ? 80 : 24, right: 24, zIndex: 850, width: 54, height: 54, borderRadius: 99, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#7c3aed,#2563eb)', color: '#fff', fontSize: 24, boxShadow: '0 6px 24px rgba(124,58,237,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🤖</button>
-        {aiOpen && <AIAssistant ctx={{ page, projectId, projects, transactions, trackings, assets, receivables, commitments, members, memberTxns, requests, documents }} onClose={() => setAiOpen(false)} />}
+        {aiOpen && <AIAssistant ctx={{ page, projectId, projects, transactions, trackings, assets, receivables, commitments, members, memberTxns, requests, documents }} onClose={() => setAiOpen(false)} onNavigate={navigateTo} />}
+
+        {/* AI-assisted fix flow for flagged transactions */}
+        {fixTx && <TxFixSheet tx={fixTx} project={projects.find(p => p.id === fixTx.projectId)} transactions={transactions} projects={projects} onClose={() => setFixTx(null)} onEdit={() => { setEditTx(fixTx); setFixTx(null); }} onApply={(action, payload) => applyTxFix(fixTx, action, payload)} />}
+        <Sheet open={!!editTx} onClose={() => setEditTx(null)} title="تعديل العملية">
+          {editTx && <TxForm key={editTx.id} initial={editTx} projectId={editTx.projectId} projects={projects} txCategories={lists.txCategories} allTransactions={transactions} onSave={(t) => { saveTx(t); setEditTx(null); }} onCancel={() => setEditTx(null)} />}
+        </Sheet>
 
         {/* global quick-create: navigates only on save, cancel stays put */}
         <Sheet open={quickCreate === 'tx'} onClose={() => setQuickCreate(null)} title="عملية مالية جديدة">
