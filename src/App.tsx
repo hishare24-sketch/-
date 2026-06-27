@@ -4442,7 +4442,7 @@ function Notifications({ notifs, projects, members, onMarkRead, onMarkAll, onNav
 // ═══════════════════════════════════════════
 //  CUSTOMIZE (لوحة القوائم المخصّصة)
 // ═══════════════════════════════════════════
-function Customize({ lists, onChange, help, onHelpChange, healthData, onNav, onNavigate }: { lists: CustomLists; onChange: (l: CustomLists) => void; help: HelpTexts; onHelpChange: (h: HelpTexts) => void; healthData: Parameters<typeof runHealthCheck>[0]; onNav: (p: Page) => void; onNavigate: (p: Page, itemId?: string, projId?: string) => void }) {
+function Customize({ lists, onChange, help, onHelpChange, healthData, onNav, onNavigate, documents = [] }: { lists: CustomLists; onChange: (l: CustomLists) => void; help: HelpTexts; onHelpChange: (h: HelpTexts) => void; healthData: Parameters<typeof runHealthCheck>[0]; onNav: (p: Page) => void; onNavigate: (p: Page, itemId?: string, projId?: string) => void; documents?: DocItem[] }) {
   const sections: { key: keyof CustomLists; title: string; icon: string; desc: string; placeholder: string }[] = [
     { key: 'txCategories', title: 'التصنيفات المالية', icon: '🏷️', desc: 'تصنيفات الإيرادات والمصروفات في الإدارة المالية', placeholder: 'مثال: تبرعات' },
     { key: 'projectTypes', title: 'أنواع المشاريع', icon: '⬡', desc: 'الأنواع المتاحة عند إنشاء مشروع جديد', placeholder: 'مثال: عيادة' },
@@ -4450,6 +4450,28 @@ function Customize({ lists, onChange, help, onHelpChange, healthData, onNav, onN
     { key: 'partyTypes', title: 'فئات الأطراف (الذمم)', icon: '⇄', desc: 'فئات تصنيف أطراف الذمم (للتنظيم)', placeholder: 'مثال: مقاول' },
   ];
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [delTarget, setDelTarget] = useState<null | { key: keyof CustomLists; item: string }>(null);
+
+  // is this value a built-in (system) category? built-ins can't be deleted/edited.
+  const isSystem = (key: keyof CustomLists, item: string) => DEFAULT_LISTS[key].includes(item);
+
+  // count how many records currently use a given category value (to guard deletion)
+  const usageOf = (key: keyof CustomLists, item: string): { active: number; total: number } => {
+    let total = 0, active = 0;
+    if (key === 'txCategories') {
+      const used = healthData.transactions.filter(t => t.category === item);
+      total = used.length; active = used.length; // all transactions are considered active records
+    } else if (key === 'projectTypes') {
+      const used = healthData.projects.filter(p => p.type === item);
+      total = used.length; active = used.length;
+    } else if (key === 'docTypes') {
+      const used = documents.filter(d => d.type === item);
+      total = used.length; active = used.length;
+    } else if (key === 'partyTypes') {
+      total = 0; active = 0; // party types are organizational labels, not hard-linked
+    }
+    return { active, total };
+  };
 
   const addItem = (key: keyof CustomLists) => {
     const val = (drafts[key] ?? '').trim();
@@ -4457,11 +4479,14 @@ function Customize({ lists, onChange, help, onHelpChange, healthData, onNav, onN
     onChange({ ...lists, [key]: [...lists[key], val] });
     setDrafts(d => ({ ...d, [key]: '' }));
   };
-  const removeItem = (key: keyof CustomLists, item: string) => {
+  const confirmDelete = (key: keyof CustomLists, item: string) => {
     onChange({ ...lists, [key]: lists[key].filter(x => x !== item) });
+    setDelTarget(null);
   };
-  const resetSection = (key: keyof CustomLists) => {
-    onChange({ ...lists, [key]: DEFAULT_LISTS[key] });
+  const requestDelete = (key: keyof CustomLists, item: string) => {
+    const u = usageOf(key, item);
+    if (u.active > 0) { setDelTarget({ key, item }); }  // has active links → confirm dialog
+    else confirmDelete(key, item);                       // no links → delete immediately
   };
 
   return (
@@ -4470,49 +4495,91 @@ function Customize({ lists, onChange, help, onHelpChange, healthData, onNav, onN
 
       <HealthCheck data={healthData} onNavigate={onNavigate} />
 
-      <Card style={{ marginBottom: 16, background: 'var(--info-bg)', border: '1px solid #bfdbfe' }}>
+      <Card style={{ marginBottom: 16, background: 'var(--info-bg)', border: '1px solid var(--border)' }}>
         <div style={{ fontSize: 13, color: 'var(--info-text)', lineHeight: 1.8 }}>
-          ℹ️ العناصر التي تضيفها هنا تظهر مباشرةً في قوائم الاختيار عبر النظام — عند إنشاء عملية مالية، مشروع، مستند، أو ذمة. حذف عنصر لا يؤثر على البيانات القديمة المرتبطة به.
+          ℹ️ تنقسم كل قائمة إلى <b>تصنيفات النظام</b> (أساسية وثابتة، لا يمكن حذفها) و<b>تصنيفاتك</b> (تضيفها وتحذفها). لا يمكن حذف تصنيف مرتبط بعمليات نشطة قبل مراجعتها.
         </div>
       </Card>
 
-      {sections.map(s => (
-        <Card key={s.key} style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {sections.map(s => {
+        const systemItems = lists[s.key].filter(i => isSystem(s.key, i));
+        const userItems = lists[s.key].filter(i => !isSystem(s.key, i));
+        return (
+          <Card key={s.key} style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
               <span style={{ fontSize: 20 }}>{s.icon}</span>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{s.title}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{s.desc}</div>
               </div>
             </div>
-            <button onClick={() => resetSection(s.key)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px', fontSize: 11.5, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>استعادة الافتراضي</button>
-          </div>
 
-          {/* chips */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '14px 0' }}>
-            {lists[s.key].length === 0 && <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>لا توجد عناصر — أضف واحداً بالأسفل.</span>}
-            {lists[s.key].map(item => (
-              <span key={item} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--surface-3)', borderRadius: 99, padding: '5px 8px 5px 12px', fontSize: 12.5, color: 'var(--text-2)' }}>
-                {item}
-                <button onClick={() => removeItem(s.key, item)} style={{ background: 'var(--surface)', border: 'none', borderRadius: 99, width: 18, height: 18, cursor: 'pointer', fontSize: 11, color: 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-              </span>
-            ))}
-          </div>
+            {/* system categories (locked) */}
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', marginBottom: 8 }}>🔒 تصنيفات النظام (ثابتة)</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              {systemItems.length === 0 && <span style={{ fontSize: 12, color: 'var(--text-3)' }}>لا يوجد.</span>}
+              {systemItems.map(item => (
+                <span key={item} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--surface-3)', borderRadius: 99, padding: '5px 12px', fontSize: 12.5, color: 'var(--text-2)' }}>
+                  <span style={{ fontSize: 10, opacity: .6 }}>🔒</span>{item}
+                </span>
+              ))}
+            </div>
 
-          {/* add */}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
-              value={drafts[s.key] ?? ''}
-              onChange={e => setDrafts(d => ({ ...d, [s.key]: e.target.value }))}
-              onKeyDown={e => { if (e.key === 'Enter') addItem(s.key); }}
-              placeholder={s.placeholder}
-              style={{ flex: 1, padding: '9px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, background: 'var(--surface)', color: 'var(--text)' }}
-            />
-            <Btn size="sm" onClick={() => addItem(s.key)}>+ إضافة</Btn>
-          </div>
-        </Card>
-      ))}
+            {/* user categories (deletable) */}
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', marginBottom: 8 }}>✎ تصنيفاتي (قابلة للحذف)</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+              {userItems.length === 0 && <span style={{ fontSize: 12, color: 'var(--text-3)' }}>لم تُضِف تصنيفات بعد.</span>}
+              {userItems.map(item => {
+                const u = usageOf(s.key, item);
+                return (
+                  <span key={item} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'var(--purple-bg)', borderRadius: 99, padding: '5px 8px 5px 12px', fontSize: 12.5, color: 'var(--purple-text)' }}>
+                    {item}
+                    {u.total > 0 && <span style={{ fontSize: 10, background: 'var(--surface)', borderRadius: 99, padding: '1px 6px', color: 'var(--text-3)' }}>{u.total}</span>}
+                    <button onClick={() => requestDelete(s.key, item)} title="حذف" style={{ background: 'var(--surface)', border: 'none', borderRadius: 99, width: 20, height: 20, cursor: 'pointer', fontSize: 11, color: 'var(--danger-text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑️</button>
+                  </span>
+                );
+              })}
+            </div>
+
+            {/* add */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                value={drafts[s.key] ?? ''}
+                onChange={e => setDrafts(d => ({ ...d, [s.key]: e.target.value }))}
+                onKeyDown={e => { if (e.key === 'Enter') addItem(s.key); }}
+                placeholder={s.placeholder}
+                style={{ flex: 1, padding: '9px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, background: 'var(--surface)', color: 'var(--text)' }}
+              />
+              <Btn size="sm" onClick={() => addItem(s.key)}>+ إضافة</Btn>
+            </div>
+          </Card>
+        );
+      })}
+
+      {/* delete confirmation dialog (when category is linked to active records) */}
+      <Sheet open={!!delTarget} onClose={() => setDelTarget(null)} title="تأكيد حذف التصنيف">
+        {delTarget && (() => {
+          const u = usageOf(delTarget.key, delTarget.item);
+          const navPage: Page = delTarget.key === 'txCategories' ? 'finance' : delTarget.key === 'projectTypes' ? 'projects' : delTarget.key === 'docTypes' ? 'documents' : 'receivables';
+          return (
+            <div>
+              <div style={{ background: 'var(--warn-bg)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--warn-text)', marginBottom: 6 }}>⚠️ التصنيف «{delTarget.item}» مرتبط ببيانات</div>
+                <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7 }}>
+                  يوجد <b>{u.total}</b> عنصر مرتبط بهذا التصنيف. حذفه لن يحذف هذه العناصر، لكنها ستبقى بتصنيف غير معرّف.
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Btn variant="outline" onClick={() => { setDelTarget(null); onNavigate(navPage); }}>↗ استعراض العناصر المرتبطة</Btn>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <Btn variant="outline" style={{ flex: 1 }} onClick={() => setDelTarget(null)}>إلغاء</Btn>
+                  <Btn style={{ flex: 1, background: 'var(--danger-text)' }} onClick={() => confirmDelete(delTarget.key, delTarget.item)}>تأكيد الحذف</Btn>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </Sheet>
 
       {/* ── help texts management (شرح الأقسام) ── */}
       <div style={{ marginTop: 32, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -7418,7 +7485,7 @@ export default function App() {
       case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} helpEntry={help.requests} />;
       case 'notifications': return <Notifications notifs={notifs} projects={projects} members={members} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} onNavigate={navigateTo} />;
       case 'audit': return <AuditLog audit={audit} onNav={setPage} />;
-      case 'customize': return <Customize lists={lists} onChange={setLists} help={help} onHelpChange={setHelp} healthData={{ projects, transactions, receivables, commitments, assets, members, memberTxns }} onNav={setPage} onNavigate={navigateTo} />;
+      case 'customize': return <Customize lists={lists} onChange={setLists} help={help} onHelpChange={setHelp} healthData={{ projects, transactions, receivables, commitments, assets, members, memberTxns }} onNav={setPage} onNavigate={navigateTo} documents={documents} />;
       case 'integrations': return <Integrations onBack={() => setPage('settings')} />;
       case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => { logAudit('تسجيل خروج', 'النظام', 'تم تسجيل الخروج'); setAuthed(false); }} prefs={prefs} onPrefs={setPrefs} />;
       case 'subscription': return <Subscription current={plan} onChoose={setPlan} />;
