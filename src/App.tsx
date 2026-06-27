@@ -213,6 +213,8 @@ const INITIAL_PROJECTS: Project[] = [
 const INITIAL_TRANSACTIONS: Transaction[] = [
   // شركة النخيل
   { id: 't1', projectId: 'p1', type: 'income', description: 'إيراد مبيعات يونيو', amount: 48000, category: 'مبيعات', date: '2025-06-18', hasDoc: true, source: 'عميل: مجموعة الرواد', createdBy: 'محمد العمري' },
+  { id: 'tErr1', projectId: 'p1', type: 'expense', description: 'فاتورة صيانة (مبلغ سالب بالخطأ)', amount: -3500, category: 'صيانة', date: '2025-06-20', hasDoc: false, source: 'ورشة الأمانة', createdBy: 'محمد العمري' },
+  { id: 'tErr2', projectId: 'p1', type: 'expense', description: 'دفعة مورد (مبلغ غير معتاد؟)', amount: 9800000, category: 'مشتريات', date: '2025-06-21', hasDoc: false, source: 'مورد: التقنية الحديثة', createdBy: 'محمد العمري' },
   { id: 't2', projectId: 'p1', type: 'expense', description: 'رواتب الموظفين', amount: 21000, category: 'رواتب', date: '2025-06-15', hasDoc: true, createdBy: 'سارة المحمد' },
   { id: 't3', projectId: 'p1', type: 'expense', description: 'إيجار المكتب', amount: 8500, category: 'إيجار', date: '2025-06-01', hasDoc: false, createdBy: 'محمد العمري' },
   { id: 't4', projectId: 'p1', type: 'income', description: 'عمولة مشروع', amount: 12000, category: 'مبيعات', date: '2025-05-10', hasDoc: true, source: 'شركة البناء الحديث', createdBy: 'محمد العمري' },
@@ -402,7 +404,7 @@ const statusFromDays = (d: number): TrackingStatus => d < 0 ? 'expired' : d <= 3
 // ── localStorage-backed state (replaceable by a real DB later) ──
 // data version: bump this whenever seed/initial data changes,
 // so stale localStorage from older versions is cleared automatically (one-time).
-const DATA_VERSION = '5';
+const DATA_VERSION = '6';
 (() => {
   try {
     const stored = localStorage.getItem('mz_data_version');
