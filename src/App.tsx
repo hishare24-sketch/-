@@ -11,8 +11,8 @@ type TrackingStatus = 'active' | 'expiring' | 'expired';
 type Attachment = { id: string; name: string; kind: 'image' | 'file'; size: string; preview?: string };
 type RequestStatus = 'pending' | 'approved' | 'rejected';
 
-type Project = { id: string; name: string; icon: string; balance: number; color: string; type?: string; description?: string };
-type Member = { id: string; projectId: string; name: string; email: string; role: MemberRole; permissions: string[]; balance?: number; status?: 'active' | 'invited' };
+type Project = { id: string; name: string; icon: string; balance: number; color: string; type?: string; description?: string; image?: string; gallery?: string[] };
+type Member = { id: string; projectId: string; name: string; email: string; role: MemberRole; permissions: string[]; balance?: number; status?: 'active' | 'invited'; image?: string };
 type MemberRole = 'owner' | 'manager' | 'member' | 'viewer';
 // member custody / settlement movements (طلب → قبول/رفض)
 type MemberTxnType = 'custody' | 'settlement' | 'expense' | 'deduction' | 'supply' | 'bonus' | 'advance' | 'salary';
@@ -501,6 +501,25 @@ function computeBalance(project: Project, transactions: Transaction[]): number {
 // ═══════════════════════════════════════════
 //  SHARED COMPONENTS
 // ═══════════════════════════════════════════
+// Avatar for a project: shows uploaded image if present, else the emoji icon on a colored chip
+function ProjectAvatar({ project, size = 32 }: { project: { icon: string; color: string; image?: string }; size?: number }) {
+  if (project.image) {
+    return <img src={project.image} alt="" style={{ width: size, height: size, borderRadius: size * 0.28, objectFit: 'cover', flexShrink: 0 }} />;
+  }
+  return (
+    <span style={{ width: size, height: size, borderRadius: size * 0.28, background: (project.color || '#2563eb') + '22', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.5, flexShrink: 0 }}>{project.icon}</span>
+  );
+}
+// Avatar for a member: shows uploaded photo if present, else the first letter on a colored circle
+function MemberAvatar({ member, size = 40, color }: { member: { name: string; image?: string }; size?: number; color?: string }) {
+  const c = color || '#2563eb';
+  if (member.image) {
+    return <img src={member.image} alt="" style={{ width: size, height: size, borderRadius: 99, objectFit: 'cover', flexShrink: 0 }} />;
+  }
+  return (
+    <span style={{ width: size, height: size, borderRadius: 99, background: c + '20', color: c, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.4, flexShrink: 0 }}>{member.name.charAt(0)}</span>
+  );
+}
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; bg: string; color: string }> = {
     active:    { label: 'نشط',              bg: 'var(--ok-bg-2)', color: 'var(--ok-text)' },
@@ -820,8 +839,59 @@ function AttachmentPicker({ value, onChange }: { value: Attachment[]; onChange: 
   );
 }
 
-// read-only attachments display (in view sheets)
-function AttachmentView({ items }: { items?: Attachment[] }) {
+// single-image picker → returns Base64 string (for project main image / member photo)
+function ImagePicker({ value, onChange, shape = 'circle', size = 84 }: { value?: string; onChange: (img: string | undefined) => void; shape?: 'circle' | 'rounded'; size?: number }) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const pick = (f: File) => {
+    if (!f.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => onChange(reader.result as string);
+    reader.readAsDataURL(f);
+  };
+  const radius = shape === 'circle' ? 99 : 16;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div onClick={() => inputRef.current?.click()} style={{ width: size, height: size, borderRadius: radius, background: 'var(--surface-3)', border: '2px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+        {value ? <img src={value} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: size * 0.34, color: 'var(--text-3)' }}>📷</span>}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <Btn size="sm" variant="outline" onClick={() => inputRef.current?.click()}>{value ? 'تغيير الصورة' : 'رفع صورة'}</Btn>
+        {value && <Btn size="sm" variant="ghost" onClick={() => onChange(undefined)}>إزالة</Btn>}
+      </div>
+      <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) pick(f); e.currentTarget.value = ''; }} />
+    </div>
+  );
+}
+
+// multi-image gallery picker → returns Base64[] (for project extra images, capped)
+function ImageGalleryPicker({ value, onChange, max = 3 }: { value: string[]; onChange: (imgs: string[]) => void; max?: number }) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const add = (files: FileList) => {
+    const slots = max - value.length;
+    const picked = Array.from(files).filter(f => f.type.startsWith('image/')).slice(0, slots);
+    Promise.all(picked.map(f => new Promise<string>(res => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(f); })))
+      .then(imgs => onChange([...value, ...imgs]));
+  };
+  return (
+    <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {value.map((img, i) => (
+          <div key={i} style={{ position: 'relative', width: 70, height: 70 }}>
+            <img src={img} alt="" style={{ width: 70, height: 70, borderRadius: 10, objectFit: 'cover', border: '1px solid var(--border)' }} />
+            <button onClick={() => onChange(value.filter((_, j) => j !== i))} style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 99, background: '#dc2626', color: '#fff', border: '2px solid var(--surface)', cursor: 'pointer', fontSize: 11, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          </div>
+        ))}
+        {value.length < max && (
+          <div onClick={() => inputRef.current?.click()} style={{ width: 70, height: 70, borderRadius: 10, background: 'var(--surface-3)', border: '2px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+            <span style={{ fontSize: 22, color: 'var(--text-3)' }}>＋</span>
+          </div>
+        )}
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>{value.length}/{max} صور</div>
+      <input ref={inputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => { if (e.target.files) add(e.target.files); e.currentTarget.value = ''; }} />
+    </div>
+  );
+}
   const [zoom, setZoom] = useState<string | null>(null);
   if (!items || items.length === 0) return null;
   const download = (a: Attachment) => {
@@ -1116,7 +1186,7 @@ function Sidebar({ page, onNav, projects, projectId, onProject, unread, isMobile
                 borderRadius: 10, border: 'none', cursor: 'pointer', textAlign: 'right', transition: 'background .15s',
                 background: projectId === p.id ? '#1e2230' : 'transparent', marginBottom: 2,
               }}>
-                <span style={{ fontSize: 16 }}>{p.icon}</span>
+                <ProjectAvatar project={p} size={26} />
                 <span style={{ color: projectId === p.id ? '#fff' : '#9ca3af', fontSize: 13, fontWeight: 500, fontFamily: 'inherit', flex: 1, textAlign: 'right' }}>{p.name}</span>
                 {projectId === p.id && <span style={{ width: 6, height: 6, borderRadius: 99, background: '#3b82f6', flexShrink: 0 }} />}
               </button>
@@ -1597,7 +1667,7 @@ function Overview({ projects, transactions, trackings, requests, receivables, co
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 22 }}>{p.icon}</span>
+                  <ProjectAvatar project={p} size={40} />
                   <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{p.name}</span>
                 </span>
                 {palerts > 0 && <span style={{ fontSize: 10.5, background: 'var(--danger-bg)', color: 'var(--danger-text)', borderRadius: 99, padding: '2px 8px', fontWeight: 600 }}>{palerts} تنبيه</span>}
@@ -1814,6 +1884,8 @@ function ProjectForm({ initial, onSave, onCancel, projectTypes = DEFAULT_PROJECT
   const [balance, setBalance] = useState<number | ''>(initial?.balance ?? '');
   const [type, setType] = useState(initial?.type ?? projectTypes[0]);
   const [description, setDescription] = useState(initial?.description ?? '');
+  const [image, setImage] = useState<string | undefined>(initial?.image);
+  const [gallery, setGallery] = useState<string[]>(initial?.gallery ?? []);
   const valid = name.trim().length > 0;
 
   return (
@@ -1827,7 +1899,13 @@ function ProjectForm({ initial, onSave, onCancel, projectTypes = DEFAULT_PROJECT
       <Field label="وصف المشروع (اختياري)">
         <TextArea value={description} onChange={setDescription} placeholder="نبذة قصيرة عن المشروع..." />
       </Field>
-      <Field label="الأيقونة">
+      <Field label="الصورة الرئيسية (تظهر بجانب اسم المشروع)">
+        <ImagePicker value={image} onChange={setImage} shape="rounded" />
+      </Field>
+      <Field label="صور إضافية (حتى 3)">
+        <ImageGalleryPicker value={gallery} onChange={setGallery} max={3} />
+      </Field>
+      <Field label="الأيقونة (احتياطية عند عدم وجود صورة)">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {PROJECT_ICONS.map(ic => (
             <button key={ic} onClick={() => setIcon(ic)} style={{
@@ -1852,7 +1930,7 @@ function ProjectForm({ initial, onSave, onCancel, projectTypes = DEFAULT_PROJECT
       </Field>
       <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
-        <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({ id: initial?.id, name: name.trim(), icon, color, balance: balance === '' ? 0 : balance, type, description: description.trim() })}>
+        <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({ id: initial?.id, name: name.trim(), icon, color, balance: balance === '' ? 0 : balance, type, description: description.trim(), image, gallery })}>
           {initial ? 'حفظ التعديلات' : 'إنشاء المشروع'}
         </Btn>
       </div>
@@ -2013,6 +2091,7 @@ function MemberForm({ initial, projectId, onSave, onCancel }: {
   const [email, setEmail] = useState(initial?.email ?? '');
   const [role, setRole] = useState<MemberRole>(initial?.role ?? 'member');
   const [perms, setPerms] = useState<string[]>(initial?.permissions ?? ROLE_PERMS.member);
+  const [image, setImage] = useState<string | undefined>(initial?.image);
   const valid = name.trim().length > 0 && email.trim().length > 0;
 
   // when role changes, reset to that role's default permissions
@@ -2021,6 +2100,9 @@ function MemberForm({ initial, projectId, onSave, onCancel }: {
 
   return (
     <>
+      <Field label="صورة العضو (تظهر بجانب الاسم في كل مكان)">
+        <ImagePicker value={image} onChange={setImage} shape="circle" />
+      </Field>
       <Field label="اسم العضو">
         <TextInput value={name} onChange={setName} placeholder="مثال: أحمد العلي" />
       </Field>
@@ -2071,7 +2153,7 @@ function MemberForm({ initial, projectId, onSave, onCancel }: {
         <Btn variant="outline" style={{ flex: 1 }} onClick={onCancel}>إلغاء</Btn>
         <Btn disabled={!valid} style={{ flex: 1 }} onClick={() => onSave({
           id: initial?.id, projectId, name: name.trim(), email: email.trim(), role,
-          permissions: role === 'owner' ? ROLE_PERMS.owner : perms,
+          permissions: role === 'owner' ? ROLE_PERMS.owner : perms, image,
         })}>{initial ? 'حفظ التعديلات' : 'إضافة العضو'}</Btn>
       </div>
     </>
@@ -2249,7 +2331,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
       {/* header */}
       <button onClick={() => onNav('projects')} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12 }}>‹ رجوع للمشاريع</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-        <div style={{ width: 64, height: 64, borderRadius: 18, background: project.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>{project.icon}</div>
+        <ProjectAvatar project={project} size={64} />
         <div style={{ flex: 1, minWidth: 200 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{project.name}</h1>
           <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 2 }}>{project.type ?? 'مشروع'}{project.description ? ` — ${project.description}` : ''}</div>
@@ -2265,6 +2347,26 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
           </div>
         )}
       </div>
+
+      {/* member avatars strip (up to 10, overlapping) */}
+      {projMembers.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>الأعضاء:</span>
+          <div style={{ display: 'flex', flexDirection: 'row-reverse', alignItems: 'center' }}>
+            {projMembers.slice(0, 10).map((m, i) => {
+              const ri = ROLES.find(r => r.id === m.role)!;
+              return (
+                <div key={m.id} onClick={() => onOpenMember(m.id)} title={m.name} style={{ marginRight: i === 0 ? 0 : -10, cursor: 'pointer', border: '2px solid var(--surface)', borderRadius: 99, position: 'relative', zIndex: 10 - i }}>
+                  <MemberAvatar member={m} size={36} color={ri.color} />
+                </div>
+              );
+            })}
+            {projMembers.length > 10 && (
+              <div style={{ marginRight: -10, width: 36, height: 36, borderRadius: 99, background: 'var(--surface-3)', border: '2px solid var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>+{projMembers.length - 10}</div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'var(--surface-3)', padding: 4, borderRadius: 12, width: 'fit-content', flexWrap: 'wrap' }}>
@@ -2470,9 +2572,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
               return (
                 <Card key={m.id} dataHl={m.id} style={{ padding: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 99, background: roleInfo.color + '20', color: roleInfo.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
-                      {m.name.charAt(0)}
-                    </div>
+                    <MemberAvatar member={m} size={44} color={roleInfo.color} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
                         {m.name}
@@ -4485,9 +4585,7 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, r
 
       {/* profile header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-        <div style={{ width: 72, height: 72, borderRadius: 99, background: roleInfo.color + '22', color: roleInfo.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 30, flexShrink: 0 }}>
-          {member.name.charAt(0)}
-        </div>
+        <MemberAvatar member={member} size={72} color={roleInfo.color} />
         <div style={{ flex: 1, minWidth: 180 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{member.name}</h1>
           <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 2 }}>{member.email}</div>
