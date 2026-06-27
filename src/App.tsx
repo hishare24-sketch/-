@@ -125,8 +125,9 @@ type UserPrefs = {
   confirmDelete: boolean;
   statsAutoScroll: boolean;
   statsScrollSeconds: number;
+  statsLayout: 'horizontal' | 'vertical';
 };
-const DEFAULT_PREFS: UserPrefs = { showStats: true, showCharts: true, defaultPeriod: '1m', compactCards: false, showQuickActions: true, confirmDelete: true, statsAutoScroll: false, statsScrollSeconds: 4 };
+const DEFAULT_PREFS: UserPrefs = { showStats: true, showCharts: true, defaultPeriod: '1m', compactCards: false, showQuickActions: true, confirmDelete: true, statsAutoScroll: false, statsScrollSeconds: 4, statsLayout: 'horizontal' };
 const PROJECT_COLORS = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#dc2626', '#0891b2'];
 
 const TX_TYPES: { id: TxType; label: string; icon: string }[] = [
@@ -886,35 +887,49 @@ function StatCards({ cards, prefs }: { cards: { label: string; value: string | n
   // prefer passed prefs; otherwise read the shared prefs from storage so the setting works everywhere
   const storedPrefs = (() => {
     if (prefs) return prefs;
-    try { const raw = dataLayer.read('mz_prefs'); return raw ? JSON.parse(raw) as UserPrefs : DEFAULT_PREFS; } catch { return DEFAULT_PREFS; }
+    try { const raw = dataLayer.read('mz_prefs'); return raw ? { ...DEFAULT_PREFS, ...JSON.parse(raw) } as UserPrefs : DEFAULT_PREFS; } catch { return DEFAULT_PREFS; }
   })();
   const autoScroll = storedPrefs.statsAutoScroll ?? false;
   const seconds = storedPrefs.statsScrollSeconds ?? 4;
+  const layout = storedPrefs.statsLayout ?? 'horizontal';
+  const horizontal = layout === 'horizontal';
 
-  // track which card is centered (for pagination dots)
+  // measure actual card offsets (accurate, RTL-safe) instead of estimating from scrollWidth
+  const scrollToIndex = (i: number, smooth = true) => {
+    const el = trackRef.current;
+    if (!el || !el.children[i]) return;
+    const child = el.children[i] as HTMLElement;
+    el.scrollTo({ left: child.offsetLeft - (el.offsetWidth - child.offsetWidth) / 2, behavior: smooth ? 'smooth' : 'auto' });
+  };
+
+  // detect the centered card from real positions
   const onScroll = () => {
     const el = trackRef.current;
     if (!el) return;
-    const cardW = el.scrollWidth / cards.length;
-    const idx = Math.round(el.scrollLeft / cardW);
-    setActive(Math.max(0, Math.min(cards.length - 1, idx)));
+    const center = el.scrollLeft + el.offsetWidth / 2;
+    let best = 0, bestDist = Infinity;
+    for (let i = 0; i < el.children.length; i++) {
+      const c = el.children[i] as HTMLElement;
+      const cc = c.offsetLeft + c.offsetWidth / 2;
+      const d = Math.abs(cc - center);
+      if (d < bestDist) { bestDist = d; best = i; }
+    }
+    setActive(best);
   };
 
-  // auto-scroll loop (mobile + enabled). RTL-aware: scrollLeft goes negative.
+  // auto-scroll loop (horizontal + enabled)
   useEffect(() => {
-    if (!isMobile || !autoScroll || cards.length <= 1) return;
+    if (!horizontal || !autoScroll || cards.length <= 1) return;
+    let idx = 0;
     const timer = setInterval(() => {
-      const el = trackRef.current;
-      if (!el) return;
-      const cardW = el.scrollWidth / cards.length;
-      const next = (Math.round(Math.abs(el.scrollLeft) / cardW) + 1) % cards.length;
-      el.scrollTo({ left: (el.scrollLeft < 0 ? -1 : 1) * next * cardW, behavior: 'smooth' });
+      idx = (idx + 1) % cards.length;
+      scrollToIndex(idx);
     }, Math.max(2, seconds) * 1000);
     return () => clearInterval(timer);
-  }, [isMobile, autoScroll, seconds, cards.length]);
+  }, [horizontal, autoScroll, seconds, cards.length]);
 
-  // Desktop: keep the original responsive grid
-  if (!isMobile) {
+  // VERTICAL layout: responsive grid (original)
+  if (!horizontal) {
     return (
       <div className="mz-statgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 12, marginBottom: 16 }}>
         {cards.map(c => (
@@ -928,20 +943,18 @@ function StatCards({ cards, prefs }: { cards: { label: string; value: string | n
     );
   }
 
-  // Mobile: horizontal carousel with snap + pagination dots
+  // HORIZONTAL layout: carousel with snap + pagination dots (mobile = peek next card, desktop = wider cards)
+  const cardBasis = isMobile ? '0 0 78%' : '0 0 220px';
   return (
     <div style={{ marginBottom: 16 }}>
       <div
         ref={trackRef}
         onScroll={onScroll}
-        style={{
-          display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory',
-          paddingBottom: 4, scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch',
-        }}
         className="mz-hide-scroll"
+        style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory', paddingBottom: 4, scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
       >
         {cards.map(c => (
-          <div key={c.label} style={{ background: c.bg, borderRadius: 14, padding: 16, scrollSnapAlign: 'center', flex: '0 0 78%', minWidth: 0 }}>
+          <div key={c.label} style={{ background: c.bg, borderRadius: 14, padding: 16, scrollSnapAlign: 'center', flex: cardBasis, minWidth: 0 }}>
             {c.icon && <div style={{ fontSize: 18, marginBottom: 4 }}>{c.icon}</div>}
             <div style={{ fontSize: 22, fontWeight: 800, color: c.color }}>{c.value}</div>
             <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{c.label}</div>
@@ -953,11 +966,8 @@ function StatCards({ cards, prefs }: { cards: { label: string; value: string | n
           {cards.map((c, i) => (
             <button
               key={c.label}
-              onClick={() => { const el = trackRef.current; if (el) { const cardW = el.scrollWidth / cards.length; el.scrollTo({ left: (el.scrollLeft < 0 ? -1 : 1) * i * cardW, behavior: 'smooth' }); } }}
-              style={{
-                width: active === i ? 20 : 7, height: 7, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 0,
-                background: active === i ? '#2563eb' : 'var(--border)', transition: 'all .25s ease',
-              }}
+              onClick={() => scrollToIndex(i)}
+              style={{ width: active === i ? 20 : 7, height: 7, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 0, background: active === i ? '#2563eb' : 'var(--border)', transition: 'all .25s ease' }}
             />
           ))}
         </div>
@@ -4224,8 +4234,15 @@ function Settings({ theme, onToggleTheme, onNav, onLogout, prefs, onPrefs }: { t
             {PERIOD_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
-        <Row title="تمرير الإحصائيات تلقائياً" desc="تمرير بطاقات الأرقام أفقياً على الجوال" k="statsAutoScroll" />
-        {prefs.statsAutoScroll && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0 4px', gap: 12, borderTop: '1px solid var(--border)' }}>
+          <div><div style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>طريقة عرض الإحصائيات</div><div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>أفقي قابل للتمرير، أو رأسي بشبكة</div></div>
+          <select value={prefs.statsLayout} onChange={e => onPrefs({ ...prefs, statsLayout: e.target.value as 'horizontal' | 'vertical' })} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', background: 'var(--surface)', color: 'var(--text)' }}>
+            <option value="horizontal">أفقي (تمرير)</option>
+            <option value="vertical">رأسي (شبكة)</option>
+          </select>
+        </div>
+        {prefs.statsLayout === 'horizontal' && <Row title="تمرير الإحصائيات تلقائياً" desc="انتقال تلقائي بين البطاقات أفقياً" k="statsAutoScroll" />}
+        {prefs.statsLayout === 'horizontal' && prefs.statsAutoScroll && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0 4px', gap: 12 }}>
             <div><div style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>مدة الانتقال</div><div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>الزمن بين كل بطاقة وأخرى</div></div>
             <select value={prefs.statsScrollSeconds} onChange={e => onPrefs({ ...prefs, statsScrollSeconds: Number(e.target.value) })} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', background: 'var(--surface)', color: 'var(--text)' }}>
