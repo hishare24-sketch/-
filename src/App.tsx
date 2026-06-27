@@ -2586,7 +2586,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                           <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{d.type} · {d.date}</div>
                         </div>
-                        <span style={{ color: 'var(--text-3)', fontSize: 14 }}>‹</span>
+                        <button onClick={(e) => { e.stopPropagation(); onViewDoc(d); }} style={{ background: 'var(--info-bg)', color: 'var(--info-text)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>⚡ إجراءات</button>
                       </div>
                     ))}
                   </div>
@@ -3717,13 +3717,21 @@ function suggestedActions(docType: string): DocSuggestion[] {
   ];
 }
 
-function Documents({ projectId, projects, documents, onSave, onDelete, onAction, openCreate, onOpenCreate, onCloseCreate, docTypeOptions = DEFAULT_DOC_TYPES, helpEntry }: {
+function Documents({ projectId, projects, documents, onSave, onDelete, onAction, openCreate, onOpenCreate, onCloseCreate, docTypeOptions = DEFAULT_DOC_TYPES, helpEntry, openDocId, onConsumeOpenDoc }: {
   projectId: string; projects: Project[]; documents: DocItem[];
   onSave: (d: Omit<DocItem, 'id'> & { id?: string }) => void; onDelete: (id: string) => void;
   onAction: (action: DocActionKind, doc: DocItem) => void;
-  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; docTypeOptions?: string[]; helpEntry?: HelpEntry;
+  openCreate: boolean; onOpenCreate: () => void; onCloseCreate: () => void; docTypeOptions?: string[]; helpEntry?: HelpEntry; openDocId?: string | null; onConsumeOpenDoc?: () => void;
 }) {
   const [sheet, setSheet] = useState<null | { mode: 'view' | 'edit' | 'actions' | 'ai'; doc: DocItem }>(null);
+  // auto-open a document when navigated here from elsewhere (e.g. project detail)
+  useEffect(() => {
+    if (openDocId) {
+      const d = documents.find(x => x.id === openDocId);
+      if (d) setSheet({ mode: 'actions', doc: d });
+      onConsumeOpenDoc?.();
+    }
+  }, [openDocId]);
   const [aiBusy, setAiBusy] = useState(false);
   const [search, setSearch] = useState('');
   const [fType, setFType] = useState('all');
@@ -7296,6 +7304,7 @@ export default function App() {
   // create-sheet flags triggered by FAB / headers
   const [createTx, setCreateTx] = useState(false);
   const [createDoc, setCreateDoc] = useState(false);
+  const [pendingDocId, setPendingDocId] = useState<string | null>(null);
   const [createTracking, setCreateTracking] = useState(false);
   const [createRequest, setCreateRequest] = useState(false);
   const [createReceivable, setCreateReceivable] = useState(false);
@@ -7550,14 +7559,14 @@ export default function App() {
       case 'tasks': return <Tasks projects={projects} requests={requests} receivables={receivables} commitments={commitments} trackings={trackings} memberTxns={memberTxns} members={members} onDecideRequest={decideRequest} onPayReceivable={payReceivable} onPayCommitment={payCommitment} onDecideMemberTxn={decideMemberTxn} onNav={setPage} />;
       case 'dashboard': return <Dashboard projectId={projectId} onNav={setPage} projects={projects} transactions={transactions} trackings={trackings} requests={requests} onDecide={decideRequest} prefs={prefs} helpEntry={help.dashboard} />;
       case 'projects': return <Projects projects={projects} transactions={transactions} onOpen={(id) => { setProjectId(id); setPage('projectDetail'); }} onSave={saveProject} onDelete={deleteProject} openCreate={createProject} onCloseCreate={() => setCreateProject(false)} prefs={prefs} projectTypes={lists.projectTypes} helpEntry={help.projects} />;
-      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={() => setPage('documents')} onViewTracking={() => setPage('trackings')} onQuickAction={fabAction} prefs={prefs} highlightId={highlightId} />;
+      case 'projectDetail': return <ProjectDetail projectId={projectId} projects={projects} transactions={transactions} trackings={trackings} requests={requests} documents={documents} members={members} memberTxns={memberTxns} notifs={notifs} onNav={setPage} onSaveMember={saveMember} onDeleteMember={deleteMember} onSaveMemberTxn={saveMemberTxn} onDecideMemberTxn={decideMemberTxn} onOpenMember={(id) => { setSelectedMember(id); setPage('memberDetail'); }} onSaveProject={saveProject} onDeleteProject={deleteProject} onViewTx={() => setPage('finance')} onViewDoc={(d) => { setPendingDocId(d.id); setProjectId(d.projectId); setPage('documents'); }} onViewTracking={() => setPage('trackings')} onQuickAction={fabAction} prefs={prefs} highlightId={highlightId} />;
       case 'memberDetail': return selectedMember ? <MemberDetail memberId={selectedMember} members={members} projects={projects} transactions={transactions} memberTxns={memberTxns} receivables={receivables} commitments={commitments} requests={requests} onBack={goBack} onNav={setPage} /> : <div style={{ padding: 24 }}>لم يتم اختيار عضو.</div>;
       case 'finance': return <Finance projectId={projectId} projects={projects} transactions={transactions} onSave={saveTx} onDelete={deleteTx} openCreate={createTx} onOpenCreate={() => setCreateTx(true)} onCloseCreate={() => setCreateTx(false)} onNav={setPage} txCategories={lists.txCategories} helpEntry={help.finance} onFixTx={(t) => setFixTx(t)} />;
       case 'ledger': return <Ledger projects={projects} transactions={transactions} members={members} memberTxns={memberTxns} helpEntry={help.ledger} onNavigate={navigateTo} />;
       case 'reports': return <Reports projects={projects} transactions={transactions} receivables={receivables} commitments={commitments} trackings={trackings} requests={requests} members={members} />;
       case 'receivables': return <Receivables projectId={projectId} projects={projects} receivables={receivables} members={members} onSave={saveReceivable} onPay={payReceivable} onDelete={deleteReceivable} openCreate={createReceivable} onOpenCreate={() => setCreateReceivable(true)} onCloseCreate={() => setCreateReceivable(false)} helpEntry={help.receivables} />;
       case 'commitments': return <Commitments projectId={projectId} projects={projects} commitments={commitments} members={members} onSave={saveCommitment} onPay={payCommitment} onToggle={toggleCommitment} onDelete={deleteCommitment} openCreate={createCommitment} onOpenCreate={() => setCreateCommitment(true)} onCloseCreate={() => setCreateCommitment(false)} helpEntry={help.commitments} />;
-      case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} docTypeOptions={lists.docTypes} helpEntry={help.documents} />;
+      case 'documents': return <Documents projectId={projectId} projects={projects} documents={documents} onSave={saveDoc} onDelete={deleteDoc} onAction={docAction} openCreate={createDoc} onOpenCreate={() => setCreateDoc(true)} onCloseCreate={() => setCreateDoc(false)} docTypeOptions={lists.docTypes} helpEntry={help.documents} openDocId={pendingDocId} onConsumeOpenDoc={() => setPendingDocId(null)} />;
       case 'trackings': return <Trackings projectId={projectId} projects={projects} trackings={trackings} members={members} onSave={saveTracking} onDelete={deleteTracking} openCreate={createTracking} onOpenCreate={() => { setTrackingPreset({}); setCreateTracking(true); }} onCloseCreate={() => { setCreateTracking(false); setTrackingPreset({}); }} presetName={trackingPreset.name} presetType={trackingPreset.type} helpEntry={help.trackings} />;
       case 'assets': return <Assets projectId={projectId} projects={projects} assets={assets} members={members} onSave={saveAsset} onDelete={deleteAsset} onAddMaintenance={addMaintenance} openCreate={createAsset} onOpenCreate={() => setCreateAsset(true)} onCloseCreate={() => setCreateAsset(false)} />;
       case 'requests': return <Requests projectId={projectId} projects={projects} requests={requests} members={members} onDecide={decideRequest} onSave={saveRequest} onDelete={deleteRequest} openCreate={createRequest} onOpenCreate={() => setCreateRequest(true)} onCloseCreate={() => setCreateRequest(false)} helpEntry={help.requests} />;
