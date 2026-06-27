@@ -2899,7 +2899,7 @@ function txErrors(tx: Transaction, ctx: { project?: Project; transactions: Trans
 }
 // contextual fix options for a flagged transaction. Each option = a suggested resolution
 // kind: 'edit' opens the editor; 'reverse'/'delete'/'reassign' are simulated operations the app can apply.
-type TxFix = { id: string; label: string; icon: string; desc: string; kind: 'edit' | 'delete' | 'reverse' | 'fixAmount' | 'reassign' };
+type TxFix = { id: string; label: string; icon: string; desc: string; kind: 'edit' | 'delete' | 'reverse' | 'fixAmount' | 'reassign' | 'changeDate' | 'changeCategory' };
 function txFixOptions(tx: Transaction, errs: TxWarning[]): TxFix[] {
   const titles = errs.map(e => e.title);
   const fixes: TxFix[] = [];
@@ -2950,16 +2950,76 @@ function TxIssueBadge({ tx, project, transactions, onEdit, onFix }: { tx: Transa
 }
 
 // AI-assisted resolution sheet: lists contextual fix options for a flagged transaction and applies them.
-function TxFixSheet({ tx, project, transactions, projects, onClose, onEdit, onApply }: {
-  tx: Transaction; project?: Project; transactions: Transaction[]; projects: Project[];
+function TxFixSheet({ tx, project, transactions, projects, txCategories = DEFAULT_TX_CATEGORIES, onClose, onEdit, onApply }: {
+  tx: Transaction; project?: Project; transactions: Transaction[]; projects: Project[]; txCategories?: string[];
   onClose: () => void; onEdit: () => void;
-  onApply: (action: TxFix['kind'], payload?: { toProject?: string }) => void;
+  onApply: (action: TxFix['kind'], payload?: { toProject?: string; reason?: string; date?: string; category?: string; newAmount?: number }) => void;
 }) {
   const errs = txErrors(tx, { project, transactions });
   const fixes = txFixOptions(tx, errs);
+  const [active, setActive] = useState<TxFix | null>(null); // the fix being confirmed
   const [reassignTo, setReassignTo] = useState('');
-  const [picking, setPicking] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
+  const [newDate, setNewDate] = useState(tx.date);
+  const [newCategory, setNewCategory] = useState(tx.category);
+  const [newAmount, setNewAmount] = useState<number | ''>(Math.abs(tx.amount));
   const otherProjects = projects.filter(p => p.id !== tx.projectId);
+
+  // compute the impact statement shown before confirming
+  const curBal = project ? computeBalance(project, transactions) : 0;
+  const impactText = (f: TxFix): string => {
+    if (f.kind === 'fixAmount') return `سيتحوّل المبلغ إلى ${fmtNum(Math.abs(tx.amount))} ر.س، وسيتغيّر رصيد المشروع «${project?.name ?? ''}» تبعاً لذلك.`;
+    if (f.kind === 'delete') return `سيُحذف أثر العملية نهائياً، وسيتغيّر رصيد «${project?.name ?? ''}» من ${fmtNum(curBal)} إلى ${fmtNum(tx.type === 'expense' ? curBal + tx.amount : curBal - tx.amount)} ر.س.`;
+    if (f.kind === 'reverse') return `ستُنشأ عملية عكسية بمبلغ ${fmtNum(Math.abs(tx.amount))} ر.س بتاريخ اليوم، تُلغي الأثر المالي مع بقاء السجل الأصلي للتدقيق.`;
+    if (f.kind === 'reassign' && reassignTo) { const np = projects.find(p => p.id === reassignTo); return `ستُنقل العملية (${fmtNum(tx.amount)} ر.س) من «${project?.name}» إلى «${np?.name}»، فيتغيّر رصيد المشروعين تبعاً لذلك.`; }
+    return 'سيُطبّق هذا التعديل على العملية مباشرةً.';
+  };
+  const needsReason = (k: TxFix['kind']) => k === 'delete' || k === 'reverse';
+
+  // confirmation view for a chosen fix
+  if (active) {
+    const canConfirm = active.kind === 'reassign' ? !!reassignTo : needsReason(active.kind) ? reason.trim().length > 0 : true;
+    return (
+      <Sheet open onClose={onClose} title={active.label}>
+        <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.7 }}><b>العملية:</b> {tx.description} — {fmtNum(tx.amount)} ر.س — {tx.date}</div>
+        </div>
+
+        {active.kind === 'reassign' && (
+          <Field label="المشروع الجديد">
+            <Select value={reassignTo} onChange={setReassignTo} options={[{ v: '', l: 'اختر المشروع…' }, ...otherProjects.map(p => ({ v: p.id, l: p.name }))]} />
+          </Field>
+        )}
+        {active.kind === 'reverse' && (
+          <Field label="حساب/مشروع الاسترجاع">
+            <Select value={reassignTo || tx.projectId} onChange={setReassignTo} options={projects.map(p => ({ v: p.id, l: p.name }))} />
+          </Field>
+        )}
+        {needsReason(active.kind) && (
+          <Field label="سبب الإجراء (إلزامي للتدقيق)">
+            <TextArea value={reason} onChange={setReason} placeholder="مثال: إدخال خاطئ، عملية مكرّرة، استرجاع من المورد…" />
+          </Field>
+        )}
+
+        {/* impact preview */}
+        <div style={{ background: 'var(--warn-bg)', borderRadius: 12, padding: 14, margin: '6px 0 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+            <span style={{ fontSize: 15 }}>🔎</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--warn-text)' }}>معاينة الأثر قبل التأكيد</span>
+          </div>
+          <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.7 }}>{impactText(active)}</div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Btn variant="outline" style={{ flex: 1 }} onClick={() => { setActive(null); setReason(''); }}>رجوع</Btn>
+          <Btn style={{ flex: 1, background: active.kind === 'delete' ? 'var(--danger-text)' : undefined }} disabled={!canConfirm}
+            onClick={() => onApply(active.kind, { toProject: reassignTo || undefined, reason: reason.trim() || undefined })}>
+            تأكيد {active.label}
+          </Btn>
+        </div>
+      </Sheet>
+    );
+  }
 
   return (
     <Sheet open onClose={onClose} title="معالجة العملية بمساعدة الذكاء">
@@ -2982,25 +3042,39 @@ function TxFixSheet({ tx, project, transactions, projects, onClose, onEdit, onAp
               <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{f.label}</span>
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.6, marginBottom: 10 }}>{f.desc}</div>
-            {f.kind === 'reassign' ? (
-              picking === f.id ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <Select value={reassignTo} onChange={setReassignTo} options={[{ v: '', l: 'اختر المشروع الجديد…' }, ...otherProjects.map(p => ({ v: p.id, l: p.name }))]} />
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Btn size="sm" variant="outline" style={{ flex: 1 }} onClick={() => setPicking(null)}>رجوع</Btn>
-                    <Btn size="sm" style={{ flex: 1 }} disabled={!reassignTo} onClick={() => onApply('reassign', { toProject: reassignTo })}>تأكيد النقل</Btn>
-                  </div>
-                </div>
-              ) : (
-                <Btn size="sm" variant="outline" onClick={() => setPicking(f.id)}>اختيار هذا الحل</Btn>
-              )
-            ) : (
-              <Btn size="sm" variant={f.kind === 'delete' ? 'outline' : 'primary'} onClick={() => { if (f.kind === 'edit') onEdit(); else onApply(f.kind); }}>تطبيق هذا الحل</Btn>
-            )}
+            <Btn size="sm" variant={f.kind === 'delete' ? 'outline' : 'primary'} onClick={() => { if (f.kind === 'edit') onEdit(); else { setActive(f); setReassignTo(''); setReason(''); } }}>
+              {f.kind === 'edit' ? 'فتح المحرّر' : 'اختيار هذا الحل'}
+            </Btn>
           </div>
         ))}
+
+        {/* quick change date — always available */}
+        <div style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8 }}>
+            <span style={{ fontSize: 17 }}>📅</span>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>تغيير تاريخ العملية</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <TextInput type="date" value={newDate} onChange={setNewDate} />
+            <Btn size="sm" disabled={newDate === tx.date} onClick={() => onApply('changeDate', { date: newDate })}>تطبيق</Btn>
+          </div>
+        </div>
+
+        {/* quick change category (accounting reassignment) — for non-transfers */}
+        {tx.type !== 'transfer' && (
+          <div style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8 }}>
+              <span style={{ fontSize: 17 }}>🏷️</span>
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>تغيير التصنيف (الإسناد المحاسبي)</span>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Select value={newCategory} onChange={setNewCategory} options={txCategories.map(c => ({ v: c, l: c }))} />
+              <Btn size="sm" disabled={newCategory === tx.category} onClick={() => onApply('changeCategory', { category: newCategory })}>تطبيق</Btn>
+            </div>
+          </div>
+        )}
       </div>
-      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 14, textAlign: 'center' }}>💡 كل حل يوضّح أثره قبل التطبيق. يمكنك التراجع بإغلاق النافذة.</div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 14, textAlign: 'center' }}>💡 كل حل يعرض معاينة الأثر ويطلب سبباً قبل التأكيد، ويُسجَّل في سجل التدقيق.</div>
     </Sheet>
   );
 }
@@ -7383,25 +7457,41 @@ export default function App() {
     return list.filter(x => x.id !== id);
   });
   // apply an AI-suggested fix to a flagged transaction
-  const applyTxFix = (tx: Transaction, action: TxFix['kind'], payload?: { toProject?: string }) => {
-    if (action === 'delete') { deleteTx(tx.id); }
+  const applyTxFix = (tx: Transaction, action: TxFix['kind'], payload?: { toProject?: string; reason?: string; date?: string; category?: string; newAmount?: number }) => {
+    const why = payload?.reason ? ` — السبب: ${payload.reason}` : '';
+    if (action === 'delete') {
+      logAudit('إلغاء', 'عملية مالية', `إلغاء «${tx.description}» (${fmt(tx.amount)})${why}`);
+      deleteTx(tx.id);
+    }
     else if (action === 'fixAmount') {
       setTransactions(list => list.map(x => x.id === tx.id ? { ...x, amount: Math.abs(x.amount) } : x));
-      logAudit('تصحيح', 'عملية مالية', `تصحيح مبلغ ${tx.description}`);
+      logAudit('تصحيح مبلغ', 'عملية مالية', `تصحيح مبلغ «${tx.description}» من ${fmt(tx.amount)} إلى ${fmt(Math.abs(tx.amount))}${why}`);
     }
     else if (action === 'reassign' && payload?.toProject) {
+      const np = projects.find(p => p.id === payload.toProject)?.name ?? '';
       setTransactions(list => list.map(x => x.id === tx.id ? { ...x, projectId: payload.toProject! } : x));
-      logAudit('إعادة إسناد', 'عملية مالية', `نقل ${tx.description} لمشروع آخر`);
+      logAudit('إعادة إسناد', 'عملية مالية', `نقل «${tx.description}» إلى مشروع «${np}»${why}`);
+    }
+    else if (action === 'changeDate' && payload?.date) {
+      setTransactions(list => list.map(x => x.id === tx.id ? { ...x, date: payload.date! } : x));
+      logAudit('تغيير تاريخ', 'عملية مالية', `تغيير تاريخ «${tx.description}» من ${tx.date} إلى ${payload.date}${why}`);
+    }
+    else if (action === 'changeCategory' && payload?.category) {
+      setTransactions(list => list.map(x => x.id === tx.id ? { ...x, category: payload.category! } : x));
+      logAudit('تغيير تصنيف', 'عملية مالية', `تغيير تصنيف «${tx.description}» من ${tx.category} إلى ${payload.category}${why}`);
     }
     else if (action === 'reverse') {
+      const dest = payload?.toProject || tx.projectId;
+      const destName = projects.find(p => p.id === dest)?.name ?? '';
       const rev: Transaction = {
-        ...tx, id: uid('t'),
+        ...tx, id: uid('t'), projectId: dest,
         type: tx.type === 'income' ? 'expense' : tx.type === 'expense' ? 'income' : tx.type,
-        amount: Math.abs(tx.amount), description: `عكس: ${tx.description}`,
-        date: today(), linkId: undefined, createdBy: CURRENT_USER,
+        amount: Math.abs(tx.amount), description: `استرجاع: ${tx.description}`,
+        category: tx.category, date: today(), linkId: undefined, transferDir: undefined,
+        createdBy: CURRENT_USER, note: payload?.reason,
       };
       setTransactions(list => [rev, ...list]);
-      logAudit('إرجاع', 'عملية مالية', `عملية عكسية لـ ${tx.description}`);
+      logAudit('استرجاع/عكس', 'عملية مالية', `عملية استرجاع لـ «${tx.description}» (${fmt(Math.abs(tx.amount))}) في «${destName}»${why}`);
     }
     setFixTx(null);
   };
@@ -7642,7 +7732,7 @@ export default function App() {
         {aiOpen && <AIAssistant ctx={{ page, projectId, projects, transactions, trackings, assets, receivables, commitments, members, memberTxns, requests, documents }} onClose={() => setAiOpen(false)} onNavigate={navigateTo} />}
 
         {/* AI-assisted fix flow for flagged transactions */}
-        {fixTx && <TxFixSheet tx={fixTx} project={projects.find(p => p.id === fixTx.projectId)} transactions={transactions} projects={projects} onClose={() => setFixTx(null)} onEdit={() => { setEditTx(fixTx); setFixTx(null); }} onApply={(action, payload) => applyTxFix(fixTx, action, payload)} />}
+        {fixTx && <TxFixSheet tx={fixTx} project={projects.find(p => p.id === fixTx.projectId)} transactions={transactions} projects={projects} txCategories={lists.txCategories} onClose={() => setFixTx(null)} onEdit={() => { setEditTx(fixTx); setFixTx(null); }} onApply={(action, payload) => applyTxFix(fixTx, action, payload)} />}
         <Sheet open={!!editTx} onClose={() => setEditTx(null)} title="تعديل العملية">
           {editTx && <TxForm key={editTx.id} initial={editTx} projectId={editTx.projectId} projects={projects} txCategories={lists.txCategories} allTransactions={transactions} onSave={(t) => { saveTx(t); setEditTx(null); }} onCancel={() => setEditTx(null)} />}
         </Sheet>
