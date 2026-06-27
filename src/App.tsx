@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 // ═══════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════
-type Page = 'overview' | 'tasks' | 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'reports' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'assets' | 'requests' | 'notifications' | 'settings' | 'subscription' | 'memberDetail' | 'audit' | 'customize';
+type Page = 'overview' | 'tasks' | 'dashboard' | 'projects' | 'projectDetail' | 'finance' | 'ledger' | 'reports' | 'receivables' | 'commitments' | 'documents' | 'trackings' | 'assets' | 'requests' | 'notifications' | 'settings' | 'integrations' | 'subscription' | 'memberDetail' | 'audit' | 'customize';
 type TxType = 'income' | 'expense' | 'transfer';
 type TrackingStatus = 'active' | 'expiring' | 'expired';
 // unified attachment (image/file) — preview kept in-session, real upload later via backend
@@ -411,20 +411,43 @@ const DATA_VERSION = '5';
   } catch { /* ignore */ }
 })();
 
+// ═══════════════════════════════════════════════════════════════
+//  DATA LAYER (طبقة البيانات الموحّدة)
+//  ───────────────────────────────────────────────────────────────
+//  كل حالة دائمة في موازين تمرّ عبر usePersist. هذه هي نقطة التبديل
+//  الوحيدة عند الانتقال للباك إند: استبدل قراءة/كتابة localStorage
+//  بنداءات API (fetch/Supabase) داخل هذا الخطّاف فقط — دون لمس بقية
+//  التطبيق. كل setX في الأقسام سيعمل كما هو.
+//
+//  مثال الترقية المستقبلية:
+//    init  → await api.get(`/state/${key}`)
+//    write → await api.put(`/state/${key}`, val)  (مع debounce)
+//
+//  المفاتيح الحالية (mz_*): theme, authed, plan, projects, transactions,
+//  trackings, assets, requests, documents, notifs, members, member_txns,
+//  receivables, commitments, prefs, audit, lists, help, data_version
+// ═══════════════════════════════════════════════════════════════
 function usePersist<T>(key: string, initial: T): [T, React.Dispatch<React.SetStateAction<T>>] {
   const [val, setVal] = useState<T>(() => {
     try {
-      const raw = localStorage.getItem(key);
+      const raw = dataLayer.read(key);
       return raw ? (JSON.parse(raw) as T) : initial;
     } catch {
       return initial;
     }
   });
   useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* ignore quota errors */ }
+    try { dataLayer.write(key, JSON.stringify(val)); } catch { /* ignore quota errors */ }
   }, [key, val]);
   return [val, setVal];
 }
+
+// single abstraction over storage — swap this object's body for an API client later
+const dataLayer = {
+  read: (key: string): string | null => localStorage.getItem(key),
+  write: (key: string, value: string): void => localStorage.setItem(key, value),
+  remove: (key: string): void => localStorage.removeItem(key),
+};
 
 // ── computed balance: opening + income − expense ± transfers ──
 // detect mobile viewport (responsive layout switch)
@@ -3994,6 +4017,82 @@ function Customize({ lists, onChange, help, onHelpChange, healthData, onNav }: {
   );
 }
 
+// ═══════════════════════════════════════════
+//  INTEGRATIONS (التكاملات — نقاط ربط مستقبلية)
+// ═══════════════════════════════════════════
+const INTEGRATION_GROUPS: { group: string; icon: string; items: { name: string; desc: string }[] }[] = [
+  { group: 'التخزين السحابي', icon: '☁️', items: [
+    { name: 'Google Drive', desc: 'مزامنة المستندات والمرفقات' },
+    { name: 'OneDrive', desc: 'نسخ احتياطي للملفات' },
+    { name: 'Dropbox', desc: 'تخزين ومشاركة المستندات' },
+  ]},
+  { group: 'الاتصالات', icon: '✉️', items: [
+    { name: 'البريد الإلكتروني', desc: 'إرسال التنبيهات والدعوات' },
+    { name: 'WhatsApp', desc: 'إشعارات فورية للأعضاء' },
+    { name: 'SMS', desc: 'رسائل نصية للتذكيرات' },
+  ]},
+  { group: 'التقويمات', icon: '📅', items: [
+    { name: 'Google Calendar', desc: 'مزامنة الاستحقاقات والمواعيد' },
+    { name: 'Outlook Calendar', desc: 'تذكيرات التجديد والصيانة' },
+  ]},
+  { group: 'الأنظمة المحاسبية', icon: '📊', items: [
+    { name: 'QuickBooks', desc: 'مزامنة العمليات المالية' },
+    { name: 'Zoho Books', desc: 'تكامل الفواتير والحسابات' },
+    { name: 'Xero', desc: 'ربط الدفاتر المحاسبية' },
+  ]},
+  { group: 'أنظمة CRM', icon: '🤝', items: [
+    { name: 'HubSpot', desc: 'ربط العملاء والذمم' },
+    { name: 'Salesforce', desc: 'مزامنة بيانات العملاء' },
+    { name: 'Zoho CRM', desc: 'إدارة العلاقات' },
+  ]},
+  { group: 'أنظمة ERP', icon: '🏭', items: [
+    { name: 'Odoo', desc: 'تكامل العمليات المؤسسية' },
+    { name: 'SAP', desc: 'ربط موارد المنشأة' },
+    { name: 'Oracle / Dynamics', desc: 'أنظمة المؤسسات الكبرى' },
+  ]},
+  { group: 'تتبّع الأصول (GPS)', icon: '📍', items: [
+    { name: 'تتبّع المركبات', desc: 'موقع وحالة المركبات' },
+    { name: 'تتبّع المعدات', desc: 'مراقبة الأصول الميدانية' },
+  ]},
+];
+
+function Integrations({ onBack }: { onBack: () => void }) {
+  return (
+    <div style={{ padding: 24, maxWidth: 800 }}>
+      <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12 }}>‹ رجوع للإعدادات</button>
+      <PageHeader title="التكاملات" subtitle="ربط موازين بأنظمتك وخدماتك الخارجية" />
+
+      <Card style={{ marginBottom: 16, background: '#eff6ff', border: '1px solid #bfdbfe' }}>
+        <div style={{ fontSize: 13, color: '#1d4ed8', lineHeight: 1.8 }}>
+          🔌 التكاملات قيد التطوير وستتوفّر تدريجياً. ستتيح لك ربط موازين بأنظمة التخزين والاتصالات والمحاسبة وإدارة العملاء لتقليل الإدخال اليدوي ومزامنة بياناتك تلقائياً.
+        </div>
+      </Card>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {INTEGRATION_GROUPS.map(g => (
+          <Card key={g.group}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span style={{ fontSize: 20 }}>{g.icon}</span>
+              <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{g.group}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
+              {g.items.map(it => (
+                <div key={it.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 14px', background: 'var(--surface-2)', borderRadius: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{it.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.desc}</div>
+                  </div>
+                  <span style={{ fontSize: 10, padding: '3px 9px', borderRadius: 99, background: 'var(--surface-3)', color: 'var(--text-3)', fontWeight: 600, flexShrink: 0 }}>قريباً</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Settings({ theme, onToggleTheme, onNav, onLogout, prefs, onPrefs }: { theme: 'light' | 'dark'; onToggleTheme: () => void; onNav: (p: Page) => void; onLogout: () => void; prefs: UserPrefs; onPrefs: (p: UserPrefs) => void }) {
   const toggle = (k: keyof UserPrefs) => onPrefs({ ...prefs, [k]: !prefs[k] });
   const Switch = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
@@ -4050,6 +4149,16 @@ function Settings({ theme, onToggleTheme, onNav, onLogout, prefs, onPrefs }: { t
             <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>أنت على الباقة المجانية حالياً</div>
           </div>
           <Btn size="sm" onClick={() => onNav('subscription')}>عرض الباقات</Btn>
+        </div>
+      </Card>
+
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>🔌 التكاملات</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>ربط موازين بأنظمتك وخدماتك الخارجية</div>
+          </div>
+          <Btn size="sm" variant="outline" onClick={() => onNav('integrations')}>استعراض</Btn>
         </div>
       </Card>
 
@@ -6364,6 +6473,7 @@ export default function App() {
       case 'notifications': return <Notifications notifs={notifs} projects={projects} members={members} onMarkRead={markRead} onMarkAll={markAll} onNav={setPage} />;
       case 'audit': return <AuditLog audit={audit} onNav={setPage} />;
       case 'customize': return <Customize lists={lists} onChange={setLists} help={help} onHelpChange={setHelp} healthData={{ projects, transactions, receivables, commitments, assets, members, memberTxns }} onNav={setPage} />;
+      case 'integrations': return <Integrations onBack={() => setPage('settings')} />;
       case 'settings': return <Settings theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} onNav={setPage} onLogout={() => { logAudit('تسجيل خروج', 'النظام', 'تم تسجيل الخروج'); setAuthed(false); }} prefs={prefs} onPrefs={setPrefs} />;
       case 'subscription': return <Subscription current={plan} onChoose={setPlan} />;
       default: return null;
