@@ -87,8 +87,8 @@ const DEFAULT_PROJECT_TYPES = ['شركة', 'مؤسسة', 'مشروع منزلي'
 
 // roles & permissions (نوع التمكين والصلاحيات)
 const ROLES: { id: MemberRole; label: string; desc: string; color: string }[] = [
-  { id: 'owner',   label: 'مالك المشروع', desc: 'تحكم كامل بكل شيء', color: '#7c3aed' },
-  { id: 'manager', label: 'مدير مالي',    desc: 'إدارة المالية والموافقات', color: '#2563eb' },
+  { id: 'owner',   label: 'مالك المشروع', desc: 'تحكم كامل بكل شيء', color: 'var(--purple-text)' },
+  { id: 'manager', label: 'مدير مالي',    desc: 'إدارة المالية والموافقات', color: 'var(--info-text)' },
   { id: 'member',  label: 'عضو',          desc: 'إضافة عمليات ومستندات', color: '#059669' },
   { id: 'viewer',  label: 'مشاهد',        desc: 'عرض فقط دون تعديل', color: 'var(--text-3)' },
 ];
@@ -154,8 +154,8 @@ const ASSET_CATEGORIES: { id: AssetCategory; label: string; icon: string }[] = [
   { id: 'other', label: 'أخرى', icon: '📦' },
 ];
 const ASSET_STATUS: Record<Asset['status'], { label: string; color: string; bg: string }> = {
-  active: { label: 'نشط', color: '#15803d', bg: '#dcfce7' },
-  maintenance: { label: 'تحت الصيانة', color: '#a16207', bg: '#fef3c7' },
+  active: { label: 'نشط', color: 'var(--ok-text)', bg: 'var(--ok-bg-2)' },
+  maintenance: { label: 'تحت الصيانة', color: 'var(--warn-text-2)', bg: 'var(--warn-bg-2)' },
   retired: { label: 'مستبعَد', color: '#64748b', bg: '#f1f5f9' },
 };
 const assetMaintCost = (a: Asset) => a.maintenance.reduce((s, m) => s + m.cost, 0);
@@ -199,10 +199,10 @@ const DEFAULT_HELP: HelpTexts = {
 //  MOCK DATA
 // ═══════════════════════════════════════════
 const INITIAL_PROJECTS: Project[] = [
-  { id: 'p1', name: 'شركة النخيل', icon: '🏢', balance: 284500, color: '#2563eb', type: 'شركة', description: 'شركة تجارية متخصصة في التوريدات' },
+  { id: 'p1', name: 'شركة النخيل', icon: '🏢', balance: 284500, color: 'var(--info-text)', type: 'شركة', description: 'شركة تجارية متخصصة في التوريدات' },
   { id: 'p2', name: 'مشروع المنزل', icon: '🏠', balance: 52300, color: '#059669', type: 'مشروع منزلي', description: 'إدارة مصاريف والتزامات المنزل' },
   { id: 'p3', name: 'مطعم الديوانية', icon: '🍽️', balance: 118900, color: '#d97706', type: 'مطعم', description: 'مطعم وجبات شعبية' },
-  { id: 'p4', name: 'متجر أناقة', icon: '🛍️', balance: 76400, color: '#7c3aed', type: 'متجر إلكتروني', description: 'متجر إلكتروني للأزياء والإكسسوارات' },
+  { id: 'p4', name: 'متجر أناقة', icon: '🛍️', balance: 76400, color: 'var(--purple-text)', type: 'متجر إلكتروني', description: 'متجر إلكتروني للأزياء والإكسسوارات' },
   { id: 'p5', name: 'عيادة الشفاء', icon: '🏥', balance: 203100, color: '#0891b2', type: 'عيادة', description: 'عيادة طبية متعددة التخصصات' },
   { id: 'p6', name: 'ميزانية العائلة', icon: '👨‍👩‍👧', balance: 31800, color: '#db2777', type: 'مشروع أسري', description: 'إدارة الالتزامات والمصاريف العائلية' },
 ];
@@ -477,15 +477,15 @@ function computeBalance(project: Project, transactions: Transaction[]): number {
 // ═══════════════════════════════════════════
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; bg: string; color: string }> = {
-    active:    { label: 'نشط',              bg: '#dcfce7', color: '#15803d' },
-    expiring:  { label: 'يوشك على الانتهاء', bg: '#fef9c3', color: '#a16207' },
-    expired:   { label: 'منتهي',            bg: '#fee2e2', color: '#b91c1c' },
-    pending:   { label: 'معلق',             bg: '#fef9c3', color: '#a16207' },
-    approved:  { label: 'معتمد',            bg: '#dcfce7', color: '#15803d' },
-    rejected:  { label: 'مرفوض',           bg: '#fee2e2', color: '#b91c1c' },
-    processed: { label: 'تمت المعالجة',    bg: '#dbeafe', color: '#1d4ed8' },
+    active:    { label: 'نشط',              bg: 'var(--ok-bg-2)', color: 'var(--ok-text)' },
+    expiring:  { label: 'يوشك على الانتهاء', bg: '#fef9c3', color: 'var(--warn-text-2)' },
+    expired:   { label: 'منتهي',            bg: 'var(--danger-bg-2)', color: 'var(--danger-text)' },
+    pending:   { label: 'معلق',             bg: '#fef9c3', color: 'var(--warn-text-2)' },
+    approved:  { label: 'معتمد',            bg: 'var(--ok-bg-2)', color: 'var(--ok-text)' },
+    rejected:  { label: 'مرفوض',           bg: 'var(--danger-bg-2)', color: 'var(--danger-text)' },
+    processed: { label: 'تمت المعالجة',    bg: '#dbeafe', color: 'var(--info-text)' },
   };
-  const s = map[status] || { label: status, bg: '#f3f4f6', color: 'var(--text-3)' };
+  const s = map[status] || { label: status, bg: 'var(--surface-3)', color: 'var(--text-3)' };
   return (
     <span style={{ background: s.bg, color: s.color, padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>
       {s.label}
@@ -561,8 +561,8 @@ function Btn({ children, variant = 'primary', onClick, size = 'md', style = {}, 
     primary: { background: '#2563eb', color: '#fff' },
     outline: { background: 'var(--surface)', color: 'var(--text-2)', border: '1px solid var(--border)' },
     ghost:   { background: 'transparent', color: 'var(--text-3)' },
-    danger:  { background: '#fee2e2', color: '#b91c1c' },
-    success: { background: '#dcfce7', color: '#15803d' },
+    danger:  { background: 'var(--danger-bg-2)', color: 'var(--danger-text)' },
+    success: { background: 'var(--ok-bg-2)', color: 'var(--ok-text)' },
   };
   return <button disabled={disabled} style={{ ...base, ...variants[variant], ...style }} onClick={onClick}>{children}</button>;
 }
@@ -699,7 +699,7 @@ function TypePicker({ value, onChange, options }: { value: string; onChange: (v:
         return (
           <button key={o.v} onClick={() => onChange(o.v)} style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10,
-            border: `1.5px solid ${active ? '#2563eb' : '#e5e7eb'}`, background: active ? '#eff6ff' : '#fff',
+            border: `1.5px solid ${active ? '#2563eb' : 'var(--border)'}`, background: active ? 'var(--info-bg)' : 'var(--surface)',
             color: active ? '#1d4ed8' : '#6b7280', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, cursor: 'pointer',
           }}>
             {o.icon && <span>{o.icon}</span>}{o.l}
@@ -1162,7 +1162,7 @@ function Tasks({ projects, requests, receivables, commitments, trackings, member
           <button key={v} onClick={() => setFilter(v)} style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 99, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 500,
             border: filter === v ? '1px solid #2563eb' : '1px solid var(--border)',
-            background: filter === v ? '#eff6ff' : 'var(--surface)', color: filter === v ? '#1d4ed8' : 'var(--text-2)',
+            background: filter === v ? 'var(--info-bg)' : 'var(--surface)', color: filter === v ? '#1d4ed8' : 'var(--text-2)',
           }}>
             {l}{n > 0 && <span style={{ fontSize: 10.5, background: filter === v ? '#2563eb' : 'var(--surface-3)', color: filter === v ? '#fff' : 'var(--text-3)', borderRadius: 99, padding: '0 6px', fontWeight: 700 }}>{n}</span>}
           </button>
@@ -1238,7 +1238,7 @@ function Tasks({ projects, requests, receivables, commitments, trackings, member
                       <div style={{ flex: 1, minWidth: 160 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
                           {isRecv ? 'تحصيل من' : 'سداد إلى'} {r.party}
-                          {overdue && <span style={{ fontSize: 10, background: '#fee2e2', color: '#b91c1c', borderRadius: 99, padding: '1px 7px', marginRight: 6 }}>متأخر</span>}
+                          {overdue && <span style={{ fontSize: 10, background: 'var(--danger-bg-2)', color: 'var(--danger-text)', borderRadius: 99, padding: '1px 7px', marginRight: 6 }}>متأخر</span>}
                         </div>
                         <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>{projName(r.projectId)} · متبقٍ {fmt(recvRemaining(r))}{r.dueDate ? ` · يستحق ${r.dueDate}` : ''}</div>
                       </div>
@@ -1267,7 +1267,7 @@ function Tasks({ projects, requests, receivables, commitments, trackings, member
                       <div style={{ flex: 1, minWidth: 160 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
                           {c.name}
-                          {overdue && <span style={{ fontSize: 10, background: '#fee2e2', color: '#b91c1c', borderRadius: 99, padding: '1px 7px', marginRight: 6 }}>متأخر</span>}
+                          {overdue && <span style={{ fontSize: 10, background: 'var(--danger-bg-2)', color: 'var(--danger-text)', borderRadius: 99, padding: '1px 7px', marginRight: 6 }}>متأخر</span>}
                         </div>
                         <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>{projName(c.projectId)} · {fmt(c.amount)} · يستحق {c.nextDue}</div>
                       </div>
@@ -1293,7 +1293,7 @@ function Tasks({ projects, requests, receivables, commitments, trackings, member
                     <div style={{ flex: 1, minWidth: 160 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
                         {t.icon} {t.name}
-                        <span style={{ fontSize: 10, background: t.status === 'expired' ? '#fee2e2' : '#fef3c7', color: t.status === 'expired' ? '#b91c1c' : '#a16207', borderRadius: 99, padding: '1px 7px', marginRight: 6 }}>{t.status === 'expired' ? 'منتهٍ' : 'يوشك'}</span>
+                        <span style={{ fontSize: 10, background: t.status === 'expired' ? 'var(--danger-bg-2)' : 'var(--warn-bg-2)', color: t.status === 'expired' ? '#b91c1c' : '#a16207', borderRadius: 99, padding: '1px 7px', marginRight: 6 }}>{t.status === 'expired' ? 'منتهٍ' : 'يوشك'}</span>
                       </div>
                       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>{projName(t.projectId)} · {t.type} · ينتهي {t.expiryDate}</div>
                     </div>
@@ -1351,10 +1351,10 @@ function Overview({ projects, transactions, trackings, requests, receivables, co
 
       {/* top totals */}
       <StatCards cards={[
-        { label: 'إجمالي الأرصدة', value: fmtNum(Math.round(totalBalance)), color: '#1d4ed8', bg: '#eff6ff', icon: '💰' },
-        { label: 'إجمالي الإيرادات', value: fmtNum(Math.round(totalIncome)), color: '#15803d', bg: '#f0fdf4', icon: '↓' },
-        { label: 'إجمالي المصروفات', value: fmtNum(Math.round(totalExpense)), color: '#b91c1c', bg: '#fef2f2', icon: '↑' },
-        { label: 'صافي الذمم', value: fmtNum(Math.round(recvOpen - payOpen)), color: recvOpen - payOpen >= 0 ? '#7c3aed' : '#b91c1c', bg: '#faf5ff', icon: '⇄' },
+        { label: 'إجمالي الأرصدة', value: fmtNum(Math.round(totalBalance)), color: 'var(--info-text)', bg: 'var(--info-bg)', icon: '💰' },
+        { label: 'إجمالي الإيرادات', value: fmtNum(Math.round(totalIncome)), color: 'var(--ok-text)', bg: 'var(--ok-bg)', icon: '↓' },
+        { label: 'إجمالي المصروفات', value: fmtNum(Math.round(totalExpense)), color: 'var(--danger-text)', bg: 'var(--danger-bg)', icon: '↑' },
+        { label: 'صافي الذمم', value: fmtNum(Math.round(recvOpen - payOpen)), color: recvOpen - payOpen >= 0 ? '#7c3aed' : '#b91c1c', bg: 'var(--purple-bg)', icon: '⇄' },
       ]} />
 
       {/* action alerts strip */}
@@ -1363,22 +1363,22 @@ function Overview({ projects, transactions, trackings, requests, receivables, co
           <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 12 }}>⚡ يحتاج انتباهك</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
             {pendingReqs.length > 0 && (
-              <button onClick={() => onNav('requests')} style={alertBtnStyle('#fffbeb', '#a16207')}>
+              <button onClick={() => onNav('requests')} style={alertBtnStyle('var(--warn-bg)', '#a16207')}>
                 <span style={{ fontSize: 20 }}>◫</span><div><div style={{ fontWeight: 700, fontSize: 16 }}>{pendingReqs.length}</div><div style={{ fontSize: 11 }}>طلب معلّق</div></div>
               </button>
             )}
             {overdueRecv.length > 0 && (
-              <button onClick={() => onNav('receivables')} style={alertBtnStyle('#fef2f2', '#b91c1c')}>
+              <button onClick={() => onNav('receivables')} style={alertBtnStyle('var(--danger-bg)', '#b91c1c')}>
                 <span style={{ fontSize: 20 }}>⇄</span><div><div style={{ fontWeight: 700, fontSize: 16 }}>{overdueRecv.length}</div><div style={{ fontSize: 11 }}>ذمة متأخرة</div></div>
               </button>
             )}
             {dueCommitments.length > 0 && (
-              <button onClick={() => onNav('commitments')} style={alertBtnStyle('#eff6ff', '#1d4ed8')}>
+              <button onClick={() => onNav('commitments')} style={alertBtnStyle('var(--info-bg)', '#1d4ed8')}>
                 <span style={{ fontSize: 20 }}>↻</span><div><div style={{ fontWeight: 700, fontSize: 16 }}>{dueCommitments.length}</div><div style={{ fontSize: 11 }}>التزام يستحق</div></div>
               </button>
             )}
             {urgentTrackings.length > 0 && (
-              <button onClick={() => onNav('trackings')} style={alertBtnStyle('#fff7ed', '#c2410c')}>
+              <button onClick={() => onNav('trackings')} style={alertBtnStyle('var(--warn-bg)', '#c2410c')}>
                 <span style={{ fontSize: 20 }}>⏰</span><div><div style={{ fontWeight: 700, fontSize: 16 }}>{urgentTrackings.length}</div><div style={{ fontSize: 11 }}>متابعة عاجلة</div></div>
               </button>
             )}
@@ -1409,13 +1409,13 @@ function Overview({ projects, transactions, trackings, requests, receivables, co
         <Card>
           <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 16 }}>الذمم على مستوى المنشأة</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: '#f0fdf4', borderRadius: 10 }}>
-              <span style={{ fontSize: 13, color: '#15803d' }}>مستحقّ لنا (مدينة)</span>
-              <span style={{ fontWeight: 800, fontSize: 15, color: '#15803d' }}>{fmt(recvOpen)}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'var(--ok-bg)', borderRadius: 10 }}>
+              <span style={{ fontSize: 13, color: 'var(--ok-text)' }}>مستحقّ لنا (مدينة)</span>
+              <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--ok-text)' }}>{fmt(recvOpen)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: '#fef2f2', borderRadius: 10 }}>
-              <span style={{ fontSize: 13, color: '#b91c1c' }}>مستحقّ علينا (دائنة)</span>
-              <span style={{ fontWeight: 800, fontSize: 15, color: '#b91c1c' }}>{fmt(payOpen)}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'var(--danger-bg)', borderRadius: 10 }}>
+              <span style={{ fontSize: 13, color: 'var(--danger-text)' }}>مستحقّ علينا (دائنة)</span>
+              <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--danger-text)' }}>{fmt(payOpen)}</span>
             </div>
             <button onClick={() => onNav('receivables')} style={{ background: 'var(--surface-3)', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit' }}>عرض كل الذمم ←</button>
           </div>
@@ -1425,7 +1425,7 @@ function Overview({ projects, transactions, trackings, requests, receivables, co
       {/* projects grid */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>مشاريعك</div>
-        <button onClick={() => onNav('projects')} style={{ background: 'none', border: 'none', fontSize: 12.5, color: '#2563eb', cursor: 'pointer', fontFamily: 'inherit' }}>إدارة المشاريع ←</button>
+        <button onClick={() => onNav('projects')} style={{ background: 'none', border: 'none', fontSize: 12.5, color: 'var(--info-text)', cursor: 'pointer', fontFamily: 'inherit' }}>إدارة المشاريع ←</button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
         {projects.map(p => {
@@ -1446,7 +1446,7 @@ function Overview({ projects, transactions, trackings, requests, receivables, co
                   <span style={{ fontSize: 22 }}>{p.icon}</span>
                   <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{p.name}</span>
                 </span>
-                {palerts > 0 && <span style={{ fontSize: 10.5, background: '#fef2f2', color: '#b91c1c', borderRadius: 99, padding: '2px 8px', fontWeight: 600 }}>{palerts} تنبيه</span>}
+                {palerts > 0 && <span style={{ fontSize: 10.5, background: 'var(--danger-bg)', color: 'var(--danger-text)', borderRadius: 99, padding: '2px 8px', fontWeight: 600 }}>{palerts} تنبيه</span>}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{p.type}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 4 }}>
@@ -1455,8 +1455,8 @@ function Overview({ projects, transactions, trackings, requests, receivables, co
                   <div style={{ fontSize: 17, fontWeight: 800, color: bal >= 0 ? 'var(--text)' : '#b91c1c' }}>{fmtNum(Math.round(bal))}</div>
                 </div>
                 <div style={{ textAlign: 'left', fontSize: 11 }}>
-                  <div style={{ color: '#15803d' }}>↓ {fmtNum(Math.round(pinc))}</div>
-                  <div style={{ color: '#b91c1c' }}>↑ {fmtNum(Math.round(pexp))}</div>
+                  <div style={{ color: 'var(--ok-text)' }}>↓ {fmtNum(Math.round(pinc))}</div>
+                  <div style={{ color: 'var(--danger-text)' }}>↑ {fmtNum(Math.round(pexp))}</div>
                 </div>
               </div>
             </button>
@@ -1502,12 +1502,12 @@ function Dashboard({ projectId, onNav, projects, transactions, trackings, reques
   const pendingReqs = requests.filter(r => r.projectId === projectId && r.status === 'pending');
 
   const stats = [
-    { label: 'الرصيد الكلي', value: fmt(computeBalance(project, transactions)), icon: '💰', bg: '#eff6ff', color: '#1d4ed8' },
-    { label: `إيرادات ${periodLabel}`, value: fmt(income), icon: '📈', bg: '#f0fdf4', color: '#15803d' },
-    { label: `مصروفات ${periodLabel}`, value: fmt(expense), icon: '📉', bg: '#fef2f2', color: '#b91c1c' },
-    { label: `صافي ${periodLabel}`, value: fmt(income - expense), icon: '📊', bg: '#faf5ff', color: '#7e22ce' },
-    { label: 'طلبات معلقة', value: String(pendingReqs.length), icon: '⏳', bg: '#fffbeb', color: '#a16207' },
-    { label: 'تنبيهات متابعات', value: String(urgentTrackings.length), icon: '⚠️', bg: '#fff7ed', color: '#c2410c' },
+    { label: 'الرصيد الكلي', value: fmt(computeBalance(project, transactions)), icon: '💰', bg: 'var(--info-bg)', color: 'var(--info-text)' },
+    { label: `إيرادات ${periodLabel}`, value: fmt(income), icon: '📈', bg: 'var(--ok-bg)', color: 'var(--ok-text)' },
+    { label: `مصروفات ${periodLabel}`, value: fmt(expense), icon: '📉', bg: 'var(--danger-bg)', color: 'var(--danger-text)' },
+    { label: `صافي ${periodLabel}`, value: fmt(income - expense), icon: '📊', bg: 'var(--purple-bg)', color: '#7e22ce' },
+    { label: 'طلبات معلقة', value: String(pendingReqs.length), icon: '⏳', bg: 'var(--warn-bg)', color: 'var(--warn-text-2)' },
+    { label: 'تنبيهات متابعات', value: String(urgentTrackings.length), icon: '⚠️', bg: 'var(--warn-bg)', color: 'var(--warn-text)' },
   ];
 
   // build monthly series from real transactions over the selected period
@@ -1578,12 +1578,12 @@ function Dashboard({ projectId, onNav, projects, transactions, trackings, reques
         <Card>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ fontWeight: 600, fontSize: 15 }}>تنبيهات عاجلة</div>
-            <button onClick={() => onNav('trackings')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل</button>
+            <button onClick={() => onNav('trackings')} style={{ background: 'none', border: 'none', color: 'var(--info-text)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {urgentTrackings.length === 0 && <div style={{ padding: '20px 12px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>✅ لا توجد تنبيهات عاجلة</div>}
             {urgentTrackings.slice(0, 4).map(t => (
-              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: t.status === 'expired' ? '#fef2f2' : '#fffbeb' }}>
+              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: t.status === 'expired' ? 'var(--danger-bg)' : 'var(--warn-bg)' }}>
                 <span style={{ fontSize: 18 }}>{t.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
@@ -1601,13 +1601,13 @@ function Dashboard({ projectId, onNav, projects, transactions, trackings, reques
         <Card>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ fontWeight: 600, fontSize: 15 }}>آخر العمليات</div>
-            <button onClick={() => onNav('finance')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل</button>
+            <button onClick={() => onNav('finance')} style={{ background: 'none', border: 'none', color: 'var(--info-text)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {txns.length === 0 && <div style={{ padding: '20px 12px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>لا توجد عمليات في هذا المشروع</div>}
             {txns.slice(0, 5).map(t => (
               <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: t.type === 'income' ? '#f0fdf4' : '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 14 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: t.type === 'income' ? 'var(--ok-bg)' : 'var(--danger-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 14 }}>
                   {t.type === 'income' ? '↑' : t.type === 'expense' ? '↓' : '↔'}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1625,12 +1625,12 @@ function Dashboard({ projectId, onNav, projects, transactions, trackings, reques
         <Card>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ fontWeight: 600, fontSize: 15 }}>طلبات تنتظر موافقتك</div>
-            <button onClick={() => onNav('requests')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل</button>
+            <button onClick={() => onNav('requests')} style={{ background: 'none', border: 'none', color: 'var(--info-text)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {pendingReqs.length === 0 && <div style={{ padding: '20px 12px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>لا توجد طلبات تنتظر موافقتك</div>}
             {pendingReqs.map(r => (
-              <div key={r.id} style={{ padding: '12px 14px', background: '#fffbeb', borderRadius: 10 }}>
+              <div key={r.id} style={{ padding: '12px 14px', background: 'var(--warn-bg)', borderRadius: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{r.title}</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-2)', flexShrink: 0 }}>{fmtNum(r.amount)}</div>
@@ -1638,7 +1638,7 @@ function Dashboard({ projectId, onNav, projects, transactions, trackings, reques
                 <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 10 }}>من: {r.requestedBy}</div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => onDecide(r.id, 'approved')} style={{ flex: 1, padding: 6, borderRadius: 8, background: '#15803d', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>✓ موافقة</button>
-                  <button onClick={() => onDecide(r.id, 'rejected')} style={{ flex: 1, padding: 6, borderRadius: 8, background: '#fee2e2', color: '#b91c1c', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>✕ رفض</button>
+                  <button onClick={() => onDecide(r.id, 'rejected')} style={{ flex: 1, padding: 6, borderRadius: 8, background: 'var(--danger-bg-2)', color: 'var(--danger-text)', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>✕ رفض</button>
                 </div>
               </div>
             ))}
@@ -1678,7 +1678,7 @@ function ProjectForm({ initial, onSave, onCancel, projectTypes = DEFAULT_PROJECT
           {PROJECT_ICONS.map(ic => (
             <button key={ic} onClick={() => setIcon(ic)} style={{
               width: 44, height: 44, borderRadius: 10, fontSize: 20, cursor: 'pointer',
-              border: `1.5px solid ${icon === ic ? '#2563eb' : '#e5e7eb'}`, background: icon === ic ? '#eff6ff' : '#fff',
+              border: `1.5px solid ${icon === ic ? '#2563eb' : 'var(--border)'}`, background: icon === ic ? 'var(--info-bg)' : 'var(--surface)',
             }}>{ic}</button>
           ))}
         </div>
@@ -1738,10 +1738,10 @@ function Projects({ projects, transactions, onOpen, onSave, onDelete, openCreate
       {projects.length > 0 && (prefs?.showStats ?? true) && (
         <>
           <StatCards cards={[
-            { label: 'عدد المشاريع', value: projects.length, color: '#1d4ed8', bg: '#eff6ff', icon: '⬡' },
-            { label: 'إجمالي الأرصدة', value: fmtNum(totalBalance), color: '#15803d', bg: '#f0fdf4', icon: '∑' },
-            { label: 'إجمالي الإيرادات', value: fmtNum(totalIncome), color: '#15803d', bg: '#f0fdf4', icon: '↓' },
-            { label: 'إجمالي المصروفات', value: fmtNum(totalExpense), color: '#b91c1c', bg: '#fef2f2', icon: '↑' },
+            { label: 'عدد المشاريع', value: projects.length, color: 'var(--info-text)', bg: 'var(--info-bg)', icon: '⬡' },
+            { label: 'إجمالي الأرصدة', value: fmtNum(totalBalance), color: 'var(--ok-text)', bg: 'var(--ok-bg)', icon: '∑' },
+            { label: 'إجمالي الإيرادات', value: fmtNum(totalIncome), color: 'var(--ok-text)', bg: 'var(--ok-bg)', icon: '↓' },
+            { label: 'إجمالي المصروفات', value: fmtNum(totalExpense), color: 'var(--danger-text)', bg: 'var(--danger-bg)', icon: '↑' },
           ]} />
           {(prefs?.showCharts ?? true) && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px,1fr))', gap: 16, marginBottom: 22 }}>
@@ -1778,20 +1778,20 @@ function Projects({ projects, transactions, onOpen, onSave, onDelete, openCreate
                 <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>{fmt(computeBalance(p, transactions))}</div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
-                <div style={{ background: '#f0fdf4', borderRadius: 8, padding: '8px 10px' }}>
-                  <div style={{ fontSize: 10, color: '#15803d' }}>إيرادات</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>{fmtNum(income)}</div>
+                <div style={{ background: 'var(--ok-bg)', borderRadius: 8, padding: '8px 10px' }}>
+                  <div style={{ fontSize: 10, color: 'var(--ok-text)' }}>إيرادات</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ok-text)' }}>{fmtNum(income)}</div>
                 </div>
-                <div style={{ background: '#fef2f2', borderRadius: 8, padding: '8px 10px' }}>
-                  <div style={{ fontSize: 10, color: '#b91c1c' }}>مصروفات</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#b91c1c' }}>{fmtNum(expense)}</div>
+                <div style={{ background: 'var(--danger-bg)', borderRadius: 8, padding: '8px 10px' }}>
+                  <div style={{ fontSize: 10, color: 'var(--danger-text)' }}>مصروفات</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--danger-text)' }}>{fmtNum(expense)}</div>
                 </div>
               </div>
               <Btn variant="outline" size="sm" style={{ width: '100%' }} onClick={() => onOpen(p.id)}>عرض المشروع</Btn>
             </Card>
           );
         })}
-        <div onClick={() => setSheet({ mode: 'create' })} style={{ border: '2px dashed #e5e7eb', borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', minHeight: 200, color: 'var(--text-3)' }}>
+        <div onClick={() => setSheet({ mode: 'create' })} style={{ border: '2px dashed var(--border)', borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', minHeight: 200, color: 'var(--text-3)' }}>
           <span style={{ fontSize: 32 }}>+</span>
           <span style={{ fontSize: 14, fontWeight: 500 }}>إضافة مشروع جديد</span>
         </div>
@@ -1878,7 +1878,7 @@ function MemberForm({ initial, projectId, onSave, onCancel }: {
           {ROLES.map(r => (
             <button key={r.id} onClick={() => pickRole(r.id)} style={{
               display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
-              border: `1.5px solid ${role === r.id ? r.color : '#e5e7eb'}`, background: role === r.id ? r.color + '12' : '#fff',
+              border: `1.5px solid ${role === r.id ? r.color : 'var(--border)'}`, background: role === r.id ? r.color + '12' : '#fff',
               textAlign: 'right', fontFamily: 'inherit',
             }}>
               <span style={{ width: 10, height: 10, borderRadius: 99, background: r.color, flexShrink: 0 }} />
@@ -1898,12 +1898,12 @@ function MemberForm({ initial, projectId, onSave, onCancel }: {
             return (
               <button key={p.id} onClick={() => togglePerm(p.id)} disabled={role === 'owner'} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', borderRadius: 9,
-                border: '1px solid var(--border)', background: on ? '#eff6ff' : '#fff', cursor: role === 'owner' ? 'not-allowed' : 'pointer',
+                border: '1px solid var(--border)', background: on ? 'var(--info-bg)' : 'var(--surface)', cursor: role === 'owner' ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit', opacity: role === 'owner' ? 0.7 : 1,
               }}>
                 <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{p.label}</span>
                 <span style={{
-                  width: 36, height: 20, borderRadius: 99, background: on ? '#2563eb' : '#e5e7eb', position: 'relative', transition: 'background .15s', flexShrink: 0,
+                  width: 36, height: 20, borderRadius: 99, background: on ? '#2563eb' : 'var(--border)', position: 'relative', transition: 'background .15s', flexShrink: 0,
                 }}>
                   <span style={{ position: 'absolute', top: 2, [on ? 'left' : 'right']: 2, width: 16, height: 16, borderRadius: 99, background: 'var(--surface)' } as React.CSSProperties} />
                 </span>
@@ -1972,7 +1972,7 @@ function MemberTxnForm({ projectId, members, onSave, onCancel }: {
       <Field label="المرفقات (صور / ملفات)">
         <AttachmentPicker value={attachments} onChange={setAttachments} />
       </Field>
-      <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#1d4ed8' }}>
+      <div style={{ background: 'var(--info-bg)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: 'var(--info-text)' }}>
         ℹ️ ستُرسل الحركة للعضو بانتظار {typeInfo.direction === 'to_member' ? 'قبوله الاستلام' : 'موافقته على الخصم'}.
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
@@ -1995,7 +1995,7 @@ function InviteForm({ projectId, onInvite, onCancel }: {
   const valid = email.includes('@') && email.length > 4;
   return (
     <>
-      <div style={{ background: '#f5f3ff', borderRadius: 12, padding: 14, marginBottom: 16, fontSize: 12, color: '#6d28d9' }}>
+      <div style={{ background: '#f5f3ff', borderRadius: 12, padding: 14, marginBottom: 16, fontSize: 12, color: 'var(--purple-text)' }}>
         📧 ستُرسل دعوة انضمام عبر البريد. يشترط أن يكون المدعو مسجلاً في النظام لقبول الدعوة.
       </div>
       <Field label="البريد الإلكتروني للمدعو">
@@ -2093,7 +2093,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
         {(canEdit || canDelete) && (
           <div style={{ display: 'flex', gap: 8 }}>
             {canEdit && <button onClick={() => setSheet({ mode: 'editProject' })} style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', fontSize: 15, color: 'var(--text-2)' }} title="تعديل المشروع">✎</button>}
-            {canDelete && <button onClick={() => setSheet({ mode: 'deleteProject' })} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', fontSize: 15, color: '#b91c1c' }} title="حذف المشروع">🗑️</button>}
+            {canDelete && <button onClick={() => setSheet({ mode: 'deleteProject' })} style={{ background: 'var(--danger-bg)', border: '1px solid #fecaca', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', fontSize: 15, color: 'var(--danger-text)' }} title="حذف المشروع">🗑️</button>}
           </div>
         )}
       </div>
@@ -2115,10 +2115,10 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginLeft: 4 }}>إجراء سريع:</span>
           {[
-            { a: 'tx' as const, icon: '💰', label: 'عملية مالية', color: '#15803d', bg: '#f0fdf4' },
-            { a: 'doc' as const, icon: '📄', label: 'مستند', color: '#1d4ed8', bg: '#eff6ff' },
-            { a: 'tracking' as const, icon: '🛡️', label: 'متابعة', color: '#a16207', bg: '#fffbeb' },
-            { a: 'request' as const, icon: '📝', label: 'طلب', color: '#7c3aed', bg: '#faf5ff' },
+            { a: 'tx' as const, icon: '💰', label: 'عملية مالية', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+            { a: 'doc' as const, icon: '📄', label: 'مستند', color: 'var(--info-text)', bg: 'var(--info-bg)' },
+            { a: 'tracking' as const, icon: '🛡️', label: 'متابعة', color: 'var(--warn-text-2)', bg: 'var(--warn-bg)' },
+            { a: 'request' as const, icon: '📝', label: 'طلب', color: 'var(--purple-text)', bg: 'var(--purple-bg)' },
           ].map(b => (
             <button key={b.a} onClick={() => onQuickAction(b.a)} style={{
               display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 10,
@@ -2136,10 +2136,10 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 14, marginBottom: 20 }}>
             {[
-              { l: 'إجمالي الإيرادات', v: fmt(income), c: '#15803d', bg: '#f0fdf4', i: '📈' },
-              { l: 'إجمالي المصروفات', v: fmt(expense), c: '#b91c1c', bg: '#fef2f2', i: '📉' },
-              { l: 'صافي الربح', v: fmt(income - expense), c: '#1d4ed8', bg: '#eff6ff', i: '💰' },
-              { l: 'عدد الأعضاء', v: String(projMembers.length), c: '#7c3aed', bg: '#faf5ff', i: '👥' },
+              { l: 'إجمالي الإيرادات', v: fmt(income), c: '#15803d', bg: 'var(--ok-bg)', i: '📈' },
+              { l: 'إجمالي المصروفات', v: fmt(expense), c: '#b91c1c', bg: 'var(--danger-bg)', i: '📉' },
+              { l: 'صافي الربح', v: fmt(income - expense), c: '#1d4ed8', bg: 'var(--info-bg)', i: '💰' },
+              { l: 'عدد الأعضاء', v: String(projMembers.length), c: '#7c3aed', bg: 'var(--purple-bg)', i: '👥' },
             ].map(s => (
               <div key={s.l} style={{ background: s.bg, borderRadius: 14, padding: 16 }}>
                 <div style={{ fontSize: 22, marginBottom: 6 }}>{s.i}</div>
@@ -2177,16 +2177,16 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                   <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>لا توجد إجراءات مطلوبة ✅</div>
                 )}
                 {pendingReqs.map(r => (
-                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: '#fffbeb' }}>
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'var(--warn-bg)' }}>
                     <span>⏳</span>
                     <div style={{ flex: 1, fontSize: 12 }}>
                       <div style={{ fontWeight: 500, color: 'var(--text)' }}>{r.title}</div>
-                      <div style={{ color: '#a16207' }}>طلب بانتظار الاعتماد — {fmtNum(r.amount)} ر.س</div>
+                      <div style={{ color: 'var(--warn-text-2)' }}>طلب بانتظار الاعتماد — {fmtNum(r.amount)} ر.س</div>
                     </div>
                   </div>
                 ))}
                 {projTrackings.filter(t => t.status !== 'active').map(t => (
-                  <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: t.status === 'expired' ? '#fef2f2' : '#fffbeb' }}>
+                  <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: t.status === 'expired' ? 'var(--danger-bg)' : 'var(--warn-bg)' }}>
                     <span>{t.icon}</span>
                     <div style={{ flex: 1, fontSize: 12 }}>
                       <div style={{ fontWeight: 500, color: 'var(--text)' }}>{t.name}</div>
@@ -2207,7 +2207,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                 <Card>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                     <div style={{ fontWeight: 600, fontSize: 15 }}>📄 مستندات المشروع</div>
-                    <button onClick={() => onNav('documents')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ‹</button>
+                    <button onClick={() => onNav('documents')} style={{ background: 'none', border: 'none', color: 'var(--info-text)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ‹</button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {projDocs.slice(0, 4).map(d => (
@@ -2227,7 +2227,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                 <Card>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                     <div style={{ fontWeight: 600, fontSize: 15 }}>🛡️ متابعات المشروع</div>
-                    <button onClick={() => onNav('trackings')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ‹</button>
+                    <button onClick={() => onNav('trackings')} style={{ background: 'none', border: 'none', color: 'var(--info-text)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ‹</button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {projTrackings.slice(0, 4).map(t => (
@@ -2266,13 +2266,13 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
           {/* pending movements requiring accept/reject */}
           {pendingTxns.length > 0 && (
             <Card style={{ marginBottom: 16, border: '1.5px solid #fde68a' }}>
-              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 12, color: '#a16207' }}>⏳ حركات بانتظار القبول/الرفض</div>
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 12, color: 'var(--warn-text-2)' }}>⏳ حركات بانتظار القبول/الرفض</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {pendingTxns.map(t => {
                   const m = members.find(x => x.id === t.memberId);
                   const ti = MEMBER_TXN_TYPES.find(x => x.id === t.type)!;
                   return (
-                    <div key={t.id} style={{ padding: '12px 14px', background: '#fffbeb', borderRadius: 10 }}>
+                    <div key={t.id} style={{ padding: '12px 14px', background: 'var(--warn-bg)', borderRadius: 10 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{ti.icon} {ti.label} — {m?.name}</div>
                         <div style={{ fontSize: 14, fontWeight: 700, color: t.direction === 'to_member' ? '#15803d' : '#b91c1c' }}>{t.direction === 'to_member' ? '+' : '−'}{fmtNum(t.amount)}</div>
@@ -2280,7 +2280,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                       {t.note && <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>{t.note}</div>}
                       <div style={{ display: 'flex', gap: 8 }}>
                         <button onClick={() => onDecideMemberTxn(t.id, 'accepted')} style={{ flex: 1, padding: 6, borderRadius: 8, background: '#15803d', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>✓ قبول</button>
-                        <button onClick={() => onDecideMemberTxn(t.id, 'rejected')} style={{ flex: 1, padding: 6, borderRadius: 8, background: '#fee2e2', color: '#b91c1c', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>✕ رفض</button>
+                        <button onClick={() => onDecideMemberTxn(t.id, 'rejected')} style={{ flex: 1, padding: 6, borderRadius: 8, background: 'var(--danger-bg-2)', color: 'var(--danger-text)', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>✕ رفض</button>
                       </div>
                     </div>
                   );
@@ -2307,7 +2307,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
                         {m.name}
-                        {m.status === 'invited' && <span style={{ fontSize: 10, background: '#fef3c7', color: '#a16207', padding: '1px 7px', borderRadius: 99 }}>دعوة معلّقة</span>}
+                        {m.status === 'invited' && <span style={{ fontSize: 10, background: 'var(--warn-bg-2)', color: 'var(--warn-text-2)', padding: '1px 7px', borderRadius: 99 }}>دعوة معلّقة</span>}
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{m.email}</div>
                     </div>
@@ -2356,10 +2356,10 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 14, marginBottom: 20 }}>
             {[
-              { l: 'تدفق داخل (إيرادات)', v: income, c: '#15803d', bg: '#f0fdf4' },
-              { l: 'تدفق خارج (مصروفات)', v: expense, c: '#b91c1c', bg: '#fef2f2' },
-              { l: 'تحويلات واردة', v: transfersIn, c: '#1d4ed8', bg: '#eff6ff' },
-              { l: 'تحويلات صادرة', v: transfersOut, c: '#a16207', bg: '#fffbeb' },
+              { l: 'تدفق داخل (إيرادات)', v: income, c: '#15803d', bg: 'var(--ok-bg)' },
+              { l: 'تدفق خارج (مصروفات)', v: expense, c: '#b91c1c', bg: 'var(--danger-bg)' },
+              { l: 'تحويلات واردة', v: transfersIn, c: '#1d4ed8', bg: 'var(--info-bg)' },
+              { l: 'تحويلات صادرة', v: transfersOut, c: '#a16207', bg: 'var(--warn-bg)' },
             ].map(s => (
               <div key={s.l} style={{ background: s.bg, borderRadius: 14, padding: 16 }}>
                 <div style={{ fontSize: 17, fontWeight: 700, color: s.c }}>{fmt(s.v)}</div>
@@ -2380,18 +2380,18 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
-                    <span style={{ fontSize: 10, color: '#15803d', width: 50 }}>داخل</span>
+                    <span style={{ fontSize: 10, color: 'var(--ok-text)', width: 50 }}>داخل</span>
                     <div style={{ flex: 1, height: 14, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${(byMonth[m].income / maxFlow) * 100}%`, background: '#22c55e', borderRadius: 99 }} />
                     </div>
-                    <span style={{ fontSize: 11, color: '#15803d', width: 60, textAlign: 'left' }}>{fmtNum(byMonth[m].income)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--ok-text)', width: 60, textAlign: 'left' }}>{fmtNum(byMonth[m].income)}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <span style={{ fontSize: 10, color: '#b91c1c', width: 50 }}>خارج</span>
+                    <span style={{ fontSize: 10, color: 'var(--danger-text)', width: 50 }}>خارج</span>
                     <div style={{ flex: 1, height: 14, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${(byMonth[m].expense / maxFlow) * 100}%`, background: '#f87171', borderRadius: 99 }} />
                     </div>
-                    <span style={{ fontSize: 11, color: '#b91c1c', width: 60, textAlign: 'left' }}>{fmtNum(byMonth[m].expense)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--danger-text)', width: 60, textAlign: 'left' }}>{fmtNum(byMonth[m].expense)}</span>
                   </div>
                 </div>
               ))}
@@ -2402,7 +2402,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
           <Card style={{ marginTop: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <div style={{ fontWeight: 600, fontSize: 15 }}>تفاصيل عمليات التدفق ({txns.length})</div>
-              <button onClick={() => onNav('finance')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>الإدارة المالية ‹</button>
+              <button onClick={() => onNav('finance')} style={{ background: 'none', border: 'none', color: 'var(--info-text)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>الإدارة المالية ‹</button>
             </div>
             {txns.length === 0 && <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>لا توجد عمليات بعد</div>}
             <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -2410,7 +2410,7 @@ function ProjectDetail({ projectId, projects, transactions, trackings, requests,
                 const isIn = t.type === 'income' || (t.type === 'transfer' && t.transferDir === 'in');
                 return (
                   <div key={t.id} onClick={() => onViewTx(t)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 12px', borderRadius: 10, cursor: 'pointer', borderRight: `3px solid ${isIn ? '#22c55e' : '#f87171'}`, background: 'var(--surface-2)' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 99, background: isIn ? '#f0fdf4' : '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 99, background: isIn ? 'var(--ok-bg)' : 'var(--danger-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
                       {t.type === 'income' ? '↓' : t.type === 'expense' ? '↑' : '↔'}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -2549,10 +2549,10 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'إجمالي الإيرادات', val: income, color: '#15803d', bg: '#f0fdf4', icon: '📈' },
-          { label: 'إجمالي المصروفات', val: expense, color: '#b91c1c', bg: '#fef2f2', icon: '📉' },
-          { label: 'صافي الربح', val: income - expense, color: '#1d4ed8', bg: '#eff6ff', icon: '💰' },
-          { label: 'صافي التحويلات', val: transfersIn - transfersOut, color: '#a16207', bg: '#fffbeb', icon: '↔' },
+          { label: 'إجمالي الإيرادات', val: income, color: 'var(--ok-text)', bg: 'var(--ok-bg)', icon: '📈' },
+          { label: 'إجمالي المصروفات', val: expense, color: 'var(--danger-text)', bg: 'var(--danger-bg)', icon: '📉' },
+          { label: 'صافي الربح', val: income - expense, color: 'var(--info-text)', bg: 'var(--info-bg)', icon: '💰' },
+          { label: 'صافي التحويلات', val: transfersIn - transfersOut, color: 'var(--warn-text-2)', bg: 'var(--warn-bg)', icon: '↔' },
         ].map((s, i) => (
           <div key={i} style={{ background: s.bg, borderRadius: 16, padding: 18, display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 24 }}>{s.icon}</span>
@@ -2645,7 +2645,7 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
                 <tr key={t.id} onClick={() => setSheet({ mode: 'view', tx: t })} style={{ cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: 8, background: t.type === 'income' ? '#f0fdf4' : t.type === 'expense' ? '#fef2f2' : '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: 8, background: t.type === 'income' ? 'var(--ok-bg)' : t.type === 'expense' ? 'var(--danger-bg)' : 'var(--info-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
                         {t.type === 'income' ? '↑' : t.type === 'expense' ? '↓' : '↔'}
                       </div>
                       <span style={{ color: 'var(--text-2)', fontWeight: 500 }}>{t.description}</span>
@@ -2653,7 +2653,7 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
                   </td>
                   <td style={{ padding: '12px 16px', color: 'var(--text-3)' }}>{t.category}</td>
                   <td style={{ padding: '12px 16px', color: 'var(--text-3)' }}>{t.date}</td>
-                  <td style={{ padding: '12px 16px' }}>{t.hasDoc ? <span style={{ color: '#2563eb', fontSize: 12 }}>📎 مرفق</span> : <span style={{ color: '#d1d5db', fontSize: 12 }}>—</span>}</td>
+                  <td style={{ padding: '12px 16px' }}>{t.hasDoc ? <span style={{ color: 'var(--info-text)', fontSize: 12 }}>📎 مرفق</span> : <span style={{ color: '#d1d5db', fontSize: 12 }}>—</span>}</td>
                   <td style={{ padding: '12px 16px', fontWeight: 600, color: t.type === 'income' ? '#15803d' : t.type === 'expense' ? '#b91c1c' : '#1d4ed8' }}>
                     {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : t.transferDir === 'in' ? '+' : '-'}{fmtNum(t.amount)} ر.س
                   </td>
@@ -2831,10 +2831,10 @@ function Ledger({ projects, transactions, members, memberTxns, helpEntry }: {
       {/* summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 14, marginBottom: 20 }}>
         {[
-          { l: 'إجمالي الوارد', v: totalIn, c: '#15803d', bg: '#f0fdf4', i: '↓' },
-          { l: 'إجمالي الصادر', v: totalOut, c: '#b91c1c', bg: '#fef2f2', i: '↑' },
-          { l: 'صافي التدفق', v: totalIn - totalOut, c: '#1d4ed8', bg: '#eff6ff', i: '⇄' },
-          { l: 'عدد العمليات', v: filtered.length, c: '#7c3aed', bg: '#faf5ff', i: '#', raw: true },
+          { l: 'إجمالي الوارد', v: totalIn, c: '#15803d', bg: 'var(--ok-bg)', i: '↓' },
+          { l: 'إجمالي الصادر', v: totalOut, c: '#b91c1c', bg: 'var(--danger-bg)', i: '↑' },
+          { l: 'صافي التدفق', v: totalIn - totalOut, c: '#1d4ed8', bg: 'var(--info-bg)', i: '⇄' },
+          { l: 'عدد العمليات', v: filtered.length, c: '#7c3aed', bg: 'var(--purple-bg)', i: '#', raw: true },
         ].map(s => (
           <div key={s.l} style={{ background: s.bg, borderRadius: 14, padding: 16 }}>
             <div style={{ fontSize: 18, marginBottom: 4 }}>{s.i}</div>
@@ -2895,7 +2895,7 @@ function Ledger({ projects, transactions, members, memberTxns, helpEntry }: {
                       <td style={{ padding: '10px 12px', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmtNum(before)}</td>
                       <td style={{ padding: '10px 12px', color: 'var(--text-2)', fontWeight: 500, whiteSpace: 'nowrap' }}>{fmtNum(after)}</td>
                       <td style={{ padding: '10px 12px', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{r.date}</td>
-                      <td style={{ padding: '10px 12px' }}><span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: r.status === 'معلّقة' ? '#fef3c7' : r.status === 'مرفوضة' ? '#fee2e2' : '#dcfce7', color: r.status === 'معلّقة' ? '#a16207' : r.status === 'مرفوضة' ? '#b91c1c' : '#15803d' }}>{r.status}</span></td>
+                      <td style={{ padding: '10px 12px' }}><span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: r.status === 'معلّقة' ? 'var(--warn-bg-2)' : r.status === 'مرفوضة' ? 'var(--danger-bg-2)' : 'var(--ok-bg-2)', color: r.status === 'معلّقة' ? '#a16207' : r.status === 'مرفوضة' ? '#b91c1c' : '#15803d' }}>{r.status}</span></td>
                     </tr>
                   );
                 })}
@@ -2936,14 +2936,14 @@ function Ledger({ projects, transactions, members, memberTxns, helpEntry }: {
                     <span style={{ color: p.in - p.out >= 0 ? '#15803d' : '#b91c1c', fontWeight: 600 }}>صافي {fmtNum(p.in - p.out)}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 3 }}>
-                    <span style={{ fontSize: 10, color: '#15803d', width: 36 }}>وارد</span>
+                    <span style={{ fontSize: 10, color: 'var(--ok-text)', width: 36 }}>وارد</span>
                     <div style={{ flex: 1, height: 12, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}><div style={{ height: '100%', width: `${Math.min(100, (p.in / Math.max(p.in, p.out, 1)) * 100)}%`, background: '#22c55e' }} /></div>
-                    <span style={{ fontSize: 11, color: '#15803d', width: 64, textAlign: 'left' }}>{fmtNum(p.in)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--ok-text)', width: 64, textAlign: 'left' }}>{fmtNum(p.in)}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <span style={{ fontSize: 10, color: '#b91c1c', width: 36 }}>صادر</span>
+                    <span style={{ fontSize: 10, color: 'var(--danger-text)', width: 36 }}>صادر</span>
                     <div style={{ flex: 1, height: 12, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}><div style={{ height: '100%', width: `${Math.min(100, (p.out / Math.max(p.in, p.out, 1)) * 100)}%`, background: '#f87171' }} /></div>
-                    <span style={{ fontSize: 11, color: '#b91c1c', width: 64, textAlign: 'left' }}>{fmtNum(p.out)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--danger-text)', width: 64, textAlign: 'left' }}>{fmtNum(p.out)}</span>
                   </div>
                 </div>
               ))}
@@ -2958,8 +2958,8 @@ function Ledger({ projects, transactions, members, memberTxns, helpEntry }: {
                 <div key={m.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--surface-2)', borderRadius: 10 }}>
                   <span style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>{m.name}</span>
                   <div style={{ display: 'flex', gap: 14, fontSize: 12 }}>
-                    <span style={{ color: '#15803d' }}>وارد {fmtNum(m.in)}</span>
-                    <span style={{ color: '#b91c1c' }}>صادر {fmtNum(m.out)}</span>
+                    <span style={{ color: 'var(--ok-text)' }}>وارد {fmtNum(m.in)}</span>
+                    <span style={{ color: 'var(--danger-text)' }}>صادر {fmtNum(m.out)}</span>
                   </div>
                 </div>
               ))}
@@ -3038,7 +3038,7 @@ function DocForm({ initial, projectId, projects, onSave, onCancel, docTypes = DE
       </Field>
       {suggestedProject && (
         <div style={{ background: '#f5f3ff', borderRadius: 10, padding: '10px 14px', marginTop: -8, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontSize: 12, color: '#6d28d9' }}>🤖 مقترح حسب نوع المستند: {suggestedProject.icon} {suggestedProject.name}</span>
+          <span style={{ fontSize: 12, color: 'var(--purple-text)' }}>🤖 مقترح حسب نوع المستند: {suggestedProject.icon} {suggestedProject.name}</span>
           <button onClick={() => setTargetProject(suggestedProject.id)} style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, padding: '4px 12px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>توجيه</button>
         </div>
       )}
@@ -3126,17 +3126,17 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
     <div style={{ padding: 24, maxWidth: 1100 }}>
       <PageHeader help={helpEntry} title="المستندات" subtitle="رفع وإدارة المستندات" action={<Btn size="sm" onClick={onOpenCreate}>+ رفع مستند</Btn>} />
 
-      <div onClick={onOpenCreate} style={{ border: '2px dashed #e5e7eb', borderRadius: 16, padding: '32px 20px', textAlign: 'center', marginBottom: 24, background: 'var(--surface-2)', cursor: 'pointer' }}>
+      <div onClick={onOpenCreate} style={{ border: '2px dashed var(--border)', borderRadius: 16, padding: '32px 20px', textAlign: 'center', marginBottom: 24, background: 'var(--surface-2)', cursor: 'pointer' }}>
         <div style={{ fontSize: 32, marginBottom: 8 }}>☁️</div>
         <div style={{ fontWeight: 500, color: 'var(--text-2)', marginBottom: 4 }}>اسحب المستندات هنا أو اضغط للرفع</div>
         <div style={{ fontSize: 12, color: 'var(--text-3)' }}>PDF, JPG, PNG — حد أقصى 10MB</div>
       </div>
 
-      <div style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%)', borderRadius: 14, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, border: '1px solid #ddd6fe' }}>
+      <div style={{ background: 'linear-gradient(135deg, var(--info-bg) 0%, #f5f3ff 100%)', borderRadius: 14, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, border: '1px solid #ddd6fe' }}>
         <span style={{ fontSize: 24 }}>🤖</span>
         <div>
           <div style={{ fontWeight: 600, color: '#4c1d95', fontSize: 14 }}>الذكاء الاصطناعي جاهز لقراءة مستنداتك</div>
-          <div style={{ fontSize: 12, color: '#6d28d9', marginTop: 2 }}>ارفع فاتورة أو عقد وسيستخرج البيانات تلقائياً</div>
+          <div style={{ fontSize: 12, color: 'var(--purple-text)', marginTop: 2 }}>ارفع فاتورة أو عقد وسيستخرج البيانات تلقائياً</div>
         </div>
       </div>
 
@@ -3150,10 +3150,10 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
         return (
           <>
             <StatCards cards={[
-              { label: 'إجمالي المستندات', value: docs.length, color: '#1d4ed8', bg: '#eff6ff', icon: '📄' },
-              { label: 'تمت قراءتها AI', value: aiRead, color: '#7c3aed', bg: '#faf5ff', icon: '🤖' },
-              { label: 'بها مرفقات', value: withAtt, color: '#15803d', bg: '#f0fdf4', icon: '📎' },
-              { label: 'أنواع مختلفة', value: Object.keys(byType).length, color: '#d97706', bg: '#fffbeb', icon: '🗂️' },
+              { label: 'إجمالي المستندات', value: docs.length, color: 'var(--info-text)', bg: 'var(--info-bg)', icon: '📄' },
+              { label: 'تمت قراءتها AI', value: aiRead, color: 'var(--purple-text)', bg: 'var(--purple-bg)', icon: '🤖' },
+              { label: 'بها مرفقات', value: withAtt, color: 'var(--ok-text)', bg: 'var(--ok-bg)', icon: '📎' },
+              { label: 'أنواع مختلفة', value: Object.keys(byType).length, color: '#d97706', bg: 'var(--warn-bg)', icon: '🗂️' },
             ]} />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px,1fr))', gap: 16, marginBottom: 22 }}>
               <Card>
@@ -3163,7 +3163,7 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
               <Card>
                 <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>حالة قراءة الذكاء الاصطناعي</div>
                 <StatBars bars={[
-                  { label: 'تمت القراءة', value: aiRead, color: '#7c3aed' },
+                  { label: 'تمت القراءة', value: aiRead, color: 'var(--purple-text)' },
                   { label: 'لم تُقرأ بعد', value: docs.length - aiRead, color: '#cbd5e1' },
                 ]} />
               </Card>
@@ -3197,7 +3197,7 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
           <Card key={d.id} style={{ padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
               <div style={{ width: 40, height: 48, background: 'var(--surface-3)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>📄</div>
-              {d.aiRead && <span style={{ fontSize: 10, background: '#f5f3ff', color: '#7c3aed', padding: '2px 7px', borderRadius: 99, fontWeight: 500 }}>✨ AI</span>}
+              {d.aiRead && <span style={{ fontSize: 10, background: '#f5f3ff', color: 'var(--purple-text)', padding: '2px 7px', borderRadius: 99, fontWeight: 500 }}>✨ AI</span>}
             </div>
             <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
             <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>{d.type} · {d.size}</div>
@@ -3270,11 +3270,11 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
               {/* AI analysis entry */}
               <button onClick={() => { setSheet({ mode: 'ai', doc: d }); setAiBusy(true); setTimeout(() => setAiBusy(false), 1600); }} style={{
                 display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 12,
-                border: '1px solid #ddd6fe', background: 'linear-gradient(135deg,#faf5ff,#eff6ff)', cursor: 'pointer', textAlign: 'right', fontFamily: 'inherit',
+                border: '1px solid #ddd6fe', background: 'linear-gradient(135deg,var(--purple-bg),var(--info-bg))', cursor: 'pointer', textAlign: 'right', fontFamily: 'inherit',
               }}>
                 <span style={{ fontSize: 22 }}>🤖</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#6d28d9' }}>تحليل ذكي واستخراج البيانات</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--purple-text)' }}>تحليل ذكي واستخراج البيانات</div>
                   <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 1 }}>اقرأ المستند واقترح الإجراءات تلقائياً</div>
                 </div>
                 <span style={{ color: '#a78bfa' }}>‹</span>
@@ -3330,8 +3330,8 @@ function Documents({ projectId, projects, documents, onSave, onDelete, onAction,
                   ))}
                 </div>
               </div>
-              <div style={{ background: '#f0fdf4', borderRadius: 12, padding: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d', marginBottom: 10 }}>✨ إجراءات مقترحة — انقر للتنفيذ</div>
+              <div style={{ background: 'var(--ok-bg)', borderRadius: 12, padding: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ok-text)', marginBottom: 10 }}>✨ إجراءات مقترحة — انقر للتنفيذ</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {suggestedActions(sheet.doc.type).map(s => (
                     <button key={s.kind} onClick={() => { onAction(s.kind, sheet.doc); close(); }} style={{
@@ -3442,10 +3442,10 @@ function Trackings({ projectId, projects, trackings, members, onSave, onDelete, 
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px,1fr))', gap: 14, marginBottom: 24 }}>
         {[
-          { key: 'all', label: 'الكل', val: counts.all, color: 'var(--text-3)', bg: '#f9fafb' },
-          { key: 'active', label: 'نشط', val: counts.active, color: '#15803d', bg: '#f0fdf4' },
-          { key: 'expiring', label: 'يوشك على الانتهاء', val: counts.expiring, color: '#a16207', bg: '#fffbeb' },
-          { key: 'expired', label: 'منتهي', val: counts.expired, color: '#b91c1c', bg: '#fef2f2' },
+          { key: 'all', label: 'الكل', val: counts.all, color: 'var(--text-3)', bg: 'var(--surface-2)' },
+          { key: 'active', label: 'نشط', val: counts.active, color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+          { key: 'expiring', label: 'يوشك على الانتهاء', val: counts.expiring, color: 'var(--warn-text-2)', bg: 'var(--warn-bg)' },
+          { key: 'expired', label: 'منتهي', val: counts.expired, color: 'var(--danger-text)', bg: 'var(--danger-bg)' },
         ].map(s => (
           <div key={s.key} onClick={() => setFilter(s.key as any)} style={{
             background: s.bg, borderRadius: 14, padding: '16px 18px', textAlign: 'center', cursor: 'pointer',
@@ -3654,10 +3654,10 @@ function Requests({ projectId, projects, requests, members, onDecide, onSave, on
         return (
           <>
             <StatCards cards={[
-              { label: 'إجمالي الطلبات', value: reqs.length, color: '#1d4ed8', bg: '#eff6ff', icon: '📋' },
-              { label: 'معلقة', value: pending.length, color: '#a16207', bg: '#fffbeb', icon: '⏳' },
-              { label: 'معتمدة', value: approved.length, color: '#15803d', bg: '#f0fdf4', icon: '✅' },
-              { label: 'نسبة الاعتماد', value: approvalRate + '%', color: '#7c3aed', bg: '#faf5ff', icon: '📊' },
+              { label: 'إجمالي الطلبات', value: reqs.length, color: 'var(--info-text)', bg: 'var(--info-bg)', icon: '📋' },
+              { label: 'معلقة', value: pending.length, color: 'var(--warn-text-2)', bg: 'var(--warn-bg)', icon: '⏳' },
+              { label: 'معتمدة', value: approved.length, color: 'var(--ok-text)', bg: 'var(--ok-bg)', icon: '✅' },
+              { label: 'نسبة الاعتماد', value: approvalRate + '%', color: 'var(--purple-text)', bg: 'var(--purple-bg)', icon: '📊' },
             ]} />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px,1fr))', gap: 16, marginBottom: 22 }}>
               <Card>
@@ -3727,7 +3727,7 @@ function Requests({ projectId, projects, requests, members, onDecide, onSave, on
             {r.status === 'pending' && (
               <div style={{ display: 'flex', gap: 8, marginTop: 14, paddingTop: 14, borderTop: '1px solid #f1f5f9' }}>
                 <button onClick={() => onDecide(r.id, 'approved')} style={{ flex: 1, padding: 8, borderRadius: 10, background: '#15803d', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>✓ اعتماد</button>
-                <button onClick={() => onDecide(r.id, 'rejected')} style={{ flex: 1, padding: 8, borderRadius: 10, background: '#fef2f2', color: '#b91c1c', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>✕ رفض</button>
+                <button onClick={() => onDecide(r.id, 'rejected')} style={{ flex: 1, padding: 8, borderRadius: 10, background: 'var(--danger-bg)', color: 'var(--danger-text)', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>✕ رفض</button>
                 <button onClick={() => setSheet({ mode: 'edit', req: r })} style={{ padding: '8px 16px', borderRadius: 10, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>✎ تعديل</button>
               </div>
             )}
@@ -3763,7 +3763,7 @@ function Requests({ projectId, projects, requests, members, onDecide, onSave, on
                 <StatusBadge status={r.status} />
               </div>
               <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{r.title}</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#1d4ed8', marginBottom: 16 }}>{fmt(r.amount)}</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--info-text)', marginBottom: 16 }}>{fmt(r.amount)}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[['مقدّم الطلب', r.requestedBy], ['التاريخ', r.date], ['أضافها', r.createdBy ?? CURRENT_USER], ...(r.note ? [['ملاحظات', r.note]] : [])].map(([k, v]) => (
                   <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, paddingBottom: 9, borderBottom: '1px solid var(--border)' }}>
@@ -3790,7 +3790,7 @@ function Requests({ projectId, projects, requests, members, onDecide, onSave, on
 // ═══════════════════════════════════════════
 function Notifications({ notifs, projects, members, onMarkRead, onMarkAll, onNav }: { notifs: Notif[]; projects: Project[]; members: Member[]; onMarkRead: (id: string) => void; onMarkAll: () => void; onNav: (p: Page) => void }) {
   const icons: Record<string, string> = { warning: '⚠️', info: 'ℹ️', danger: '🔴', success: '✅' };
-  const colors: Record<string, string> = { warning: '#fffbeb', info: '#eff6ff', danger: '#fef2f2', success: '#f0fdf4' };
+  const colors: Record<string, string> = { warning: 'var(--warn-bg)', info: 'var(--info-bg)', danger: 'var(--danger-bg)', success: 'var(--ok-bg)' };
   const linkLabel: Record<string, string> = { trackings: 'المتابعات', requests: 'الطلبات', documents: 'المستندات', finance: 'المالية', projects: 'المشاريع', projectDetail: 'المشروع' };
   const sectionLabel: Record<string, string> = { trackings: 'متابعات', requests: 'طلبات', documents: 'مستندات', finance: 'مالية', members: 'أعضاء' };
 
@@ -3929,8 +3929,8 @@ function Customize({ lists, onChange, help, onHelpChange, healthData, onNav }: {
 
       <HealthCheck data={healthData} onNav={onNav} />
 
-      <Card style={{ marginBottom: 16, background: '#eff6ff', border: '1px solid #bfdbfe' }}>
-        <div style={{ fontSize: 13, color: '#1d4ed8', lineHeight: 1.8 }}>
+      <Card style={{ marginBottom: 16, background: 'var(--info-bg)', border: '1px solid #bfdbfe' }}>
+        <div style={{ fontSize: 13, color: 'var(--info-text)', lineHeight: 1.8 }}>
           ℹ️ العناصر التي تضيفها هنا تظهر مباشرةً في قوائم الاختيار عبر النظام — عند إنشاء عملية مالية، مشروع، مستند، أو ذمة. حذف عنصر لا يؤثر على البيانات القديمة المرتبطة به.
         </div>
       </Card>
@@ -4062,8 +4062,8 @@ function Integrations({ onBack }: { onBack: () => void }) {
       <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12 }}>‹ رجوع للإعدادات</button>
       <PageHeader title="التكاملات" subtitle="ربط موازين بأنظمتك وخدماتك الخارجية" />
 
-      <Card style={{ marginBottom: 16, background: '#eff6ff', border: '1px solid #bfdbfe' }}>
-        <div style={{ fontSize: 13, color: '#1d4ed8', lineHeight: 1.8 }}>
+      <Card style={{ marginBottom: 16, background: 'var(--info-bg)', border: '1px solid #bfdbfe' }}>
+        <div style={{ fontSize: 13, color: 'var(--info-text)', lineHeight: 1.8 }}>
           🔌 التكاملات قيد التطوير وستتوفّر تدريجياً. ستتيح لك ربط موازين بأنظمة التخزين والاتصالات والمحاسبة وإدارة العملاء لتقليل الإدخال اليدوي ومزامنة بياناتك تلقائياً.
         </div>
       </Card>
@@ -4174,7 +4174,7 @@ function Settings({ theme, onToggleTheme, onNav, onLogout, prefs, onPrefs }: { t
               <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{item.label}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{item.val}</span>
-                <button style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>تعديل</button>
+                <button style={{ background: 'none', border: 'none', color: 'var(--info-text)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>تعديل</button>
               </div>
             </div>
           ))}
@@ -4213,8 +4213,8 @@ function Settings({ theme, onToggleTheme, onNav, onLogout, prefs, onPrefs }: { t
 // ═══════════════════════════════════════════
 const PLANS = [
   { id: 'free', name: 'المجانية', price: 0, tag: 'للتجربة', color: '#6b7280', features: ['حتى 3 مشاريع', 'ذكاء اصطناعي أساسي', 'متابعات محدودة', 'تقارير أساسية'] },
-  { id: 'pro', name: 'الاحترافية', price: 49, tag: 'الأكثر شيوعاً', color: '#2563eb', features: ['مشاريع غير محدودة', 'متابعات وضمانات كاملة', 'ذكاء اصطناعي موسّع', 'تقارير متقدمة', 'دعم ذو أولوية'] },
-  { id: 'business', name: 'الأعمال', price: 99, tag: 'للفرق', color: '#7c3aed', features: ['كل مزايا الاحترافية', 'صلاحيات متقدمة', 'موافقات متعددة', 'إدارة أعضاء كاملة', 'تكاملات خارجية'] },
+  { id: 'pro', name: 'الاحترافية', price: 49, tag: 'الأكثر شيوعاً', color: 'var(--info-text)', features: ['مشاريع غير محدودة', 'متابعات وضمانات كاملة', 'ذكاء اصطناعي موسّع', 'تقارير متقدمة', 'دعم ذو أولوية'] },
+  { id: 'business', name: 'الأعمال', price: 99, tag: 'للفرق', color: 'var(--purple-text)', features: ['كل مزايا الاحترافية', 'صلاحيات متقدمة', 'موافقات متعددة', 'إدارة أعضاء كاملة', 'تكاملات خارجية'] },
   { id: 'enterprise', name: 'المؤسسات', price: 249, tag: 'للمنشآت الكبيرة', color: '#059669', features: ['كل مزايا الأعمال', 'تكامل ERP / CRM', 'تتبّع GPS للأصول', 'ذكاء اصطناعي متقدم', 'دعم مؤسسي مخصص'] },
 ];
 
@@ -4293,10 +4293,10 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, r
       {/* stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 14, marginBottom: 22 }}>
         {[
-          { l: 'إجمالي الوارد', v: fmt(incoming), c: '#15803d', bg: '#f0fdf4', i: '↓' },
-          { l: 'إجمالي الصادر', v: fmt(outgoing), c: '#b91c1c', bg: '#fef2f2', i: '↑' },
-          { l: 'رصيد كل المشاريع', v: fmt(totalBalanceAllProjects), c: '#1d4ed8', bg: '#eff6ff', i: '∑' },
-          { l: 'حركات معلّقة', v: String(pending), c: '#a16207', bg: '#fffbeb', i: '⏳' },
+          { l: 'إجمالي الوارد', v: fmt(incoming), c: '#15803d', bg: 'var(--ok-bg)', i: '↓' },
+          { l: 'إجمالي الصادر', v: fmt(outgoing), c: '#b91c1c', bg: 'var(--danger-bg)', i: '↑' },
+          { l: 'رصيد كل المشاريع', v: fmt(totalBalanceAllProjects), c: '#1d4ed8', bg: 'var(--info-bg)', i: '∑' },
+          { l: 'حركات معلّقة', v: String(pending), c: '#a16207', bg: 'var(--warn-bg)', i: '⏳' },
         ].map(s => (
           <div key={s.l} style={{ background: s.bg, borderRadius: 14, padding: 16 }}>
             <div style={{ fontSize: 18, marginBottom: 4 }}>{s.i}</div>
@@ -4318,9 +4318,9 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, r
                   <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{ROLES.find(r => r.id === p.role)?.label}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
-                  <span style={{ color: '#15803d' }}>وارد {fmtNum(p.in)}</span>
-                  <span style={{ color: '#b91c1c' }}>صادر {fmtNum(p.out)}</span>
-                  <span style={{ color: '#1d4ed8', marginRight: 'auto', fontWeight: 600 }}>رصيد {fmtNum(p.balance)}</span>
+                  <span style={{ color: 'var(--ok-text)' }}>وارد {fmtNum(p.in)}</span>
+                  <span style={{ color: 'var(--danger-text)' }}>صادر {fmtNum(p.out)}</span>
+                  <span style={{ color: 'var(--info-text)', marginRight: 'auto', fontWeight: 600 }}>رصيد {fmtNum(p.balance)}</span>
                 </div>
               </div>
             ))}
@@ -4336,14 +4336,14 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, r
               <div key={m}>
                 <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>{m}</div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 3 }}>
-                  <span style={{ fontSize: 10, color: '#15803d', width: 32 }}>وارد</span>
+                  <span style={{ fontSize: 10, color: 'var(--ok-text)', width: 32 }}>وارد</span>
                   <div style={{ flex: 1, height: 12, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}><div style={{ height: '100%', width: `${(byMonth[m].in / maxM) * 100}%`, background: '#22c55e' }} /></div>
-                  <span style={{ fontSize: 11, color: '#15803d', width: 60, textAlign: 'left' }}>{fmtNum(byMonth[m].in)}</span>
+                  <span style={{ fontSize: 11, color: 'var(--ok-text)', width: 60, textAlign: 'left' }}>{fmtNum(byMonth[m].in)}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <span style={{ fontSize: 10, color: '#b91c1c', width: 32 }}>صادر</span>
+                  <span style={{ fontSize: 10, color: 'var(--danger-text)', width: 32 }}>صادر</span>
                   <div style={{ flex: 1, height: 12, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}><div style={{ height: '100%', width: `${(byMonth[m].out / maxM) * 100}%`, background: '#f87171' }} /></div>
-                  <span style={{ fontSize: 11, color: '#b91c1c', width: 60, textAlign: 'left' }}>{fmtNum(byMonth[m].out)}</span>
+                  <span style={{ fontSize: 11, color: 'var(--danger-text)', width: 60, textAlign: 'left' }}>{fmtNum(byMonth[m].out)}</span>
                 </div>
               </div>
             ))}
@@ -4367,7 +4367,7 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, r
                 </div>
                 <div style={{ textAlign: 'left', flexShrink: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: t.direction === 'to_member' ? '#15803d' : '#b91c1c' }}>{t.direction === 'to_member' ? '+' : '−'}{fmtNum(t.amount)}</div>
-                  <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: t.status === 'pending' ? '#fef3c7' : t.status === 'rejected' ? '#fee2e2' : '#dcfce7', color: t.status === 'pending' ? '#a16207' : t.status === 'rejected' ? '#b91c1c' : '#15803d' }}>
+                  <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: t.status === 'pending' ? 'var(--warn-bg-2)' : t.status === 'rejected' ? 'var(--danger-bg-2)' : 'var(--ok-bg-2)', color: t.status === 'pending' ? '#a16207' : t.status === 'rejected' ? '#b91c1c' : '#15803d' }}>
                     {t.status === 'accepted' ? 'مقبولة' : t.status === 'rejected' ? 'مرفوضة' : 'معلّقة'}
                   </span>
                 </div>
@@ -4382,7 +4382,7 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, r
         <Card style={{ marginTop: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>⇄ الذمم المرتبطة ({myRecv.length})</div>
-            <button onClick={() => onNav('receivables')} style={{ background: 'none', border: 'none', fontSize: 12, color: '#2563eb', cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ←</button>
+            <button onClick={() => onNav('receivables')} style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--info-text)', cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ←</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {myRecv.map(r => (
@@ -4406,7 +4406,7 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, r
         <Card style={{ marginTop: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>↻ الالتزامات المرتبطة ({myComms.length})</div>
-            <button onClick={() => onNav('commitments')} style={{ background: 'none', border: 'none', fontSize: 12, color: '#2563eb', cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ←</button>
+            <button onClick={() => onNav('commitments')} style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--info-text)', cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ←</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {myComms.map(c => (
@@ -4427,7 +4427,7 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, r
         <Card style={{ marginTop: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>◫ الطلبات المرتبطة ({myReqs.length})</div>
-            <button onClick={() => onNav('requests')} style={{ background: 'none', border: 'none', fontSize: 12, color: '#2563eb', cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ←</button>
+            <button onClick={() => onNav('requests')} style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--info-text)', cursor: 'pointer', fontFamily: 'inherit' }}>عرض الكل ←</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {myReqs.map(r => (
@@ -4438,7 +4438,7 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, r
                 </div>
                 <div style={{ textAlign: 'left', flexShrink: 0 }}>
                   {r.amount > 0 && <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{fmtNum(r.amount)}</div>}
-                  <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: r.status === 'pending' ? '#fef3c7' : r.status === 'rejected' ? '#fee2e2' : '#dcfce7', color: r.status === 'pending' ? '#a16207' : r.status === 'rejected' ? '#b91c1c' : '#15803d' }}>
+                  <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: r.status === 'pending' ? 'var(--warn-bg-2)' : r.status === 'rejected' ? 'var(--danger-bg-2)' : 'var(--ok-bg-2)', color: r.status === 'pending' ? '#a16207' : r.status === 'rejected' ? '#b91c1c' : '#15803d' }}>
                     {r.status === 'approved' ? 'معتمد' : r.status === 'rejected' ? 'مرفوض' : 'معلّق'}
                   </span>
                 </div>
@@ -4517,7 +4517,7 @@ function ReceivableForm({ projectId, projects, members, onSave, onCancel }: {
       <Field label="المرفقات (صور / ملفات)">
         <AttachmentPicker value={attachments} onChange={setAttachments} />
       </Field>
-      <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#1d4ed8' }}>
+      <div style={{ background: 'var(--info-bg)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: 'var(--info-text)' }}>
         ℹ️ الذمة لا تُحرّك الرصيد عند الإنشاء. عند التحصيل/السداد تتحول لعملية مالية فعلية تلقائياً.
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
@@ -4553,11 +4553,11 @@ function PaymentForm({ receivable, onSave, onCancel }: {
       <Field label={`مبلغ ${isRecv ? 'التحصيل' : 'السداد'} (ر.س)`}>
         <NumInput value={amount} onChange={setAmount} placeholder="0" />
       </Field>
-      {amount !== '' && Number(amount) > remaining && <div style={{ fontSize: 12, color: '#b91c1c', marginBottom: 12 }}>المبلغ أكبر من المتبقي ({fmtNum(remaining)}).</div>}
+      {amount !== '' && Number(amount) > remaining && <div style={{ fontSize: 12, color: 'var(--danger-text)', marginBottom: 12 }}>المبلغ أكبر من المتبقي ({fmtNum(remaining)}).</div>}
       <Field label="ملاحظة (اختياري)">
         <TextInput value={note} onChange={setNote} placeholder="مثال: دفعة نقدية، تحويل بنكي..." />
       </Field>
-      <div style={{ background: isRecv ? '#f0fdf4' : '#fef2f2', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: isRecv ? '#15803d' : '#b91c1c' }}>
+      <div style={{ background: isRecv ? 'var(--ok-bg)' : 'var(--danger-bg)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: isRecv ? '#15803d' : '#b91c1c' }}>
         {isRecv ? '↓ سيُسجَّل تدفق وارد فعلي بالمبلغ في الإدارة المالية.' : '↑ سيُسجَّل تدفق صادر فعلي بالمبلغ في الإدارة المالية.'}
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
@@ -4603,17 +4603,17 @@ function Receivables({ projectId, projects, receivables, members, onSave, onPay,
 
   const clearFilters = () => { setSearch(''); setFProject('all'); setFMember('all'); setFStatus('all'); setSort('due'); };
   const close = () => setSheet(null);
-  const statusInfo = (s: ReceivableStatus) => s === 'settled' ? { l: 'مسددة', c: '#15803d', bg: '#dcfce7' } : s === 'partial' ? { l: 'جزئية', c: '#a16207', bg: '#fef3c7' } : { l: 'مفتوحة', c: '#1d4ed8', bg: '#dbeafe' };
+  const statusInfo = (s: ReceivableStatus) => s === 'settled' ? { l: 'مسددة', c: '#15803d', bg: 'var(--ok-bg-2)' } : s === 'partial' ? { l: 'جزئية', c: '#a16207', bg: 'var(--warn-bg-2)' } : { l: 'مفتوحة', c: '#1d4ed8', bg: '#dbeafe' };
 
   return (
     <div style={{ padding: 24, maxWidth: 1000 }}>
       <PageHeader help={helpEntry} title="الذمم" subtitle="المبالغ المستحقة لك أو عليك" action={<Btn size="sm" onClick={onOpenCreate}>+ ذمة جديدة</Btn>} />
 
       <StatCards cards={[
-        { label: 'ذمم مدينة (لنا)', value: fmtNum(totalRecv), color: '#15803d', bg: '#f0fdf4', icon: '📥' },
-        { label: 'ذمم دائنة (علينا)', value: fmtNum(totalPay), color: '#b91c1c', bg: '#fef2f2', icon: '📤' },
-        { label: 'صافي الذمم', value: fmtNum(totalRecv - totalPay), color: '#1d4ed8', bg: '#eff6ff', icon: '⇄' },
-        { label: 'متأخرة السداد', value: overdue, color: '#c2410c', bg: '#fff7ed', icon: '⏰' },
+        { label: 'ذمم مدينة (لنا)', value: fmtNum(totalRecv), color: 'var(--ok-text)', bg: 'var(--ok-bg)', icon: '📥' },
+        { label: 'ذمم دائنة (علينا)', value: fmtNum(totalPay), color: 'var(--danger-text)', bg: 'var(--danger-bg)', icon: '📤' },
+        { label: 'صافي الذمم', value: fmtNum(totalRecv - totalPay), color: 'var(--info-text)', bg: 'var(--info-bg)', icon: '⇄' },
+        { label: 'متأخرة السداد', value: overdue, color: 'var(--warn-text)', bg: 'var(--warn-bg)', icon: '⏰' },
       ]} />
 
       {/* kind tabs */}
@@ -4661,7 +4661,7 @@ function Receivables({ projectId, projects, receivables, members, onSave, onPay,
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{r.party}</span>
                     <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: si.bg, color: si.c }}>{si.l}</span>
-                    {isOverdue && <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: '#fee2e2', color: '#b91c1c' }}>⏰ متأخرة</span>}
+                    {isOverdue && <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: 'var(--danger-bg-2)', color: 'var(--danger-text)' }}>⏰ متأخرة</span>}
                   </div>
                   <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>
                     {projName(r.projectId)}{r.memberId ? ` · 👤 ${memberName(r.memberId)}` : ''}{r.note ? ` · ${r.note}` : ''}{r.dueDate ? ` · تستحق ${r.dueDate}` : ''}
@@ -4830,7 +4830,7 @@ function CommitmentForm({ projectId, projects, members, onSave, onCancel }: {
       <Field label="المرفقات (صور / ملفات)">
         <AttachmentPicker value={attachments} onChange={setAttachments} />
       </Field>
-      <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#1d4ed8' }}>
+      <div style={{ background: 'var(--info-bg)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: 'var(--info-text)' }}>
         ℹ️ عند تسجيل دفعة، تتحول لعملية مالية فعلية ويتقدّم الاستحقاق للموعد التالي تلقائياً.
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
@@ -4890,10 +4890,10 @@ function Commitments({ projectId, projects, commitments, members, onSave, onPay,
       <PageHeader help={helpEntry} title="الالتزامات الدورية" subtitle="الأقساط والالتزامات والاشتراكات المتكررة" action={<Btn size="sm" onClick={onOpenCreate}>+ التزام جديد</Btn>} />
 
       <StatCards cards={[
-        { label: 'صادر شهرياً (تقديري)', value: fmtNum(Math.round(monthlyOut)), color: '#b91c1c', bg: '#fef2f2', icon: '↑' },
-        { label: 'وارد شهرياً (تقديري)', value: fmtNum(Math.round(monthlyIn)), color: '#15803d', bg: '#f0fdf4', icon: '↓' },
-        { label: 'صافي شهري', value: fmtNum(Math.round(monthlyIn - monthlyOut)), color: '#1d4ed8', bg: '#eff6ff', icon: '⇄' },
-        { label: 'تستحق هذا الأسبوع', value: dueSoon, color: '#c2410c', bg: '#fff7ed', icon: '⏰' },
+        { label: 'صادر شهرياً (تقديري)', value: fmtNum(Math.round(monthlyOut)), color: 'var(--danger-text)', bg: 'var(--danger-bg)', icon: '↑' },
+        { label: 'وارد شهرياً (تقديري)', value: fmtNum(Math.round(monthlyIn)), color: 'var(--ok-text)', bg: 'var(--ok-bg)', icon: '↓' },
+        { label: 'صافي شهري', value: fmtNum(Math.round(monthlyIn - monthlyOut)), color: 'var(--info-text)', bg: 'var(--info-bg)', icon: '⇄' },
+        { label: 'تستحق هذا الأسبوع', value: dueSoon, color: 'var(--warn-text)', bg: 'var(--warn-bg)', icon: '⏰' },
       ]} />
 
       {/* kind tabs */}
@@ -4940,9 +4940,9 @@ function Commitments({ projectId, projects, commitments, members, onSave, onPay,
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{c.name}</span>
                     <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: 'var(--surface-3)', color: 'var(--text-3)' }}>{ki.label} · {FREQ_LABEL[c.freq]}</span>
-                    {done && <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: '#dcfce7', color: '#15803d' }}>مكتمل</span>}
+                    {done && <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: 'var(--ok-bg-2)', color: 'var(--ok-text)' }}>مكتمل</span>}
                     {!c.active && !done && <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: '#f1f5f9', color: '#64748b' }}>موقوف</span>}
-                    {overdue && <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: '#fee2e2', color: '#b91c1c' }}>⏰ متأخر</span>}
+                    {overdue && <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: 'var(--danger-bg-2)', color: 'var(--danger-text)' }}>⏰ متأخر</span>}
                   </div>
                   <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>
                     {projName(c.projectId)}{c.memberId ? ` · 👤 ${memberName(c.memberId)}` : ''}{c.party ? ` · ${c.party}` : ''}{!done ? ` · يستحق ${c.nextDue}` : ''}
@@ -5139,10 +5139,10 @@ function FinancialReport({ txs, recvs, projects, fProject, palette }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <StatCards cards={[
-        { label: 'إجمالي الإيرادات', value: fmtNum(Math.round(income)), color: '#15803d', bg: '#f0fdf4', icon: '↓' },
-        { label: 'إجمالي المصروفات', value: fmtNum(Math.round(expense)), color: '#b91c1c', bg: '#fef2f2', icon: '↑' },
-        { label: 'صافي التدفق', value: fmtNum(Math.round(net)), color: net >= 0 ? '#1d4ed8' : '#b91c1c', bg: '#eff6ff', icon: '⇄' },
-        { label: 'عدد العمليات', value: txs.length, color: '#7c3aed', bg: '#faf5ff', icon: '#' },
+        { label: 'إجمالي الإيرادات', value: fmtNum(Math.round(income)), color: 'var(--ok-text)', bg: 'var(--ok-bg)', icon: '↓' },
+        { label: 'إجمالي المصروفات', value: fmtNum(Math.round(expense)), color: 'var(--danger-text)', bg: 'var(--danger-bg)', icon: '↑' },
+        { label: 'صافي التدفق', value: fmtNum(Math.round(net)), color: net >= 0 ? '#1d4ed8' : '#b91c1c', bg: 'var(--info-bg)', icon: '⇄' },
+        { label: 'عدد العمليات', value: txs.length, color: 'var(--purple-text)', bg: 'var(--purple-bg)', icon: '#' },
       ]} />
 
       {months.length > 0 && (
@@ -5190,13 +5190,13 @@ function FinancialReport({ txs, recvs, projects, fProject, palette }: {
         <Card>
           <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 16 }}>وضع الذمم</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: '#f0fdf4', borderRadius: 10 }}>
-              <span style={{ fontSize: 13, color: '#15803d' }}>ذمم مدينة (لنا)</span>
-              <span style={{ fontWeight: 800, fontSize: 16, color: '#15803d' }}>{fmt(recvOpen)}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'var(--ok-bg)', borderRadius: 10 }}>
+              <span style={{ fontSize: 13, color: 'var(--ok-text)' }}>ذمم مدينة (لنا)</span>
+              <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--ok-text)' }}>{fmt(recvOpen)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: '#fef2f2', borderRadius: 10 }}>
-              <span style={{ fontSize: 13, color: '#b91c1c' }}>ذمم دائنة (علينا)</span>
-              <span style={{ fontWeight: 800, fontSize: 16, color: '#b91c1c' }}>{fmt(payOpen)}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'var(--danger-bg)', borderRadius: 10 }}>
+              <span style={{ fontSize: 13, color: 'var(--danger-text)' }}>ذمم دائنة (علينا)</span>
+              <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--danger-text)' }}>{fmt(payOpen)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'var(--surface-2)', borderRadius: 10 }}>
               <span style={{ fontSize: 13, color: 'var(--text-2)' }}>صافي الذمم</span>
@@ -5245,10 +5245,10 @@ function OperationalReport({ tracks, reqs, comms, projects, palette, projName }:
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <StatCards cards={[
-        { label: 'متابعات تنتهي قريباً', value: expiring, color: '#c2410c', bg: '#fff7ed', icon: '⏰' },
-        { label: 'متابعات منتهية', value: expired, color: '#b91c1c', bg: '#fef2f2', icon: '⚠️' },
-        { label: 'طلبات معلّقة', value: pendingReqs, color: '#d97706', bg: '#fffbeb', icon: '◫' },
-        { label: 'التزامات نشطة', value: activeComms, color: '#1d4ed8', bg: '#eff6ff', icon: '↻' },
+        { label: 'متابعات تنتهي قريباً', value: expiring, color: 'var(--warn-text)', bg: 'var(--warn-bg)', icon: '⏰' },
+        { label: 'متابعات منتهية', value: expired, color: 'var(--danger-text)', bg: 'var(--danger-bg)', icon: '⚠️' },
+        { label: 'طلبات معلّقة', value: pendingReqs, color: '#d97706', bg: 'var(--warn-bg)', icon: '◫' },
+        { label: 'التزامات نشطة', value: activeComms, color: 'var(--info-text)', bg: 'var(--info-bg)', icon: '↻' },
       ]} />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
@@ -5312,19 +5312,19 @@ function SmartReport({ txs, recvs, comms, tracks, reqs, projName }: {
   const overdueRecv = recvs.filter(r => r.kind === 'receivable' && r.status !== 'settled' && r.dueDate && r.dueDate < today());
   if (overdueRecv.length > 0) {
     const sum = overdueRecv.reduce((s, r) => s + recvRemaining(r), 0);
-    insights.push({ kind: 'risk', icon: '⚠️', color: '#b91c1c', bg: '#fef2f2', title: `${overdueRecv.length} ذمة مدينة متأخرة`, body: `بإجمالي ${fmt(sum)} تجاوزت تاريخ الاستحقاق ولم تُحصّل بعد. يُنصح بالمتابعة مع الأطراف.` });
+    insights.push({ kind: 'risk', icon: '⚠️', color: 'var(--danger-text)', bg: 'var(--danger-bg)', title: `${overdueRecv.length} ذمة مدينة متأخرة`, body: `بإجمالي ${fmt(sum)} تجاوزت تاريخ الاستحقاق ولم تُحصّل بعد. يُنصح بالمتابعة مع الأطراف.` });
   }
   // RISK: overdue payables
   const overduePay = recvs.filter(r => r.kind === 'payable' && r.status !== 'settled' && r.dueDate && r.dueDate < today());
   if (overduePay.length > 0) {
     const sum = overduePay.reduce((s, r) => s + recvRemaining(r), 0);
-    insights.push({ kind: 'risk', icon: '⚠️', color: '#b91c1c', bg: '#fef2f2', title: `${overduePay.length} ذمة دائنة متأخرة`, body: `بإجمالي ${fmt(sum)} مستحقة عليك وتجاوزت موعدها. سدادها يحافظ على علاقاتك ومصداقيتك.` });
+    insights.push({ kind: 'risk', icon: '⚠️', color: 'var(--danger-text)', bg: 'var(--danger-bg)', title: `${overduePay.length} ذمة دائنة متأخرة`, body: `بإجمالي ${fmt(sum)} مستحقة عليك وتجاوزت موعدها. سدادها يحافظ على علاقاتك ومصداقيتك.` });
   }
   // RISK: expired/expiring trackings
   const expiredTr = tracks.filter(t => t.status === 'expired');
   const expiringTr = tracks.filter(t => t.status === 'expiring');
-  if (expiredTr.length > 0) insights.push({ kind: 'risk', icon: '🔴', color: '#b91c1c', bg: '#fef2f2', title: `${expiredTr.length} متابعة منتهية`, body: `هناك عقود أو ضمانات أو وثائق انتهت صلاحيتها. راجعها لتجنّب انقطاع الخدمة أو فقد الضمان.` });
-  if (expiringTr.length > 0) insights.push({ kind: 'risk', icon: '⏰', color: '#c2410c', bg: '#fff7ed', title: `${expiringTr.length} متابعة تنتهي قريباً`, body: `تنتهي خلال 30 يوماً. بادر بالتجديد قبل فوات الموعد.` });
+  if (expiredTr.length > 0) insights.push({ kind: 'risk', icon: '🔴', color: 'var(--danger-text)', bg: 'var(--danger-bg)', title: `${expiredTr.length} متابعة منتهية`, body: `هناك عقود أو ضمانات أو وثائق انتهت صلاحيتها. راجعها لتجنّب انقطاع الخدمة أو فقد الضمان.` });
+  if (expiringTr.length > 0) insights.push({ kind: 'risk', icon: '⏰', color: 'var(--warn-text)', bg: 'var(--warn-bg)', title: `${expiringTr.length} متابعة تنتهي قريباً`, body: `تنتهي خلال 30 يوماً. بادر بالتجديد قبل فوات الموعد.` });
 
   // TREND: expense trend (last 2 months)
   const months = Array.from(new Set(txs.map(t => monthKey(t.date)))).sort();
@@ -5336,7 +5336,7 @@ function SmartReport({ txs, recvs, comms, tracks, reqs, projName }: {
       const change = Math.round(((lastExp - prevExp) / prevExp) * 100);
       if (Math.abs(change) >= 10) {
         insights.push({
-          kind: 'trend', icon: change > 0 ? '📈' : '📉', color: change > 0 ? '#b91c1c' : '#15803d', bg: change > 0 ? '#fef2f2' : '#f0fdf4',
+          kind: 'trend', icon: change > 0 ? '📈' : '📉', color: change > 0 ? '#b91c1c' : '#15803d', bg: change > 0 ? 'var(--danger-bg)' : 'var(--ok-bg)',
           title: `المصروفات ${change > 0 ? 'ارتفعت' : 'انخفضت'} ${Math.abs(change)}%`, body: `مقارنةً بالشهر السابق (${monthLabelAr(prev)}). ${change > 0 ? 'راجع بنود الصرف لتحديد سبب الزيادة.' : 'استمرار جيد في ضبط المصروفات.'}`
         });
       }
@@ -5347,18 +5347,18 @@ function SmartReport({ txs, recvs, comms, tracks, reqs, projName }: {
   const catMap = new Map<string, number>();
   txs.filter(t => t.type === 'expense').forEach(t => catMap.set(t.category, (catMap.get(t.category) ?? 0) + t.amount));
   const topCat = Array.from(catMap.entries()).sort((a, b) => b[1] - a[1])[0];
-  if (topCat) insights.push({ kind: 'trend', icon: '🏷️', color: '#7c3aed', bg: '#faf5ff', title: `أكبر بند مصروف: ${topCat[0]}`, body: `استحوذ على ${fmt(topCat[1])} من إجمالي مصروفاتك في الفترة. مراقبته تساعد على ضبط التكاليف.` });
+  if (topCat) insights.push({ kind: 'trend', icon: '🏷️', color: 'var(--purple-text)', bg: 'var(--purple-bg)', title: `أكبر بند مصروف: ${topCat[0]}`, body: `استحوذ على ${fmt(topCat[1])} من إجمالي مصروفاتك في الفترة. مراقبته تساعد على ضبط التكاليف.` });
 
   // TIP: monthly commitment load
   const monthlyOut = comms.filter(c => c.active && !commitmentDone(c) && c.direction === 'out').reduce((s, c) => {
     const perMonth = c.freq === 'weekly' ? c.amount * 4.33 : c.freq === 'monthly' ? c.amount : c.freq === 'quarterly' ? c.amount / 3 : c.amount / 12;
     return s + perMonth;
   }, 0);
-  if (monthlyOut > 0) insights.push({ kind: 'tip', icon: '💡', color: '#1d4ed8', bg: '#eff6ff', title: `التزاماتك الشهرية ≈ ${fmt(Math.round(monthlyOut))}`, body: `هذا متوسط ما يخرج شهرياً من أقساط والتزامات واشتراكات. خطّط لتدفقك النقدي بناءً عليه.` });
+  if (monthlyOut > 0) insights.push({ kind: 'tip', icon: '💡', color: 'var(--info-text)', bg: 'var(--info-bg)', title: `التزاماتك الشهرية ≈ ${fmt(Math.round(monthlyOut))}`, body: `هذا متوسط ما يخرج شهرياً من أقساط والتزامات واشتراكات. خطّط لتدفقك النقدي بناءً عليه.` });
 
   // TIP: pending requests
   const pending = reqs.filter(r => r.status === 'pending');
-  if (pending.length > 0) insights.push({ kind: 'tip', icon: '📋', color: '#d97706', bg: '#fffbeb', title: `${pending.length} طلب بانتظار قرارك`, body: `هناك طلبات معلّقة تنتظر الاعتماد أو الرفض. مراجعتها تُبقي سير العمل سلساً.` });
+  if (pending.length > 0) insights.push({ kind: 'tip', icon: '📋', color: '#d97706', bg: 'var(--warn-bg)', title: `${pending.length} طلب بانتظار قرارك`, body: `هناك طلبات معلّقة تنتظر الاعتماد أو الرفض. مراجعتها تُبقي سير العمل سلساً.` });
 
   if (insights.length === 0) {
     return (
@@ -5511,7 +5511,7 @@ function MaintenanceForm({ onSave, onCancel }: { onSave: (m: Omit<MaintenanceEnt
       <Field label="الوصف">
         <TextArea value={note} onChange={setNote} placeholder="تفاصيل الصيانة أو العطل..." />
       </Field>
-      <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#1d4ed8' }}>
+      <div style={{ background: 'var(--info-bg)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: 'var(--info-text)' }}>
         ℹ️ ستُسجّل التكلفة كمصروف فعلي في الإدارة المالية للمشروع.
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
@@ -5557,10 +5557,10 @@ function Assets({ projectId, projects, assets, members, onSave, onDelete, onAddM
       <PageHeader title="الأصول" subtitle="إدارة الأصول الملموسة ودورة حياتها" action={<Btn size="sm" onClick={onOpenCreate}>+ أصل جديد</Btn>} />
 
       <StatCards cards={[
-        { label: 'إجمالي قيمة الأصول', value: fmtNum(Math.round(totalValue)), color: '#1d4ed8', bg: '#eff6ff', icon: '💎' },
-        { label: 'أصول نشطة', value: activeCount, color: '#15803d', bg: '#f0fdf4', icon: '✓' },
-        { label: 'تحت الصيانة', value: inMaint, color: '#a16207', bg: '#fef3c7', icon: '🔧' },
-        { label: 'ضمانات تنتهي قريباً', value: warrantyExpiring, color: '#c2410c', bg: '#fff7ed', icon: '🛡️' },
+        { label: 'إجمالي قيمة الأصول', value: fmtNum(Math.round(totalValue)), color: 'var(--info-text)', bg: 'var(--info-bg)', icon: '💎' },
+        { label: 'أصول نشطة', value: activeCount, color: 'var(--ok-text)', bg: 'var(--ok-bg)', icon: '✓' },
+        { label: 'تحت الصيانة', value: inMaint, color: 'var(--warn-text-2)', bg: 'var(--warn-bg-2)', icon: '🔧' },
+        { label: 'ضمانات تنتهي قريباً', value: warrantyExpiring, color: 'var(--warn-text)', bg: 'var(--warn-bg)', icon: '🛡️' },
       ]} />
 
       <FilterBar
@@ -5606,7 +5606,7 @@ function Assets({ projectId, projects, assets, members, onSave, onDelete, onAddM
                     <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{fmtNum(a.purchaseValue)}</div>
                   </div>
                   {a.warrantyEnd && (
-                    <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: warrantyExp ? '#fff7ed' : warrantyActive ? '#dcfce7' : '#f1f5f9', color: warrantyExp ? '#c2410c' : warrantyActive ? '#15803d' : '#64748b' }}>
+                    <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 99, background: warrantyExp ? 'var(--warn-bg)' : warrantyActive ? 'var(--ok-bg-2)' : '#f1f5f9', color: warrantyExp ? '#c2410c' : warrantyActive ? '#15803d' : '#64748b' }}>
                       {warrantyActive ? `🛡️ ضمان حتى ${a.warrantyEnd}` : 'انتهى الضمان'}
                     </span>
                   )}
@@ -5659,7 +5659,7 @@ function Assets({ projectId, projects, assets, members, onSave, onDelete, onAddM
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)' }}>سجل الصيانة والأعطال ({a.maintenance.length})</span>
-                  <button onClick={() => setAddMaint(true)} style={{ background: '#eff6ff', color: '#1d4ed8', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>+ تسجيل</button>
+                  <button onClick={() => setAddMaint(true)} style={{ background: 'var(--info-bg)', color: 'var(--info-text)', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>+ تسجيل</button>
                 </div>
                 {a.maintenance.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-3)', padding: '8px 0' }}>لا توجد سجلات بعد.</div>}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -5669,7 +5669,7 @@ function Assets({ projectId, projects, assets, members, onSave, onDelete, onAddM
                         <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>{m.type === 'صيانة' ? '🔧' : m.type === 'عطل' ? '⚠️' : '🔍'} {m.type} — {m.date}</div>
                         {m.note && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{m.note}</div>}
                       </div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#b91c1c', flexShrink: 0 }}>{fmtNum(m.cost)}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger-text)', flexShrink: 0 }}>{fmtNum(m.cost)}</div>
                     </div>
                   ))}
                 </div>
@@ -5682,7 +5682,7 @@ function Assets({ projectId, projects, assets, members, onSave, onDelete, onAddM
                 </div>
               )}
 
-              <button onClick={() => { onDelete(a.id); setView(null); }} style={{ background: 'none', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: 8, padding: '8px', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', marginTop: 4 }}>🗑️ حذف الأصل</button>
+              <button onClick={() => { onDelete(a.id); setView(null); }} style={{ background: 'none', border: '1px solid #fecaca', color: 'var(--danger-text)', borderRadius: 8, padding: '8px', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', marginTop: 4 }}>🗑️ حذف الأصل</button>
             </div>
           );
         })()}
@@ -5769,7 +5769,7 @@ function HealthCheck({ data, onNav }: { data: Parameters<typeof runHealthCheck>[
   const errors = issues?.filter(i => i.level === 'error').length ?? 0;
   const warnings = issues?.filter(i => i.level === 'warning').length ?? 0;
   const oks = issues?.filter(i => i.level === 'ok').length ?? 0;
-  const meta = (l: HealthIssue['level']) => l === 'error' ? { icon: '🔴', c: '#b91c1c', bg: '#fef2f2' } : l === 'warning' ? { icon: '🟠', c: '#c2410c', bg: '#fff7ed' } : { icon: '🟢', c: '#15803d', bg: '#f0fdf4' };
+  const meta = (l: HealthIssue['level']) => l === 'error' ? { icon: '🔴', c: '#b91c1c', bg: 'var(--danger-bg)' } : l === 'warning' ? { icon: '🟠', c: '#c2410c', bg: 'var(--warn-bg)' } : { icon: '🟢', c: '#15803d', bg: 'var(--ok-bg)' };
 
   return (
     <Card style={{ marginBottom: 16 }}>
@@ -5787,9 +5787,9 @@ function HealthCheck({ data, onNav }: { data: Parameters<typeof runHealthCheck>[
       {issues && (
         <div style={{ marginTop: 16 }}>
           <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 99, background: '#f0fdf4', color: '#15803d', fontWeight: 600 }}>🟢 {oks} سليم</span>
-            {warnings > 0 && <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 99, background: '#fff7ed', color: '#c2410c', fontWeight: 600 }}>🟠 {warnings} تحذير</span>}
-            {errors > 0 && <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 99, background: '#fef2f2', color: '#b91c1c', fontWeight: 600 }}>🔴 {errors} خطأ</span>}
+            <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 99, background: 'var(--ok-bg)', color: 'var(--ok-text)', fontWeight: 600 }}>🟢 {oks} سليم</span>
+            {warnings > 0 && <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 99, background: 'var(--warn-bg)', color: 'var(--warn-text)', fontWeight: 600 }}>🟠 {warnings} تحذير</span>}
+            {errors > 0 && <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 99, background: 'var(--danger-bg)', color: 'var(--danger-text)', fontWeight: 600 }}>🔴 {errors} خطأ</span>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {issues.map((i, idx) => {
@@ -5806,7 +5806,7 @@ function HealthCheck({ data, onNav }: { data: Parameters<typeof runHealthCheck>[
             })}
           </div>
           {errors === 0 && warnings === 0 && (
-            <div style={{ textAlign: 'center', padding: '16px', marginTop: 8, fontSize: 13, color: '#15803d', fontWeight: 600 }}>✅ كل الحسابات متسقة وسليمة</div>
+            <div style={{ textAlign: 'center', padding: '16px', marginTop: 8, fontSize: 13, color: 'var(--ok-text)', fontWeight: 600 }}>✅ كل الحسابات متسقة وسليمة</div>
           )}
         </div>
       )}
@@ -6092,11 +6092,25 @@ const KEYFRAMES = `
   --bg: #f4f6fa; --surface: #ffffff; --surface-2: #f8fafc; --surface-3: #f1f5f9;
   --text: #0b1120; --text-2: #475569; --text-3: #64748b; --border: #e2e8f0;
   --sidebar: #0b1120; --sidebar-2: #1a2234;
+  /* semantic tinted backgrounds + text (success/danger/info/warning/purple/neutral) */
+  --ok-bg: var(--ok-bg); --ok-bg-2: var(--ok-bg-2); --ok-text: #15803d;
+  --danger-bg: var(--danger-bg); --danger-bg-2: var(--danger-bg-2); --danger-text: #b91c1c;
+  --info-bg: var(--info-bg); --info-text: #1d4ed8;
+  --warn-bg: var(--warn-bg); --warn-bg-2: var(--warn-bg-2); --warn-text: #c2410c; --warn-text-2: #a16207;
+  --purple-bg: var(--purple-bg); --purple-text: #7c3aed;
+  --neutral-bg: #f1f5f9; --neutral-text: #64748b;
 }
 .mz-dark {
   --bg: #0b0f17; --surface: #161b26; --surface-2: #1c2230; --surface-3: #232b3a;
   --text: #f1f5f9; --text-2: #b8c2d4; --text-3: #94a3b8; --border: #2a3346;
   --sidebar: #060911; --sidebar-2: #161b26;
+  /* dark-mode tints: deep translucent-feel backgrounds + brighter text for contrast */
+  --ok-bg: #112a1d; --ok-bg-2: #15351f; --ok-text: #4ade80;
+  --danger-bg: #2c1517; --danger-bg-2: #3a181b; --danger-text: #f87171;
+  --info-bg: #14233d; --info-text: #60a5fa;
+  --warn-bg: #2c1d10; --warn-bg-2: #33260f; --warn-text: #fb923c; --warn-text-2: #fbbf24;
+  --purple-bg: #21183a; --purple-text: #a78bfa;
+  --neutral-bg: #232b3a; --neutral-text: #94a3b8;
 }
 @keyframes mzFade { from { opacity: 0 } to { opacity: 1 } }
 @keyframes mzSlideUp { from { transform: translateY(100%) } to { transform: translateY(0) } }
