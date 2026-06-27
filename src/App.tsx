@@ -4468,6 +4468,16 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, r
   const maxM = Math.max(...months.map(m => Math.max(byMonth[m].in, byMonth[m].out)), 1);
 
   const projName = (id: string) => projects.find(p => p.id === id)?.name ?? '—';
+  const hasMismatch = Math.abs((incoming - outgoing) - (member.balance ?? 0)) > 1;
+  // when a member with a balance issue is opened, draw attention to the alert automatically
+  useEffect(() => {
+    if (!hasMismatch) return;
+    const t = window.setTimeout(() => {
+      const el = document.querySelector(`[data-hl="${member.id}"]`) as HTMLElement | null;
+      if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('mz-flash'); window.setTimeout(() => el.classList.remove('mz-flash'), 2200); }
+    }, 200);
+    return () => window.clearTimeout(t);
+  }, [member.id, hasMismatch]);
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
@@ -4488,6 +4498,39 @@ function MemberDetail({ memberId, members, projects, transactions, memberTxns, r
           <div style={{ fontSize: 24, fontWeight: 800, color: (member.balance ?? 0) > 0 ? '#15803d' : 'var(--text-3)' }}>{fmt(member.balance ?? 0)}</div>
         </div>
       </div>
+
+      {/* balance mismatch alert: stored balance ≠ computed from accepted movements */}
+      {Math.abs((incoming - outgoing) - (member.balance ?? 0)) > 1 && (
+        <div data-hl={member.id} style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-text)', borderRadius: 14, padding: 18, marginBottom: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
+            <span style={{ fontSize: 20 }}>⚠️</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--danger-text)' }}>عدم تطابق في رصيد العهدة</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px,1fr))', gap: 10, marginBottom: 12 }}>
+            <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '10px 12px' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>الرصيد المخزّن</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{fmt(member.balance ?? 0)}</div>
+            </div>
+            <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '10px 12px' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>المحسوب من الحركات المقبولة</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{fmt(incoming - outgoing)}</div>
+            </div>
+            <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '10px 12px' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>الفرق</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--danger-text)' }}>{fmt(Math.abs((incoming - outgoing) - (member.balance ?? 0)))}</div>
+            </div>
+          </div>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '11px 13px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+              <span style={{ fontSize: 15 }}>🤖</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--purple-text)' }}>توصية المساعد الذكي</span>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.7 }}>
+              الرصيد المخزّن لا يطابق مجموع الحركات المقبولة أدناه. غالباً السبب تعديل يدوي على الرصيد أو حركة عُدّلت/حُذفت بعد قبولها. راجع سجل الحركات في الأسفل، وسجّل حركة <b>تسوية</b> بمقدار الفرق ({fmt(Math.abs((incoming - outgoing) - (member.balance ?? 0)))}) لإعادة الرصيد لمطابقة الواقع — تجنّب تعديل الرصيد يدوياً ليبقى قابلاً للتتبّع.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 14, marginBottom: 22 }}>
