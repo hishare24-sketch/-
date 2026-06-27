@@ -468,15 +468,22 @@ function useIsMobile(breakpoint = 768): boolean {
 function useHighlight(highlightId: string | null) {
   useEffect(() => {
     if (!highlightId) return;
-    const el = document.querySelector(`[data-hl="${highlightId}"]`) as HTMLElement | null;
-    if (!el) return;
-    // wait a frame so layout is ready, then scroll into view + flash
-    const t = window.setTimeout(() => {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.classList.add('mz-flash');
-      window.setTimeout(() => el.classList.remove('mz-flash'), 2200);
-    }, 120);
-    return () => window.clearTimeout(t);
+    let attempts = 0;
+    let timer: number;
+    const tryFind = () => {
+      const el = document.querySelector(`[data-hl="${highlightId}"]`) as HTMLElement | null;
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('mz-flash');
+        window.setTimeout(() => el.classList.remove('mz-flash'), 2200);
+        return;
+      }
+      // element not mounted yet (page still rendering) — retry a few times
+      attempts++;
+      if (attempts < 15) timer = window.setTimeout(tryFind, 120);
+    };
+    timer = window.setTimeout(tryFind, 120);
+    return () => window.clearTimeout(timer);
   }, [highlightId]);
 }
 
@@ -6486,6 +6493,7 @@ export default function App() {
   const [history, setHistory] = useState<Page[]>([]);
   const setPage = (p: Page) => { setHistory(h => [...h, page]); setPageRaw(p); };
   const goBack = () => setHistory(h => { if (h.length === 0) return h; const prev = h[h.length - 1]; setPageRaw(prev); return h.slice(0, -1); });
+  const [projectId, setProjectId] = useState('p1');
   // shared deep-link target: navigate to a page and highlight a specific item by id
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const navigateTo = (p: Page, itemId?: string, projId?: string) => {
@@ -6498,7 +6506,6 @@ export default function App() {
     }
   };
   const canGoBack = history.length > 0;
-  const [projectId, setProjectId] = useState('p1');
   const isMobile = useIsMobile();
   useHighlight(highlightId);
   const [drawerOpen, setDrawerOpen] = useState(false);
