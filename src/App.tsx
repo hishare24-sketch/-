@@ -880,7 +880,7 @@ function StatBars({ bars }: { bars: { label: string; value: number; color: strin
 }
 
 // small stat number cards row
-function StatCards({ cards, prefs }: { cards: { label: string; value: string | number; color: string; bg: string; icon?: string }[]; prefs?: UserPrefs }) {
+function StatCards({ cards, prefs, extras }: { cards: { label: string; value: string | number; color: string; bg: string; icon?: string }[]; prefs?: UserPrefs; extras?: { key: string; node: React.ReactNode }[] }) {
   const isMobile = useIsMobile();
   const trackRef = React.useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
@@ -893,6 +893,7 @@ function StatCards({ cards, prefs }: { cards: { label: string; value: string | n
   const seconds = storedPrefs.statsScrollSeconds ?? 4;
   const layout = storedPrefs.statsLayout ?? 'horizontal';
   const horizontal = layout === 'horizontal';
+  const extrasList = extras ?? [];
 
   // measure actual card offsets (accurate, RTL-safe) instead of estimating from scrollWidth
   const scrollToIndex = (i: number, smooth = true) => {
@@ -918,15 +919,16 @@ function StatCards({ cards, prefs }: { cards: { label: string; value: string | n
   };
 
   // auto-scroll loop (horizontal + enabled)
+  const slideCount = cards.length + (extras?.length ?? 0);
   useEffect(() => {
-    if (!horizontal || !autoScroll || cards.length <= 1) return;
+    if (!horizontal || !autoScroll || slideCount <= 1) return;
     let idx = 0;
     const timer = setInterval(() => {
-      idx = (idx + 1) % cards.length;
+      idx = (idx + 1) % slideCount;
       scrollToIndex(idx);
     }, Math.max(2, seconds) * 1000);
     return () => clearInterval(timer);
-  }, [horizontal, autoScroll, seconds, cards.length]);
+  }, [horizontal, autoScroll, seconds, slideCount]);
 
   // VERTICAL layout: responsive grid (original)
   if (!horizontal) {
@@ -945,27 +947,35 @@ function StatCards({ cards, prefs }: { cards: { label: string; value: string | n
 
   // HORIZONTAL layout: carousel with snap + pagination dots (mobile = peek next card, desktop = wider cards)
   const cardBasis = isMobile ? '0 0 78%' : '0 0 220px';
+  const chartBasis = isMobile ? '0 0 88%' : '0 0 320px';
+  const extras = extrasList;
+  const totalSlides = cards.length + extras.length;
   return (
     <div style={{ marginBottom: 16 }}>
       <div
         ref={trackRef}
         onScroll={onScroll}
         className="mz-hide-scroll"
-        style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory', paddingBottom: 4, scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+        style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory', paddingBottom: 4, scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', alignItems: 'stretch' }}
       >
         {cards.map(c => (
-          <div key={c.label} style={{ background: c.bg, borderRadius: 14, padding: 16, scrollSnapAlign: 'center', flex: cardBasis, minWidth: 0 }}>
+          <div key={c.label} style={{ background: c.bg, borderRadius: 14, padding: 16, scrollSnapAlign: 'center', flex: cardBasis, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             {c.icon && <div style={{ fontSize: 18, marginBottom: 4 }}>{c.icon}</div>}
             <div style={{ fontSize: 22, fontWeight: 800, color: c.color }}>{c.value}</div>
             <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{c.label}</div>
           </div>
         ))}
+        {extras.map(ex => (
+          <div key={ex.key} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, scrollSnapAlign: 'center', flex: chartBasis, minWidth: 0 }}>
+            {ex.node}
+          </div>
+        ))}
       </div>
-      {cards.length > 1 && (
+      {totalSlides > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
-          {cards.map((c, i) => (
+          {Array.from({ length: totalSlides }).map((_, i) => (
             <button
-              key={c.label}
+              key={i}
               onClick={() => scrollToIndex(i)}
               style={{ width: active === i ? 20 : 7, height: 7, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 0, background: active === i ? '#2563eb' : 'var(--border)', transition: 'all .25s ease' }}
             />
@@ -1022,11 +1032,12 @@ const NAV = [
   { id: 'settings',      icon: '◎',  label: 'الإعدادات' },
 ];
 
-function Sidebar({ page, onNav, projects, projectId, onProject, unread, isMobile, open, onClose, theme, onToggleTheme }: {
+function Sidebar({ page, onNav, projects, projectId, onProject, unread, isMobile, open, onClose, theme, onToggleTheme, projectsOpen, onToggleProjects }: {
   page: Page; onNav: (p: Page) => void; projects: Project[];
   projectId: string; onProject: (id: string) => void; unread: number;
   isMobile: boolean; open: boolean; onClose: () => void;
   theme: 'light' | 'dark'; onToggleTheme: () => void;
+  projectsOpen: boolean; onToggleProjects: () => void;
 }) {
   // on mobile, sidebar is an overlay drawer; hidden unless open
   if (isMobile && !open) return null;
@@ -1050,20 +1061,34 @@ function Sidebar({ page, onNav, projects, projectId, onProject, unread, isMobile
         {isMobile && <button onClick={onClose} style={{ background: 'var(--sidebar-2)', border: 'none', color: 'var(--text-3)', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', fontSize: 16 }}>✕</button>}
       </div>
 
-      {/* Project switcher */}
+      {/* Project switcher — accordion */}
       <div style={{ padding: '12px 12px 8px', borderBottom: '1px solid var(--sidebar-2)' }}>
-        <div style={{ color: '#4b5563', fontSize: 11, padding: '0 8px', marginBottom: 6 }}>المشروع الحالي</div>
-        {projects.map(p => (
-          <button key={p.id} onClick={() => { onProject(p.id); if (isMobile) onClose(); }} style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
-            borderRadius: 10, border: 'none', cursor: 'pointer', textAlign: 'right', transition: 'background .15s',
-            background: projectId === p.id ? '#1e2230' : 'transparent', marginBottom: 2,
-          }}>
-            <span style={{ fontSize: 16 }}>{p.icon}</span>
-            <span style={{ color: projectId === p.id ? '#fff' : '#9ca3af', fontSize: 13, fontWeight: 500, fontFamily: 'inherit', flex: 1, textAlign: 'right' }}>{p.name}</span>
-            {projectId === p.id && <span style={{ width: 6, height: 6, borderRadius: 99, background: '#3b82f6', flexShrink: 0 }} />}
-          </button>
-        ))}
+        <button onClick={onToggleProjects} style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '8px 10px',
+          borderRadius: 10, border: 'none', cursor: 'pointer', background: 'transparent', fontFamily: 'inherit',
+        }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: '#9ca3af', fontSize: 15 }}>⬡</span>
+            <span style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>المشاريع</span>
+            <span style={{ color: 'var(--text-3)', fontSize: 11, background: 'var(--sidebar-2)', borderRadius: 99, padding: '0 7px', fontWeight: 600 }}>{projects.length}</span>
+          </span>
+          <span style={{ color: '#6b7280', fontSize: 11, transform: projectsOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform .2s ease' }}>▼</span>
+        </button>
+        {projectsOpen && (
+          <div style={{ marginTop: 4, animation: 'mzFade .2s ease' }}>
+            {projects.map(p => (
+              <button key={p.id} onClick={() => { onProject(p.id); if (isMobile) onClose(); }} style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+                borderRadius: 10, border: 'none', cursor: 'pointer', textAlign: 'right', transition: 'background .15s',
+                background: projectId === p.id ? '#1e2230' : 'transparent', marginBottom: 2,
+              }}>
+                <span style={{ fontSize: 16 }}>{p.icon}</span>
+                <span style={{ color: projectId === p.id ? '#fff' : '#9ca3af', fontSize: 13, fontWeight: 500, fontFamily: 'inherit', flex: 1, textAlign: 'right' }}>{p.name}</span>
+                {projectId === p.id && <span style={{ width: 6, height: 6, borderRadius: 99, background: '#3b82f6', flexShrink: 0 }} />}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Nav */}
@@ -1450,7 +1475,25 @@ function Overview({ projects, transactions, trackings, requests, receivables, co
         { label: 'إجمالي الإيرادات', value: fmtNum(Math.round(totalIncome)), color: 'var(--ok-text)', bg: 'var(--ok-bg)', icon: '↓' },
         { label: 'إجمالي المصروفات', value: fmtNum(Math.round(totalExpense)), color: 'var(--danger-text)', bg: 'var(--danger-bg)', icon: '↑' },
         { label: 'صافي الذمم', value: fmtNum(Math.round(recvOpen - payOpen)), color: recvOpen - payOpen >= 0 ? '#7c3aed' : '#b91c1c', bg: 'var(--purple-bg)', icon: '⇄' },
-      ]} />
+      ]} extras={balanceSegments.length > 0 ? [{
+        key: 'balance-donut',
+        node: (
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 10 }}>توزيع الأرصدة</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Donut segments={balanceSegments} size={92} label="الرصيد" />
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {balanceSegments.slice(0, 4).map(s => (
+                  <div key={s.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-2)', minWidth: 0 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} /><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span></span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-3)', flexShrink: 0 }}>{fmtNum(s.value)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ),
+      }] : undefined} />
 
       {/* action alerts strip */}
       {(pendingReqs.length > 0 || urgentTrackings.length > 0 || overdueRecv.length > 0 || dueCommitments.length > 0) && (
@@ -6327,6 +6370,7 @@ export default function App() {
   const [projectId, setProjectId] = useState('p1');
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [projectsOpen, setProjectsOpen] = usePersist<boolean>('mz_sidebar_projects_open', false);
   const [fabSheet, setFabSheet] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [theme, setTheme] = usePersist<'light' | 'dark'>('mz_theme', 'light');
@@ -6623,7 +6667,7 @@ export default function App() {
     <>
       <style>{KEYFRAMES}</style>
       <div className={theme === 'dark' ? 'mz-dark' : 'mz-light'} style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'IBM Plex Sans Arabic', sans-serif", direction: 'rtl', background: 'var(--bg)', color: 'var(--text)' }}>
-        <Sidebar page={page} onNav={setPage} projects={projects} projectId={projectId} onProject={setProjectId} unread={unread} isMobile={isMobile} open={drawerOpen} onClose={() => setDrawerOpen(false)} theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} />
+        <Sidebar page={page} onNav={setPage} projects={projects} projectId={projectId} onProject={setProjectId} unread={unread} isMobile={isMobile} open={drawerOpen} onClose={() => setDrawerOpen(false)} theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} projectsOpen={projectsOpen} onToggleProjects={() => setProjectsOpen(v => !v)} />
         <main style={{ flex: 1, overflowY: 'auto', position: 'relative', display: 'flex', flexDirection: 'column' }}>
           {/* mobile top bar */}
           {isMobile && (
