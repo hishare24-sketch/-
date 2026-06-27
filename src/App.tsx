@@ -892,6 +892,9 @@ function ImageGalleryPicker({ value, onChange, max = 3 }: { value: string[]; onC
     </div>
   );
 }
+
+// read-only attachments display (in view sheets)
+function AttachmentView({ items }: { items?: Attachment[] }) {
   const [zoom, setZoom] = useState<string | null>(null);
   if (!items || items.length === 0) return null;
   const download = (a: Attachment) => {
