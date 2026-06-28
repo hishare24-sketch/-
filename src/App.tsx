@@ -908,19 +908,19 @@ function AttachmentPicker({ value, onChange }: { value: Attachment[]; onChange: 
   const addFiles = (files: FileList | null, kind: 'image' | 'file') => {
     if (!files) return;
     const arr = Array.from(files);
+    if (arr.length === 0) return;
     let pending = arr.length;
     const next: Attachment[] = [];
+    const done = () => { if (pending === 0) onChange([...value, ...next]); };
     arr.forEach(f => {
-      const att: Attachment = { id: uid('att'), name: f.name, kind: f.type.startsWith('image') ? 'image' : kind, size: humanSize(f.size), fileType: f.type || f.name.split('.').pop(), uploadDate: today() };
-      // generate a small preview for images (kept in-session)
-      if (att.kind === 'image') {
-        const reader = new FileReader();
-        reader.onload = () => { att.preview = reader.result as string; next.push(att); pending--; if (pending === 0) onChange([...value, ...next]); };
-        reader.onerror = () => { next.push(att); pending--; if (pending === 0) onChange([...value, ...next]); };
-        reader.readAsDataURL(f);
-      } else {
-        next.push(att); pending--; if (pending === 0) onChange([...value, ...next]);
-      }
+      if (f.size > 3 * 1048576) { alert(`الملف «${f.name}» كبير (${humanSize(f.size)}). قد لا يُحفظ بالكامل في هذه النسخة المحلية. يُفضّل ملفات أصغر من 3 ميجابايت حتى ربط التخزين السحابي.`); }
+      const isImg = f.type.startsWith('image');
+      const att: Attachment = { id: uid('att'), name: f.name, kind: isImg ? 'image' : 'file', size: humanSize(f.size), fileType: f.type || f.name.split('.').pop(), uploadDate: today() };
+      // read EVERY file as Base64 (images for thumbnails; PDF/Excel/others so they can be previewed/downloaded)
+      const reader = new FileReader();
+      reader.onload = () => { att.preview = reader.result as string; next.push(att); pending--; done(); };
+      reader.onerror = () => { next.push(att); pending--; done(); };
+      try { reader.readAsDataURL(f); } catch { next.push(att); pending--; done(); }
     });
   };
 
@@ -941,7 +941,7 @@ function AttachmentPicker({ value, onChange }: { value: Attachment[]; onChange: 
       {/* hidden native inputs — open camera / gallery / files */}
       <input ref={camRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { addFiles(e.target.files, 'image'); e.target.value = ''; }} />
       <input ref={galRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => { addFiles(e.target.files, 'image'); e.target.value = ''; }} />
-      <input ref={fileRef} type="file" multiple style={{ display: 'none' }} onChange={e => { addFiles(e.target.files, 'file'); e.target.value = ''; }} />
+      <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.txt,image/*,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" multiple style={{ display: 'none' }} onChange={e => { addFiles(e.target.files, 'file'); e.target.value = ''; }} />
 
       <div style={{ display: 'flex', gap: 8, marginBottom: value.length ? 12 : 0 }}>
         {btn('📷', 'كاميرا', () => camRef.current?.click())}
@@ -965,7 +965,7 @@ function AttachmentPicker({ value, onChange }: { value: Attachment[]; onChange: 
           ))}
         </div>
       )}
-      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 8 }}>📌 يُحفظ شكلياً في هذه النسخة — الرفع الفعلي للسحابة يأتي مع الـ Backend.</div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 8 }}>📌 تُحفظ المرفقات داخل التطبيق ويمكن معاينتها وتنزيلها. المزامنة السحابية تأتي مع الـ Backend.</div>
     </div>
   );
 }
