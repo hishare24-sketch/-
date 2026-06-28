@@ -498,6 +498,59 @@ async function exportXLSX(fileName: string, sheets: { name: string; rows: Record
   XLSX.writeFile(wb, fileName.endsWith('.xlsx') ? fileName : fileName + '.xlsx');
 }
 
+// ── PDF generation (real downloadable PDF via html2pdf, preserves Arabic RTL) ──
+let _pdfPromise: Promise<any> | null = null;
+function loadPDF(): Promise<any> {
+  if ((window as any).html2pdf) return Promise.resolve((window as any).html2pdf);
+  if (_pdfPromise) return _pdfPromise;
+  _pdfPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    s.onload = () => resolve((window as any).html2pdf);
+    s.onerror = () => reject(new Error('تعذّر تحميل مكتبة PDF'));
+    document.head.appendChild(s);
+  });
+  return _pdfPromise;
+}
+// render an HTML string to a downloadable PDF file
+async function exportPDF(fileName: string, innerHTML: string): Promise<void> {
+  const html2pdf = await loadPDF();
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'direction:rtl;font-family:Tahoma,Arial,sans-serif;padding:32px;color:#111;background:#fff;width:794px;box-sizing:border-box';
+  wrap.innerHTML = innerHTML;
+  document.body.appendChild(wrap);
+  try {
+    await html2pdf().set({
+      margin: 0, filename: fileName.endsWith('.pdf') ? fileName : fileName + '.pdf',
+      image: { type: 'jpeg', quality: 0.97 }, html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' },
+    }).from(wrap).save();
+  } finally {
+    document.body.removeChild(wrap);
+  }
+}
+// shared document chrome: header with logo/title + footer
+function docHTML(opts: { title: string; subtitle?: string; body: string; brand?: string }): string {
+  const brand = opts.brand || 'موازين';
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #2563eb;padding-bottom:16px;margin-bottom:24px">
+      <div>
+        <div style="font-size:26px;font-weight:800;color:#2563eb">${brand}</div>
+        <div style="font-size:12px;color:#666;margin-top:2px">نظام الإدارة المالية والتشغيلية</div>
+      </div>
+      <div style="text-align:left">
+        <div style="font-size:20px;font-weight:700">${opts.title}</div>
+        ${opts.subtitle ? `<div style="font-size:12px;color:#666;margin-top:3px">${opts.subtitle}</div>` : ''}
+        <div style="font-size:11px;color:#999;margin-top:3px">تاريخ الإصدار: ${new Date().toLocaleDateString('ar-SA')}</div>
+      </div>
+    </div>
+    ${opts.body}
+    <div style="margin-top:40px;padding-top:14px;border-top:1px solid #ddd;font-size:10px;color:#999;text-align:center">
+      صُدّر هذا المستند من نظام موازين · ${new Date().toLocaleString('ar-SA')}
+    </div>`;
+}
+
+
 // remaining balance on a receivable (original − payments)
 const recvPaid = (r: Receivable) => r.payments.reduce((s, p) => s + p.amount, 0);
 const recvRemaining = (r: Receivable) => Math.max(0, r.amount - recvPaid(r));
@@ -3480,6 +3533,28 @@ function Finance({ projectId, projects, transactions, onSave, onDelete, openCrea
         footer={sheet?.mode === 'view' ? (
           <>
             <Btn variant="danger" onClick={() => { onDelete(sheet.tx.id); setSheet(null); }}>🗑️ حذف</Btn>
+            <Btn variant="outline" onClick={() => {
+              const t = sheet.tx;
+              const body = `
+                <div style="background:#f8fafc;border-radius:10px;padding:18px;margin-bottom:20px">
+                  <table style="width:100%;font-size:13px">
+                    <tr><td style="padding:5px 0;color:#666">المشروع:</td><td style="padding:5px 0;font-weight:700">${project.name}</td>
+                        <td style="padding:5px 0;color:#666">التاريخ:</td><td style="padding:5px 0;font-weight:700">${t.date}</td></tr>
+                    <tr><td style="padding:5px 0;color:#666">النوع:</td><td style="padding:5px 0;font-weight:700">${t.type === 'income' ? 'إيراد' : t.type === 'expense' ? 'مصروف' : 'تحويل'}</td>
+                        <td style="padding:5px 0;color:#666">التصنيف:</td><td style="padding:5px 0;font-weight:700">${t.category}</td></tr>
+                    ${t.source ? `<tr><td style="padding:5px 0;color:#666">الجهة:</td><td style="padding:5px 0;font-weight:700">${t.source}</td><td></td><td></td></tr>` : ''}
+                  </table>
+                </div>
+                <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px">
+                  <thead><tr style="background:#2563eb;color:#fff"><th style="padding:10px;border:1px solid #2563eb;text-align:right">البيان</th><th style="padding:10px;border:1px solid #2563eb">المبلغ</th></tr></thead>
+                  <tbody><tr><td style="padding:10px;border:1px solid #ddd">${t.description}</td><td style="padding:10px;border:1px solid #ddd;text-align:left;font-weight:700">${fmtNum(t.amount)} ر.س</td></tr></tbody>
+                </table>
+                <table style="width:100%;font-size:16px;border-top:2px solid #2563eb;padding-top:10px">
+                  <tr><td style="padding:8px 0;font-weight:800">الإجمالي:</td><td style="padding:8px 0;text-align:left;font-weight:800;color:#2563eb">${fmtNum(t.amount)} ر.س</td></tr>
+                </table>
+                ${t.note ? `<div style="margin-top:16px;font-size:12px;color:#666">ملاحظات: ${t.note}</div>` : ''}`;
+              exportPDF(`فاتورة_${t.description}`, docHTML({ title: 'فاتورة', subtitle: `رقم: ${t.id}`, body })).catch(e => alert(e.message));
+            }}>📄 فاتورة</Btn>
             <Btn variant="outline" style={{ flex: 1 }} onClick={() => setSheet({ mode: 'edit', tx: sheet.tx })}>✎ تعديل</Btn>
           </>
         ) : undefined}>
@@ -6075,6 +6150,35 @@ function Receivables({ projectId, projects, receivables, members, onSave, onPay,
                   <AttachmentView items={r.attachments} />
                 </div>
               )}
+              {/* export account statement as PDF */}
+              <Btn variant="outline" style={{ width: '100%', marginTop: 4 }} onClick={() => {
+                const paymentsRows = r.payments.length
+                  ? r.payments.map((p, i) => `<tr><td style="padding:8px;border:1px solid #ddd;text-align:center">${i + 1}</td><td style="padding:8px;border:1px solid #ddd">${p.date}</td><td style="padding:8px;border:1px solid #ddd">${p.note || '—'}</td><td style="padding:8px;border:1px solid #ddd;text-align:left;font-weight:700">${fmtNum(p.amount)} ر.س</td></tr>`).join('')
+                  : `<tr><td colspan="4" style="padding:12px;border:1px solid #ddd;text-align:center;color:#999">لا توجد دفعات مسجّلة</td></tr>`;
+                const body = `
+                  <div style="background:#f8fafc;border-radius:10px;padding:18px;margin-bottom:20px">
+                    <table style="width:100%;font-size:13px">
+                      <tr><td style="padding:5px 0;color:#666">الطرف:</td><td style="padding:5px 0;font-weight:700">${r.party}</td>
+                          <td style="padding:5px 0;color:#666">النوع:</td><td style="padding:5px 0;font-weight:700">${r.kind === 'receivable' ? 'ذمة مدينة (مستحقة لنا)' : 'ذمة دائنة (مستحقة علينا)'}</td></tr>
+                      <tr><td style="padding:5px 0;color:#666">المشروع:</td><td style="padding:5px 0;font-weight:700">${projName(r.projectId)}</td>
+                          <td style="padding:5px 0;color:#666">تاريخ الإنشاء:</td><td style="padding:5px 0;font-weight:700">${r.date}</td></tr>
+                      ${r.dueDate ? `<tr><td style="padding:5px 0;color:#666">تاريخ الاستحقاق:</td><td style="padding:5px 0;font-weight:700">${r.dueDate}</td><td></td><td></td></tr>` : ''}
+                    </table>
+                  </div>
+                  <div style="font-size:15px;font-weight:700;margin-bottom:10px">سجل الدفعات</div>
+                  <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px">
+                    <thead><tr style="background:#2563eb;color:#fff">
+                      <th style="padding:9px;border:1px solid #2563eb">#</th><th style="padding:9px;border:1px solid #2563eb">التاريخ</th><th style="padding:9px;border:1px solid #2563eb">ملاحظة</th><th style="padding:9px;border:1px solid #2563eb">المبلغ</th>
+                    </tr></thead>
+                    <tbody>${paymentsRows}</tbody>
+                  </table>
+                  <table style="width:100%;font-size:14px;border-top:2px solid #2563eb;padding-top:10px">
+                    <tr><td style="padding:6px 0">المبلغ الأصلي:</td><td style="padding:6px 0;text-align:left;font-weight:700">${fmtNum(r.amount)} ر.س</td></tr>
+                    <tr><td style="padding:6px 0">إجمالي المسدّد:</td><td style="padding:6px 0;text-align:left;font-weight:700;color:#15803d">${fmtNum(recvPaid(r))} ر.س</td></tr>
+                    <tr style="font-size:16px"><td style="padding:8px 0;font-weight:800">الرصيد المتبقي:</td><td style="padding:8px 0;text-align:left;font-weight:800;color:#b91c1c">${fmtNum(recvRemaining(r))} ر.س</td></tr>
+                  </table>`;
+                exportPDF(`كشف_حساب_${r.party}`, docHTML({ title: 'كشف حساب', subtitle: r.party, body })).catch(e => alert(e.message));
+              }}>📄 تصدير كشف حساب PDF</Btn>
             </div>
           );
         })()}
