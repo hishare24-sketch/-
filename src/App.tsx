@@ -7161,21 +7161,28 @@ type AICtx = {
 };
 // page → short human label + quick suggested prompts (so the assistant adapts to where the user is)
 const AI_PAGE_INFO: Partial<Record<Page, { label: string; prompts: string[] }>> = {
-  overview: { label: 'النظرة الشاملة', prompts: ['ما ملخّص وضعي المالي؟', 'أي مشروع يحتاج انتباهي؟', 'ما أبرز التنبيهات؟'] },
+  overview: { label: 'النظرة الشاملة', prompts: ['افحص النظام بالكامل', 'ما ملخّص وضعي المالي؟', 'أي مشروع يحتاج انتباهي؟'] },
+  dashboard: { label: 'لوحة التحكم', prompts: ['افحص النظام', 'ما أبرز التنبيهات؟', 'ما ملخّص وضعي؟'] },
+  projects: { label: 'المشاريع', prompts: ['أي مشروع يحتاج انتباهي؟', 'ما إجمالي أرصدتي؟'] },
   finance: { label: 'الإدارة المالية', prompts: ['لماذا ارتفعت المصروفات؟', 'هل توجد عمليات خاطئة؟', 'ما أكبر بنود الصرف؟'] },
-  ledger: { label: 'السجل المالي', prompts: ['ما صافي التدفق النقدي؟', 'من أين تأتي الأموال؟'] },
+  ledger: { label: 'السجل المالي', prompts: ['ما صافي التدفق النقدي؟', 'كيف أصدّر Excel؟'] },
   trackings: { label: 'المتابعات والضمانات', prompts: ['ما الذي يوشك على الانتهاء؟', 'هل توجد وثائق منتهية؟'] },
   assets: { label: 'الأصول', prompts: ['ما الأصول التي تحتاج صيانة؟', 'كم تبلغ قيمة أصولي؟'] },
   receivables: { label: 'الذمم', prompts: ['كم لي وكم عليّ؟', 'ما الذمم المتأخرة؟'] },
-  commitments: { label: 'الالتزامات', prompts: ['ما الأقساط القادمة؟', 'كم إجمالي التزاماتي الشهرية؟'] },
+  commitments: { label: 'الالتزامات', prompts: ['ما الأقساط القادمة؟', 'كم إجمالي التزاماتي؟'] },
   requests: { label: 'الطلبات والموافقات', prompts: ['ما الطلبات المعلّقة؟', 'كم قيمة الطلبات المنتظرة؟'] },
   reports: { label: 'التقارير', prompts: ['ما أهم المؤشرات؟', 'فسّر لي اتجاه المصروفات'] },
-  documents: { label: 'المستندات', prompts: ['كم مستنداً لديّ؟', 'ما المستندات الأخيرة؟'] },
+  documents: { label: 'المستندات', prompts: ['كم مستنداً لديّ؟', 'كيف أحوّل فاتورة لعملية؟'] },
+  surveys: { label: 'الاستبيانات', prompts: ['كيف أنشئ استبياناً؟', 'ما أنواع الاستبيانات؟'] },
+  notifications: { label: 'الإشعارات', prompts: ['ما أبرز التنبيهات؟', 'افحص النظام'] },
+  colorCustomize: { label: 'تخصيص الألوان', prompts: ['كيف أغيّر الألوان؟', 'كيف أفعّل الوضع الليلي؟'] },
+  settings: { label: 'الإعدادات', prompts: ['كيف أخصّص الألوان؟', 'ماذا تستطيع أن تفعل؟'] },
 };
 function fmtN(n: number) { return new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 0 }).format(Math.round(n)); }
 
 // generate a context-aware textual answer from the user's query + the data on the current page
-type AIReply = { text: string; link?: { label: string; page: Page; itemId?: string; projId?: string } };
+type AILink = { label: string; page: Page; itemId?: string; projId?: string };
+type AIReply = { text: string; link?: AILink; links?: AILink[]; tone?: 'info' | 'warn' | 'ok' };
 function aiRespond(query: string, ctx: AICtx): AIReply {
   const q = query.trim();
   const proj = ctx.projects.find(p => p.id === ctx.projectId);
@@ -7189,10 +7196,36 @@ function aiRespond(query: string, ctx: AICtx): AIReply {
   // intent matching (lightweight keyword routing)
   const has = (...kw: string[]) => kw.some(k => q.includes(k));
 
+  // ── greetings / thanks (conversational warmth) ──
+  if (has('مرحبا', 'السلام', 'هلا', 'أهلا', 'صباح', 'مساء') && q.length < 25) {
+    return { text: `أهلاً بك! 👋 أنا مساعدك الذكي في موازين. أراقب بياناتك وأساعدك في تحليلها واكتشاف ما يحتاج انتباهك.\nاسألني عن وضعك المالي، الذمم، الأصول، أو أي قسم — وسأوجّهك مباشرةً.`, tone: 'info' };
+  }
+  if (has('شكرا', 'شكراً', 'يعطيك', 'ممتاز', 'رائع') && q.length < 20) {
+    return { text: 'العفو! 😊 أنا هنا متى احتجتني. هل تريد أن أراجع لك أي قسم آخر؟', tone: 'ok' };
+  }
+  // ── health check / scan everything (proactive error discovery) ──
+  if (has('افحص', 'فحص', 'راجع كل', 'تحقق', 'مشاكل', 'كل المشاكل', 'صحة النظام', 'تدقيق')) {
+    const issues: string[] = [];
+    const links: AILink[] = [];
+    if (badTx.length) { issues.push(`⚠️ ${badTx.length} عملية مالية تحتاج مراجعة محاسبية`); links.push({ label: 'مراجعة العمليات', page: 'finance', itemId: badTx[0].id, projId: badTx[0].projectId }); }
+    const expiring = ctx.trackings.filter(t => t.status === 'expiring' || t.status === 'expired');
+    if (expiring.length) { issues.push(`⏰ ${expiring.length} متابعة/ضمان قريب الانتهاء أو منتهٍ`); links.push({ label: 'فتح المتابعات', page: 'trackings', itemId: expiring[0].id, projId: expiring[0].projectId }); }
+    const overdue = ctx.receivables.filter(r => r.dueDate && r.dueDate < today() && (r.amount - recvPaid(r)) > 0);
+    if (overdue.length) { issues.push(`💰 ${overdue.length} ذمة متأخرة عن تاريخ الاستحقاق`); links.push({ label: 'فتح الذمم', page: 'receivables' }); }
+    const pending = ctx.requests.filter(r => r.status === 'pending');
+    if (pending.length) { issues.push(`📋 ${pending.length} طلب بانتظار موافقتك`); links.push({ label: 'فتح الطلبات', page: 'requests' }); }
+    const maint = ctx.assets.filter(a => a.status === 'maintenance');
+    if (maint.length) { issues.push(`🔧 ${maint.length} أصل في حالة صيانة`); links.push({ label: 'فتح الأصول', page: 'assets' }); }
+    const negProjs = ctx.projects.filter(p => computeBalance(p, ctx.transactions) < 0);
+    if (negProjs.length) { issues.push(`📉 ${negProjs.length} مشروع برصيد سالب`); links.push({ label: `فتح ${negProjs[0].name}`, page: 'finance', projId: negProjs[0].id }); }
+    if (issues.length === 0) return { text: '✅ فحصت النظام بالكامل — كل شيء سليم!\nلا عمliات خاطئة، لا ضمانات منتهية، لا ذمم متأخرة، ولا طلبات معلّقة. وضعك ممتاز.', tone: 'ok' };
+    return { text: `أجريت فحصاً شاملاً للنظام ورصدت ${issues.length} نقطة تحتاج انتباهك:\n\n${issues.join('\n')}\n\n💡 اضغط الروابط أدناه للانتقال المباشر لكل قسم.`, links: links.slice(0, 4), tone: 'warn' };
+  }
+
   // ── financial summary ──
-  if (has('ملخّص', 'ملخص', 'وضعي', 'وضع المالي', 'الوضع المالي')) {
+  if (has('ملخّص', 'ملخص', 'وضعي', 'وضع المالي', 'الوضع المالي', 'كيف وضعي')) {
     const totalBal = ctx.projects.reduce((s, p) => s + computeBalance(p, ctx.transactions), 0);
-    return { text: `إجمالي أرصدة مشاريعك ${fmtN(totalBal)} ر.س عبر ${ctx.projects.length} مشاريع.\nفي «${proj?.name ?? '—'}»: الإيرادات ${fmtN(income)} والمصروفات ${fmtN(expense)} ر.س (الصافي ${fmtN(income - expense)}).${badTx.length ? `\n⚠️ انتبه: لديك ${badTx.length} عملية تحتاج مراجعة محاسبية.` : ''}`, link: badTx.length ? { label: 'مراجعة العمليات', page: 'finance', itemId: badTx[0].id, projId: badTx[0].projectId } : { label: 'فتح التقارير', page: 'reports' } };
+    return { text: `إجمالي أرصدة مشاريعك ${fmtN(totalBal)} ر.س عبر ${ctx.projects.length} مشاريع.\nفي «${proj?.name ?? '—'}»: الإيرادات ${fmtN(income)} والمصروفات ${fmtN(expense)} ر.س (الصافي ${fmtN(income - expense)}).${badTx.length ? `\n⚠️ انتبه: لديك ${badTx.length} عملية تحتاج مراجعة محاسبية.` : ''}`, tone: badTx.length ? 'warn' : 'info', link: badTx.length ? { label: 'مراجعة العمليات', page: 'finance', itemId: badTx[0].id, projId: badTx[0].projectId } : { label: 'فتح التقارير', page: 'reports' } };
   }
   // ── expenses analysis ──
   if (has('مصروف', 'المصروفات', 'الصرف', 'صرف', 'ارتفع')) {
@@ -7204,39 +7237,67 @@ function aiRespond(query: string, ctx: AICtx): AIReply {
   }
   // ── erroneous transactions ──
   if (has('خطأ', 'خاطئة', 'خاطئ', 'مشكلة', 'غير صحيح')) {
-    if (badTx.length === 0) return { text: '✅ لا توجد عمليات خاطئة محاسبياً حالياً. كل العمليات سليمة.' };
-    return { text: `رصدت ${badTx.length} عملية تحتاج مراجعة:\n${badTx.slice(0, 4).map(t => `• ${t.description} (${fmtN(t.amount)} ر.س)`).join('\n')}\n💡 افتح الإدارة المالية — ستجدها مميّزة بالأحمر مع زر «معالجة» عند الضغط على ⚠️.`, link: { label: 'الذهاب للعملية', page: 'finance', itemId: badTx[0].id, projId: badTx[0].projectId } };
+    if (badTx.length === 0) return { text: '✅ لا توجد عمليات خاطئة محاسبياً حالياً. كل العمليات سليمة.', tone: 'ok' };
+    return { text: `رصدت ${badTx.length} عملية تحتاج مراجعة:\n${badTx.slice(0, 4).map(t => `• ${t.description} (${fmtN(t.amount)} ر.س)`).join('\n')}\n💡 افتح الإدارة المالية — ستجدها مميّزة بالأحمر مع زر «معالجة» عند الضغط على ⚠️.`, tone: 'warn', link: { label: 'الذهاب للعملية', page: 'finance', itemId: badTx[0].id, projId: badTx[0].projectId } };
   }
   // ── trackings / expiring ──
-  if (has('ينتهي', 'انتهاء', 'يوشك', 'ضمان', 'تجديد', 'منتهي')) {
+  if (has('ينتهي', 'انتهاء', 'يوشك', 'ضمان', 'تجديد', 'منتهي', 'وثيقة', 'هوية', 'رخصة')) {
     const soon = ctx.trackings.filter(t => t.status === 'expiring' || t.status === 'expired');
-    if (soon.length === 0) return { text: 'لا توجد متابعات أو ضمانات قريبة الانتهاء حالياً. كل شيء ضمن المدة.' };
-    return { text: `${soon.length} عنصر يحتاج انتباهك:\n${soon.slice(0, 5).map(t => `• ${t.name} — ${t.status === 'expired' ? 'منتهٍ' : `خلال ${t.daysLeft} يوم`}`).join('\n')}\n💡 راجعها في قسم المتابعات والضمانات وجدّد ما يلزم.`, link: { label: 'الذهاب للمتابعات', page: 'trackings', itemId: soon[0].id, projId: soon[0].projectId } };
+    if (soon.length === 0) return { text: 'لا توجد متابعات أو ضمانات قريبة الانتهاء حالياً. كل شيء ضمن المدة.', tone: 'ok' };
+    return { text: `${soon.length} عنصر يحتاج انتباهك:\n${soon.slice(0, 5).map(t => `• ${t.name} — ${t.status === 'expired' ? 'منتهٍ' : `خلال ${t.daysLeft} يوم`}`).join('\n')}\n💡 راجعها في قسم المتابعات والضمانات وجدّد ما يلزم.`, tone: 'warn', link: { label: 'الذهاب للمتابعات', page: 'trackings', itemId: soon[0].id, projId: soon[0].projectId } };
   }
   // ── assets / maintenance ──
-  if (has('أصول', 'أصل', 'صيانة', 'سيارة', 'معدات')) {
+  if (has('أصول', 'أصل', 'صيانة', 'سيارة', 'معدات', 'أجهزة')) {
     const totalVal = ctx.assets.reduce((s, a) => s + a.purchaseValue, 0);
     const needMaint = ctx.assets.filter(a => a.status === 'maintenance');
-    return { text: `لديك ${ctx.assets.length} أصل بقيمة شراء إجمالية ${fmtN(totalVal)} ر.س.${needMaint.length ? `\n🔧 ${needMaint.length} أصل في حالة صيانة: ${needMaint.map(a => a.name).join('، ')}.` : '\n✅ كل الأصول في حالة تشغيل جيدة.'}`, link: { label: 'فتح الأصول', page: 'assets' } };
+    return { text: `لديك ${ctx.assets.length} أصل بقيمة شراء إجمالية ${fmtN(totalVal)} ر.س.${needMaint.length ? `\n🔧 ${needMaint.length} أصل في حالة صيانة: ${needMaint.map(a => a.name).join('، ')}.` : '\n✅ كل الأصول في حالة تشغيل جيدة.'}`, tone: needMaint.length ? 'warn' : 'ok', link: { label: 'فتح الأصول', page: 'assets' } };
   }
   // ── receivables ──
-  if (has('ذمم', 'ذمة', 'مستحق', 'لي', 'عليّ', 'علي ')) {
+  if (has('ذمم', 'ذمة', 'مستحق', 'ديون', 'دين', 'لي', 'عليّ', 'علي ', 'متأخر')) {
     const recv = ctx.receivables.filter(r => r.kind === 'receivable').reduce((s, r) => s + (r.amount - recvPaid(r)), 0);
     const pay = ctx.receivables.filter(r => r.kind === 'payable').reduce((s, r) => s + (r.amount - recvPaid(r)), 0);
-    return { text: `الذمم المستحقة لك (لك): ${fmtN(recv)} ر.س.\nالذمم المستحقة عليك (عليك): ${fmtN(pay)} ر.س.\nالصافي: ${fmtN(recv - pay)} ر.س.${recv > pay ? '\n💡 وضعك إيجابي — لك أكثر مما عليك.' : ''}`, link: { label: 'فتح الذمم', page: 'receivables' } };
+    const overdue = ctx.receivables.filter(r => r.dueDate && r.dueDate < today() && (r.amount - recvPaid(r)) > 0);
+    return { text: `الذمم المستحقة لك: ${fmtN(recv)} ر.س.\nالذمم المستحقة عليك: ${fmtN(pay)} ر.س.\nالصافي: ${fmtN(recv - pay)} ر.س.${overdue.length ? `\n⚠️ ${overdue.length} ذمة متأخرة عن الاستحقاق — يُفضّل متابعتها.` : recv > pay ? '\n💡 وضعك إيجابي — لك أكثر مما عليك.' : ''}`, tone: overdue.length ? 'warn' : 'info', link: { label: 'فتح الذمم', page: 'receivables', itemId: overdue[0]?.id, projId: overdue[0]?.projectId } };
   }
   // ── commitments ──
-  if (has('التزام', 'أقساط', 'قسط', 'اشتراك')) {
+  if (has('التزام', 'أقساط', 'قسط', 'اشتراك', 'فاتورة دورية')) {
     const active = ctx.commitments.filter(c => c.active);
     const monthly = active.reduce((s, c) => s + c.amount, 0);
     return { text: `لديك ${active.length} التزام نشط بإجمالي تقريبي ${fmtN(monthly)} ر.س لكل دورة.\n💡 راجع قسم الالتزامات لرؤية تواريخ الاستحقاق القادمة.`, link: { label: 'فتح الالتزامات', page: 'commitments' } };
   }
   // ── requests ──
-  if (has('طلب', 'طلبات', 'موافق', 'معلّق', 'معلق')) {
+  if (has('طلب', 'طلبات', 'موافق', 'معلّق', 'معلق', 'اعتماد')) {
     const pending = ctx.requests.filter(r => r.status === 'pending');
     const sum = pending.reduce((s, r) => s + r.amount, 0);
-    if (pending.length === 0) return { text: 'لا توجد طلبات معلّقة بانتظار موافقتك حالياً.' };
-    return { text: `${pending.length} طلب معلّق بإجمالي ${fmtN(sum)} ر.س:\n${pending.slice(0, 4).map(r => `• ${r.title} — ${fmtN(r.amount)} ر.س (${r.requestedBy})`).join('\n')}`, link: { label: 'فتح الطلبات', page: 'requests' } };
+    if (pending.length === 0) return { text: 'لا توجد طلبات معلّقة بانتظار موافقتك حالياً.', tone: 'ok' };
+    return { text: `${pending.length} طلب معلّق بإجمالي ${fmtN(sum)} ر.س:\n${pending.slice(0, 4).map(r => `• ${r.title} — ${fmtN(r.amount)} ر.س (${r.requestedBy})`).join('\n')}`, tone: 'warn', link: { label: 'فتح الطلبات', page: 'requests' } };
+  }
+  // ── members ──
+  if (has('عضو', 'أعضاء', 'فريق', 'موظف', 'عهدة', 'عهد', 'مندوب', 'شريك')) {
+    const totalCustody = ctx.memberTxns.filter(mt => mt.status === 'accepted' && mt.direction === 'to_member').reduce((s, mt) => s + mt.amount, 0);
+    return { text: `لديك ${ctx.members.length} عضو في النظام.\nإجمالي العُهد المسلّمة للأعضاء: ${fmtN(totalCustody)} ر.س.\n💡 راجع تفاصيل كل عضو وعهدته من صفحة المشروع.`, link: { label: 'فتح المشاريع', page: 'projects' } };
+  }
+  // ── documents ──
+  if (has('مستند', 'مستندات', 'وثائق', 'ملف', 'فاتورة', 'عقد')) {
+    const withAi = ctx.documents.filter(d => d.aiRead).length;
+    return { text: `لديك ${ctx.documents.length} مستند في النظام، منها ${withAi} تمّت قراءته بالذكاء الاصطناعي.\n💡 يمكنك رفع فاتورة أو عقد وسأقترح تحويله لعملية مالية أو عنصر متابعة تلقائياً.`, link: { label: 'فتح المستندات', page: 'documents' } };
+  }
+  // ── surveys ──
+  if (has('استبيان', 'استطلاع', 'رأي', 'تقييم العملاء', 'رضا')) {
+    return { text: `قسم الاستبيانات يتيح لك إنشاء استبيانات (رضا العملاء، الموردين، الموظفين...) وجمع الإجابات وتحليل النتائج.\n💡 ابدأ من قالب جاهز ووفّر وقتك.`, link: { label: 'فتح الاستبيانات', page: 'surveys' } };
+  }
+  // ── reports ──
+  if (has('تقرير', 'تقارير', 'مؤشر', 'مؤشرات', 'تحليل', 'إحصاء')) {
+    const totalBal = ctx.projects.reduce((s, p) => s + computeBalance(p, ctx.transactions), 0);
+    return { text: `أبرز مؤشّراتك:\n• إجمالي الأرصدة: ${fmtN(totalBal)} ر.س\n• المشاريع: ${ctx.projects.length}\n• العمليات المسجّلة: ${ctx.transactions.length}\n💡 صفحة التقارير تعرض رسوماً بيانية تفصيلية للاتجاهات.`, link: { label: 'فتح التقارير', page: 'reports' } };
+  }
+  // ── export / pdf / excel ──
+  if (has('تصدير', 'إكسل', 'excel', 'pdf', 'طباعة', 'فاتورة pdf', 'كشف حساب')) {
+    return { text: `يمكنك تصدير بياناتك فعلياً:\n• 📊 Excel: من السجل المالي أو الإدارة المالية أو نتائج الاستبيانات\n• 📄 PDF: كشف حساب من تفاصيل أي ذمة، وفاتورة من تفاصيل أي عملية\n💡 الملفات تُنزّل مباشرةً لجهازك.`, link: { label: 'فتح السجل المالي', page: 'ledger' } };
+  }
+  // ── customization / colors ──
+  if (has('لون', 'ألوان', 'ثيم', 'مظهر', 'تخصيص', 'داكن', 'ليلي')) {
+    return { text: `يمكنك تخصيص مظهر النظام بالكامل:\n• الوضع الليلي/النهاري\n• لوحات ألوان جاهزة (6 ثيمات)\n• تخصيص دقيق لكل لون\n💡 كل ذلك من الإعدادات ← تخصيص الألوان.`, link: { label: 'تخصيص الألوان', page: 'colorCustomize' } };
   }
   // ── which project needs attention ──
   if (has('انتباه', 'مشروع يحتاج', 'أي مشروع', 'انتباهي')) {
@@ -7245,25 +7306,29 @@ function aiRespond(query: string, ctx: AICtx): AIReply {
       const bad = ctx.transactions.filter(t => t.projectId === p.id && txErrors(t, { project: p, transactions: ctx.transactions }).length > 0).length;
       return { p, bal, bad };
     }).filter(x => x.bal < 0 || x.bad > 0);
-    if (flagged.length === 0) return { text: '✅ كل مشاريعك بحالة جيدة — لا أرصدة سالبة ولا عمليات خاطئة.' };
-    return { text: `مشاريع تحتاج انتباهك:\n${flagged.map(x => `• ${x.p.name}: ${x.bal < 0 ? `رصيد سالب (${fmtN(x.bal)})` : ''}${x.bad ? `${x.bal < 0 ? ' و' : ''}${x.bad} عملية خاطئة` : ''}`).join('\n')}`, link: { label: `فتح ${flagged[0].p.name}`, page: 'finance', projId: flagged[0].p.id } };
+    if (flagged.length === 0) return { text: '✅ كل مشاريعك بحالة جيدة — لا أرصدة سالبة ولا عمليات خاطئة.', tone: 'ok' };
+    return { text: `مشاريع تحتاج انتباهك:\n${flagged.map(x => `• ${x.p.name}: ${x.bal < 0 ? `رصيد سالب (${fmtN(x.bal)})` : ''}${x.bad ? `${x.bal < 0 ? ' و' : ''}${x.bad} عملية خاطئة` : ''}`).join('\n')}`, tone: 'warn', link: { label: `فتح ${flagged[0].p.name}`, page: 'finance', projId: flagged[0].p.id } };
   }
   // ── alerts / notifications ──
   if (has('تنبيه', 'تنبيهات', 'إشعار')) {
     const expiring = ctx.trackings.filter(t => t.status === 'expiring' || t.status === 'expired').length;
     const txt = `أبرز ما يحتاج انتباهك الآن:\n${expiring ? `• ${expiring} متابعة/ضمان قريب الانتهاء\n` : ''}${badTx.length ? `• ${badTx.length} عملية تحتاج مراجعة محاسبية\n` : ''}${ctx.requests.filter(r => r.status === 'pending').length ? `• ${ctx.requests.filter(r => r.status === 'pending').length} طلب بانتظار موافقتك` : ''}`.trim();
-    return { text: txt || '✅ لا تنبيهات عاجلة — كل شيء تحت السيطرة.', link: { label: 'فتح الإشعارات', page: 'notifications' } };
+    return { text: txt || '✅ لا تنبيهات عاجلة — كل شيء تحت السيطرة.', tone: expiring || badTx.length ? 'warn' : 'ok', link: { label: 'فتح الإشعارات', page: 'notifications' } };
+  }
+  // ── help / what can you do ──
+  if (has('ماذا تفعل', 'كيف تساعد', 'مساعدة', 'وش تسوي', 'إيش تقدر', 'ساعدني')) {
+    return { text: `أنا مساعدك الذكي في موازين، أستطيع:\n• تحليل وضعك المالي وتفسير الأرقام\n• اكتشاف العمليات الخاطئة وتوجيهك لإصلاحها\n• تنبيهك للضمانات والذمم والالتزامات القريبة\n• توجيهك لأي قسم بنقرة واحدة\n\n💡 جرّب: «افحص النظام» لأراجع كل شيء دفعةً واحدة.`, tone: 'info', link: { label: 'النظرة الشاملة', page: 'overview' } };
   }
 
   // ── fallback: page-aware generic help ──
   const info = AI_PAGE_INFO[ctx.page];
-  return { text: `أنا مساعدك الذكي في موازين، وأرى أنك في «${info?.label ?? 'النظام'}».\nيمكنني مساعدتك في تحليل بياناتك، تفسير الأرقام، واقتراح الإجراءات. جرّب أن تسألني:\n${(info?.prompts ?? ['ما ملخّص وضعي المالي؟']).map(p => `• ${p}`).join('\n')}` };
+  return { text: `أنا مساعدك الذكي في موازين، وأرى أنك في «${info?.label ?? 'النظام'}».\nلم أفهم سؤالك تماماً، لكن يمكنني مساعدتك في تحليل بياناتك واقتراح الإجراءات. جرّب:\n${(info?.prompts ?? ['ما ملخّص وضعي المالي؟', 'افحص النظام']).map(p => `• ${p}`).join('\n')}`, tone: 'info' };
 }
 
 function AIAssistant({ ctx, onClose, onNavigate }: { ctx: AICtx; onClose: () => void; onNavigate: (p: Page, itemId?: string, projId?: string) => void }) {
   const info = AI_PAGE_INFO[ctx.page];
-  const [msgs, setMsgs] = useState<{ role: 'user' | 'ai'; text: string; link?: AIReply['link'] }[]>([
-    { role: 'ai', text: `مرحباً! أنا مساعد موازين الذكي 🤖\nأنت الآن في «${info?.label ?? 'النظام'}». كيف أساعدك؟` },
+  const [msgs, setMsgs] = useState<{ role: 'user' | 'ai'; text: string; link?: AILink; links?: AILink[]; tone?: AIReply['tone'] }[]>([
+    { role: 'ai', text: `مرحباً! أنا مساعد موازين الذكي 🤖\nأنت الآن في «${info?.label ?? 'النظام'}». كيف أساعدك؟\n\n💡 جرّب «افحص النظام» لأراجع كل شيء دفعةً واحدة.`, tone: 'info' },
   ]);
   const [input, setInput] = useState('');
   const bodyRef = React.useRef<HTMLDivElement>(null);
@@ -7275,13 +7340,17 @@ function AIAssistant({ ctx, onClose, onNavigate }: { ctx: AICtx; onClose: () => 
     setMsgs(m => [...m, { role: 'user', text: q }]);
     setInput('');
     setTyping(true);
+    // realistic variable delay based on answer complexity
     setTimeout(() => {
       const reply = aiRespond(q, ctx);
-      setMsgs(m => [...m, { role: 'ai', text: reply.text, link: reply.link }]);
+      setMsgs(m => [...m, { role: 'ai', text: reply.text, link: reply.link, links: reply.links, tone: reply.tone }]);
       setTyping(false);
-    }, 600);
+    }, 500 + Math.random() * 500);
   };
   useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight; }, [msgs, typing]);
+
+  const toneBg = (t?: AIReply['tone']) => t === 'warn' ? 'var(--warn-bg)' : t === 'ok' ? 'var(--ok-bg)' : 'var(--surface-2)';
+  const toneBorder = (t?: AIReply['tone']) => t === 'warn' ? '1px solid var(--warn-border, #fde68a)' : t === 'ok' ? '1px solid var(--ok-border, #bbf7d0)' : '1px solid transparent';
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,17,23,.45)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'mzFade .2s ease' }}>
@@ -7299,14 +7368,21 @@ function AIAssistant({ ctx, onClose, onNavigate }: { ctx: AICtx; onClose: () => 
         </div>
         {/* messages */}
         <div ref={bodyRef} style={{ flex: 1, overflowY: 'auto', padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {msgs.map((m, i) => (
-            <div key={i} style={{ alignSelf: m.role === 'user' ? 'flex-start' : 'flex-end', maxWidth: '85%', display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-start' : 'flex-end', gap: 6 }}>
-              <div style={{ background: m.role === 'user' ? '#2563eb' : 'var(--surface-2)', color: m.role === 'user' ? '#fff' : 'var(--text)', padding: '10px 14px', borderRadius: m.role === 'user' ? '14px 14px 14px 4px' : '14px 14px 4px 14px', fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-line' }}>{m.text}</div>
-              {m.link && (
-                <button onClick={() => { onNavigate(m.link!.page, m.link!.itemId, m.link!.projId); onClose(); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--info-bg)', color: 'var(--info-text)', border: '1px solid var(--border)', borderRadius: 99, padding: '6px 13px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>↗ {m.link.label}</button>
-              )}
-            </div>
-          ))}
+          {msgs.map((m, i) => {
+            const allLinks = [...(m.links ?? []), ...(m.link ? [m.link] : [])];
+            return (
+              <div key={i} style={{ alignSelf: m.role === 'user' ? 'flex-start' : 'flex-end', maxWidth: '85%', display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-start' : 'flex-end', gap: 6 }}>
+                <div style={{ background: m.role === 'user' ? '#2563eb' : toneBg(m.tone), border: m.role === 'user' ? 'none' : toneBorder(m.tone), color: m.role === 'user' ? '#fff' : 'var(--text)', padding: '10px 14px', borderRadius: m.role === 'user' ? '14px 14px 14px 4px' : '14px 14px 4px 14px', fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-line' }}>{m.text}</div>
+                {allLinks.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-end' }}>
+                    {allLinks.map((lk, j) => (
+                      <button key={j} onClick={() => { onNavigate(lk.page, lk.itemId, lk.projId); onClose(); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--info-bg)', color: 'var(--info-text)', border: '1px solid var(--border)', borderRadius: 99, padding: '6px 13px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>↗ {lk.label}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
           {typing && <div style={{ alignSelf: 'flex-end', background: 'var(--surface-2)', padding: '10px 16px', borderRadius: 14, fontSize: 13, color: 'var(--text-3)' }}>يكتب…</div>}
         </div>
         {/* quick prompts */}
