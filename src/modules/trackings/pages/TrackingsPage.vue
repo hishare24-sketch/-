@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useTrackingsStore } from '@/stores/TrackingsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
@@ -15,7 +16,6 @@ const settingsStore = useSettingsStore()
 const { trackings } = storeToRefs(trackingsStore)
 const { activeProjectId } = storeToRefs(projectsStore)
 
-const helpEntry = computed(() => settingsStore.help.trackings)
 
 const statusTab = ref<'all' | TrackingStatus>('all')
 const search = ref('')
@@ -84,15 +84,12 @@ async function onDelete(t: Tracking) {
   <section class="trackings">
     <header class="trackings__header">
       <div>
-        <h1>المتابعات والضمانات</h1>
+        <h1>المتابعات والضمانات <HelpIcon section="trackings" /></h1>
         <p>الضمانات والعقود والتراخيص ومواعيد انتهائها</p>
       </div>
       <button class="app-btn" @click="openCreate">＋ متابعة جديدة</button>
     </header>
 
-    <div v-if="helpEntry.show" class="help-note app-card">
-      <strong>{{ helpEntry.title }}</strong><span>{{ helpEntry.body }}</span>
-    </div>
 
     <div class="trackings__stats">
       <div v-for="(s, i) in stats" :key="i" class="stat app-card">

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useDocumentsStore } from '@/stores/DocumentsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
@@ -22,7 +23,6 @@ const settingsStore = useSettingsStore()
 const { documents } = storeToRefs(documentsStore)
 const { activeProjectId } = storeToRefs(projectsStore)
 
-const helpEntry = computed(() => settingsStore.help.documents)
 
 const typeTab = ref('all')
 const search = ref('')
@@ -90,15 +90,12 @@ async function onDelete(d: DocItem) {
   <section class="documents">
     <header class="documents__header">
       <div>
-        <h1>المستندات</h1>
+        <h1>المستندات <HelpIcon section="documents" /></h1>
         <p>الفواتير والعقود والوثائق ومعالجتها</p>
       </div>
       <button class="app-btn" @click="showForm = true">＋ مستند جديد</button>
     </header>
 
-    <div v-if="helpEntry.show" class="help-note app-card">
-      <strong>{{ helpEntry.title }}</strong><span>{{ helpEntry.body }}</span>
-    </div>
 
     <div class="documents__stats">
       <div v-for="(s, i) in stats" :key="i" class="stat app-card">

@@ -47,15 +47,22 @@ export const useSettingsStore = defineStore('settings', {
       this.lists[key] = this.lists[key].filter((x) => x !== item)
     },
 
-    // ── شروحات الأقسام ──
+    // ── شروحات الأقسام (لأي شاشة) ──
+    ensureHelp(key: HelpKey): HelpEntry {
+      if (!this.help[key]) this.help[key] = { title: '', body: '', show: true }
+      return this.help[key]
+    },
     toggleHelp(key: HelpKey) {
-      this.help[key].show = !this.help[key].show
+      this.ensureHelp(key).show = !this.help[key].show
     },
     setHelp(key: HelpKey, patch: Partial<HelpEntry>) {
-      this.help[key] = { ...this.help[key], ...patch }
+      this.help[key] = { ...this.ensureHelp(key), ...patch }
     },
     resetHelp(key: HelpKey) {
-      this.help[key] = { ...DEFAULT_HELP[key] }
+      this.help[key] = DEFAULT_HELP[key] ? { ...DEFAULT_HELP[key] } : { title: '', body: '', show: true }
+    },
+    removeHelp(key: HelpKey) {
+      delete this.help[key]
     },
 
     // ── الثيم ──

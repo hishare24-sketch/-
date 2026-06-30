@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useFinanceStore } from '@/stores/FinanceStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
@@ -20,7 +21,6 @@ const financeStore = useFinanceStore()
 const settingsStore = useSettingsStore()
 const { activeProjectId, activeProject, projects } = storeToRefs(projectsStore)
 
-const helpEntry = computed(() => settingsStore.help.finance)
 
 const txns = computed(() => financeStore.byProject(activeProjectId.value))
 
@@ -133,7 +133,7 @@ function clearFilters() {
   <section class="finance">
     <header class="finance__header">
       <div>
-        <h1>الإدارة المالية</h1>
+        <h1>الإدارة المالية <HelpIcon section="finance" /></h1>
         <p>{{ activeProject?.name }}</p>
       </div>
       <div class="finance__controls">
@@ -145,9 +145,6 @@ function clearFilters() {
       </div>
     </header>
 
-    <div v-if="helpEntry.show" class="help-note app-card">
-      <strong>{{ helpEntry.title }}</strong><span>{{ helpEntry.body }}</span>
-    </div>
 
     <div class="finance__stats">
       <div v-for="(s, i) in stats" :key="i" class="stat" :style="{ background: s.bg }">

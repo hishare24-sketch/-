@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useReceivablesStore } from '@/stores/ReceivablesStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
 import { recvPaid, recvRemaining } from '@/helpers/calc'
@@ -19,7 +20,6 @@ const projectsStore = useProjectsStore()
 const { receivables } = storeToRefs(receivablesStore)
 const { activeProjectId } = storeToRefs(projectsStore)
 
-const helpEntry = computed(() => settingsStore.help.receivables)
 
 const kindTab = ref<'all' | ReceivableKind>('all')
 const search = ref('')
@@ -90,15 +90,12 @@ async function onDelete(r: Receivable) {
   <section class="receivables">
     <header class="receivables__header">
       <div>
-        <h1>الذمم</h1>
+        <h1>الذمم <HelpIcon section="receivables" /></h1>
         <p>المبالغ المستحقة لك أو عليك</p>
       </div>
       <button class="app-btn" @click="showForm = true">＋ ذمة جديدة</button>
     </header>
 
-    <div v-if="helpEntry.show" class="help-note app-card">
-      <strong>{{ helpEntry.title }}</strong><span>{{ helpEntry.body }}</span>
-    </div>
 
     <div class="receivables__stats">
       <div v-for="(s, i) in stats" :key="i" class="stat app-card">

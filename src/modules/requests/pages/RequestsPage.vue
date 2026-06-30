@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useRequestsStore } from '@/stores/RequestsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
@@ -16,7 +17,6 @@ const settingsStore = useSettingsStore()
 const { requests } = storeToRefs(requestsStore)
 const { activeProjectId } = storeToRefs(projectsStore)
 
-const helpEntry = computed(() => settingsStore.help.requests)
 
 const statusTab = ref<'all' | RequestStatus>('all')
 const search = ref('')
@@ -78,15 +78,12 @@ async function onDelete(r: RequestItem) {
   <section class="requests">
     <header class="requests__header">
       <div>
-        <h1>الطلبات والموافقات</h1>
+        <h1>الطلبات والموافقات <HelpIcon section="requests" /></h1>
         <p>دورة الاعتماد: إنشاء ← مراجعة ← اعتماد/رفض</p>
       </div>
       <button class="app-btn" @click="showForm = true">＋ طلب جديد</button>
     </header>
 
-    <div v-if="helpEntry.show" class="help-note app-card">
-      <strong>{{ helpEntry.title }}</strong><span>{{ helpEntry.body }}</span>
-    </div>
 
     <div class="requests__stats">
       <div v-for="(s, i) in stats" :key="i" class="stat app-card">

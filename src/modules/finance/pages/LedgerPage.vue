@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
 import { fmt, fmtNum } from '@/helpers/format'
@@ -12,7 +13,6 @@ const settingsStore = useSettingsStore()
 const { projects, members } = storeToRefs(projectsStore)
 const { rows, projName, memName } = useLedgerRows()
 
-const helpEntry = computed(() => settingsStore.help.ledger)
 
 // الفلاتر
 const fType = ref('all')
@@ -76,15 +76,12 @@ function exportExcel() {
   <section class="ledger">
     <header class="ledger__header">
       <div>
-        <h1>السجل المالي</h1>
+        <h1>السجل المالي <HelpIcon section="ledger" /></h1>
         <p>سجل موحّد لكل العمليات والتدفقات عبر المشاريع والأعضاء</p>
       </div>
       <button class="app-btn app-btn--outlined" @click="exportExcel">⬇ تصدير Excel</button>
     </header>
 
-    <div v-if="helpEntry.show" class="help-note app-card">
-      <strong>{{ helpEntry.title }}</strong><span>{{ helpEntry.body }}</span>
-    </div>
 
     <div class="ledger__totals">
       <div class="total total--in">

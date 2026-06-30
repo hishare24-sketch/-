@@ -332,12 +332,11 @@ export interface CustomLists {
   partyTypes: string[]
 }
 
-export type HelpKey =
-  | 'dashboard' | 'projects' | 'finance' | 'ledger' | 'receivables'
-  | 'commitments' | 'documents' | 'trackings' | 'requests' | 'members'
+// مفتاح الشرح = معرّف الشاشة (مرن، يدعم أي شاشة)
+export type HelpKey = string
 export interface HelpEntry {
   title: string
   body: string
   show: boolean
 }
-export type HelpTexts = Record<HelpKey, HelpEntry>
+export type HelpTexts = Record<string, HelpEntry>

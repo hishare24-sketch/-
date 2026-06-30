@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useRequestsStore } from '@/stores/RequestsStore'
 import { useCommitmentsStore } from '@/stores/CommitmentsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
@@ -37,7 +38,7 @@ const payingRecv = ref<Receivable | null>(null)
 <template>
   <section class="tasks">
     <header class="tasks__header">
-      <h1>الإجراءات المطلوبة</h1>
+      <h1>الإجراءات المطلوبة <HelpIcon section="tasks" /></h1>
       <p>{{ totalCount > 0 ? `${totalCount} بند ينتظر تصرّفك عبر كل المشاريع` : 'كل شيء منجز' }}</p>
     </header>
 

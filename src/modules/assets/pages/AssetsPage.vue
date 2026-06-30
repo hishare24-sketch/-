@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useAssetsStore } from '@/stores/AssetsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { assetMaintCost } from '@/helpers/calc'
@@ -73,7 +74,7 @@ async function onDelete(a: Asset) {
   <section class="assets">
     <header class="assets__header">
       <div>
-        <h1>الأصول</h1>
+        <h1>الأصول <HelpIcon section="assets" /></h1>
         <p>الأصول الملموسة وسجل الصيانة والضمانات</p>
       </div>
       <button class="app-btn" @click="showForm = true">＋ أصل جديد</button>

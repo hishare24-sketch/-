@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useAuditStore } from '@/stores/AuditStore'
 
 const auditStore = useAuditStore()
@@ -53,7 +54,7 @@ const colorOf = (a: string) => actionColor[a] ?? '#6b7280'
   <section class="audit">
     <header class="audit__header">
       <div>
-        <h1>سجل العمليات</h1>
+        <h1>سجل العمليات <HelpIcon section="audit" /></h1>
         <p>سجل بكل الأحداث والعمليات المهمة في النظام</p>
       </div>
     </header>

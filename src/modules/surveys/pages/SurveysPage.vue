@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useSurveysStore } from '@/stores/SurveysStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { SURVEY_TEMPLATES } from '@/constants/surveyTemplates'
@@ -79,7 +80,7 @@ async function onDelete(s: Survey) {
   <section class="surveys">
     <header class="surveys__header">
       <div>
-        <h1>الاستبيانات</h1>
+        <h1>الاستبيانات <HelpIcon section="surveys" /></h1>
         <p>إنشاء الاستبيانات وجمع الردود وتحليلها</p>
       </div>
       <button class="app-btn" @click="openCreate">＋ استبيان جديد</button>

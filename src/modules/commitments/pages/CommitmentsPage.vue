@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useCommitmentsStore } from '@/stores/CommitmentsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
@@ -19,7 +20,6 @@ const settingsStore = useSettingsStore()
 const { commitments } = storeToRefs(commitmentsStore)
 const { activeProjectId } = storeToRefs(projectsStore)
 
-const helpEntry = computed(() => settingsStore.help.commitments)
 
 const kindTab = ref<'all' | CommitmentKind>('all')
 const search = ref('')
@@ -93,15 +93,12 @@ function onPay(c: Commitment) {
   <section class="commitments">
     <header class="commitments__header">
       <div>
-        <h1>الالتزامات الدورية</h1>
+        <h1>الالتزامات الدورية <HelpIcon section="commitments" /></h1>
         <p>الأقساط والالتزامات المتكررة والاشتراكات</p>
       </div>
       <button class="app-btn" @click="showForm = true">＋ التزام جديد</button>
     </header>
 
-    <div v-if="helpEntry.show" class="help-note app-card">
-      <strong>{{ helpEntry.title }}</strong><span>{{ helpEntry.body }}</span>
-    </div>
 
     <div class="commitments__stats">
       <div v-for="(s, i) in stats" :key="i" class="stat app-card">

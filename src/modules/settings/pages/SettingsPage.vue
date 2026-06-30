@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSettingsStore, type CustomTheme } from '@/stores/SettingsStore'
-import { THEME_PRESETS } from '@/constants'
-import type { CustomLists, HelpKey, UserPrefs } from '@/interfaces/models'
+import { THEME_PRESETS, SCREENS } from '@/constants'
+import type { CustomLists, UserPrefs } from '@/interfaces/models'
 import ToggleActivationSwitch from '@/components/shared/ToggleActivationSwitch.vue'
 
 const settingsStore = useSettingsStore()
@@ -51,7 +51,10 @@ function addItem(key: keyof CustomLists) {
   newItem[key] = ''
 }
 
-const helpKeys = Object.keys(help.value) as HelpKey[]
+// شروحات الأقسام — اختيار الشاشة من قائمة
+const selectedScreen = ref(SCREENS[0].id)
+watch(selectedScreen, (id) => settingsStore.ensureHelp(id), { immediate: true })
+const selectedHelp = computed(() => help.value[selectedScreen.value])
 
 // التكاملات (عرض فقط)
 const integrations = [
@@ -182,19 +185,35 @@ const integrations = [
         <div v-else-if="tab === 'help'" class="help-edit">
           <div class="app-card panel help-intro">
             <h2>💡 شروحات الأقسام</h2>
-            <p class="muted" style="margin: 0">عدّل نص الشرح الذي يظهر أعلى كل قسم، أو أخفِه.</p>
+            <p class="muted" style="margin: 0">
+              اختر الشاشة من القائمة واكتب الشرح — ستظهر أيقونة (ⓘ) بجانب عنوان تلك الشاشة، وعند النقر عليها يرى المستخدم الشرح في نافذة منبثقة.
+            </p>
           </div>
-          <div v-for="k in helpKeys" :key="k" class="app-card help-card">
-            <div class="help-card__head">
-              <input v-model="help[k].title" class="help-card__title" />
-              <div class="help-card__toggle">
-                <span>{{ help[k].show ? 'ظاهر' : 'مخفي' }}</span>
-                <ToggleActivationSwitch :model-value="help[k].show" @update:model-value="settingsStore.toggleHelp(k)" />
-              </div>
+
+          <!-- اختيار الشاشة -->
+          <div class="app-card panel">
+            <div class="field">
+              <label>اختر الشاشة</label>
+              <select v-model="selectedScreen">
+                <option v-for="s in SCREENS" :key="s.id" :value="s.id">{{ s.label }}</option>
+              </select>
             </div>
-            <textarea v-model="help[k].body" rows="4" class="help-card__body"></textarea>
-            <div class="help-card__foot">
-              <button class="restore-btn" @click="settingsStore.resetHelp(k)">استعادة النص الافتراضي</button>
+
+            <div v-if="selectedHelp" class="help-card">
+              <div class="help-card__head">
+                <input v-model="selectedHelp.title" class="help-card__title" placeholder="عنوان الشرح" />
+                <div class="help-card__toggle">
+                  <span>{{ selectedHelp.show ? 'ظاهر' : 'مخفي' }}</span>
+                  <ToggleActivationSwitch :model-value="selectedHelp.show" @update:model-value="settingsStore.toggleHelp(selectedScreen)" />
+                </div>
+              </div>
+              <textarea v-model="selectedHelp.body" rows="5" class="help-card__body" placeholder="اكتب نص الشرح الذي سيظهر للمستخدم..."></textarea>
+              <div class="help-card__foot">
+                <button class="restore-btn" @click="settingsStore.resetHelp(selectedScreen)">استعادة النص الافتراضي</button>
+                <span class="help-card__preview">
+                  معاينة: <span class="help-card__chip">ⓘ</span> بجانب عنوان "{{ SCREENS.find((s) => s.id === selectedScreen)?.label }}"
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -528,7 +547,29 @@ const integrations = [
 
   &__foot {
     margin-block-start: 8px;
-    text-align: start;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  &__preview {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 18px;
+    block-size: 18px;
+    border-radius: 50%;
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 11px;
   }
 }
 

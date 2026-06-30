@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useNotificationsStore } from '@/stores/NotificationsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import type { Notif, Page } from '@/interfaces/models'
@@ -74,7 +75,7 @@ function openNotif(n: Notif) {
   <section class="notifs">
     <header class="notifs__header">
       <div>
-        <h1>الإشعارات</h1>
+        <h1>الإشعارات <HelpIcon section="notifications" /></h1>
         <p>{{ notificationsStore.unreadCount }} غير مقروء من أصل {{ notifs.length }}</p>
       </div>
       <button class="app-btn app-btn--outlined" @click="notificationsStore.markAllRead()">

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useFinanceStore } from '@/stores/FinanceStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
@@ -16,7 +17,6 @@ const financeStore = useFinanceStore()
 const settingsStore = useSettingsStore()
 const { projects } = storeToRefs(projectsStore)
 
-const helpEntry = computed(() => settingsStore.help.projects)
 
 // الفلاتر والفرز
 const search = ref('')
@@ -97,16 +97,12 @@ async function onDelete(p: Project) {
   <section class="projects">
     <header class="projects__header">
       <div>
-        <h1>المشاريع</h1>
+        <h1>المشاريع <HelpIcon section="projects" /></h1>
         <p>الوحدة التنظيمية الأساسية — كل عملية ومستند يرتبط بمشروع</p>
       </div>
       <button class="app-btn" @click="openCreate">＋ مشروع جديد</button>
     </header>
 
-    <div v-if="helpEntry.show" class="help-note app-card">
-      <strong>{{ helpEntry.title }}</strong>
-      <span>{{ helpEntry.body }}</span>
-    </div>
 
     <div class="projects__stats">
       <div v-for="(s, i) in stats" :key="i" class="stat app-card">

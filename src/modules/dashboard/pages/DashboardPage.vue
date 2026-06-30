@@ -9,6 +9,7 @@ import { useDashboard, PERIODS } from '../composables/useDashboard'
 import ChartCard from '@/components/charts/ChartCard.vue'
 import BarChart from '@/components/charts/BarChart.vue'
 import LineChart from '@/components/charts/LineChart.vue'
+import HelpIcon from '@/components/shared/HelpIcon.vue'
 
 const router = useRouter()
 const projectsStore = useProjectsStore()
@@ -22,7 +23,6 @@ const { period, stats, txns, urgentTrackings, monthlyData } = useDashboard(
 )
 
 const recentTxns = computed(() => txns.value.slice(0, 5))
-const helpEntry = computed(() => settingsStore.help.dashboard)
 
 // بيانات الرسم (تسلسل الإيرادات/المصروفات)
 const chartView = ref<'bar' | 'line'>('bar')
@@ -38,7 +38,7 @@ const chartSeries = computed(() => [
     <!-- الترويسة: العنوان + اختيار المشروع + الفترة -->
     <header class="dashboard__header">
       <div>
-        <h1>لوحة التحكم</h1>
+        <h1>لوحة التحكم <HelpIcon section="dashboard" /></h1>
         <p>{{ activeProject?.name }} — يونيو 2025</p>
       </div>
       <div class="dashboard__controls">
@@ -52,12 +52,6 @@ const chartSeries = computed(() => [
         </select>
       </div>
     </header>
-
-    <!-- نص المساعدة السياقي -->
-    <div v-if="helpEntry.show" class="help-note app-card">
-      <strong>{{ helpEntry.title }}</strong>
-      <span>{{ helpEntry.body }}</span>
-    </div>
 
     <!-- بطاقات الإحصائيات -->
     <div class="dashboard__stats">
