@@ -50,6 +50,11 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
   { id: 't28', projectId: 'p6', type: 'expense', description: 'وقود السيارة', amount: 600, category: 'مواصلات', date: '2025-06-15', hasDoc: false, createdBy: 'منى العمري' },
   { id: 't29', projectId: 'p6', type: 'expense', description: 'فاتورة الجوال', amount: 280, category: 'فواتير', date: '2025-06-10', hasDoc: false, createdBy: 'منى العمري' },
   { id: 't30', projectId: 'p6', type: 'expense', description: 'مطعم عائلي', amount: 520, category: 'ترفيه', date: '2025-06-20', hasDoc: false, createdBy: 'منى العمري' },
+  // تحويلات بين المشاريع (قيدان مرتبطان)
+  { id: 't31', projectId: 'p1', type: 'transfer', description: 'تحويل سيولة لمطعم الديوانية', amount: 15000, category: 'تحويل', date: '2025-06-19', hasDoc: false, transferDir: 'out', toProject: 'p3', linkId: 'lnkSeed1', createdBy: 'محمد العمري' },
+  { id: 't32', projectId: 'p3', type: 'transfer', description: 'تحويل سيولة من شركة النخيل', amount: 15000, category: 'تحويل', date: '2025-06-19', hasDoc: false, transferDir: 'in', toProject: 'p1', linkId: 'lnkSeed1', createdBy: 'محمد العمري' },
+  { id: 't33', projectId: 'p5', type: 'income', description: 'منحة تشغيلية', amount: 25000, category: 'مبيعات', date: '2025-06-23', hasDoc: true, source: 'جهة داعمة', createdBy: 'د. ليلى الحربي' },
+  { id: 't34', projectId: 'p4', type: 'expense', description: 'تغليف وهدايا', amount: 1900, category: 'تسويق', date: '2025-06-22', hasDoc: false, createdBy: 'نورة القحطاني' },
 ]
 
 export const INITIAL_TRACKINGS: Tracking[] = [
@@ -63,6 +68,9 @@ export const INITIAL_TRACKINGS: Tracking[] = [
   { id: 'tr8', name: 'ترخيص وزارة الصحة', type: 'ترخيص', icon: '⚕️', status: 'expiring', daysLeft: 30, expiryDate: '2025-07-24', projectId: 'p5', createdBy: 'د. ليلى الحربي' },
   { id: 'tr9', name: 'اشتراك نظام الحجوزات', type: 'اشتراك', icon: '📅', status: 'active', daysLeft: 120, expiryDate: '2025-10-24', projectId: 'p5', createdBy: 'عبدالله الشمري' },
   { id: 'tr10', name: 'ضمان أجهزة المتجر', type: 'ضمان', icon: '📦', status: 'expiring', daysLeft: 18, expiryDate: '2025-07-12', projectId: 'p4', createdBy: 'فهد الدوسري' },
+  { id: 'tr11', name: 'تأمين طبي للموظفين', type: 'تأمين', icon: '🏥', status: 'active', daysLeft: 150, expiryDate: '2025-11-23', projectId: 'p5', createdBy: 'عبدالله الشمري' },
+  { id: 'tr12', name: 'وثيقة الدفاع المدني', type: 'وثيقة', icon: '🪪', status: 'expiring', daysLeft: 20, expiryDate: '2025-07-16', projectId: 'p3', createdBy: 'محمد الزيد' },
+  { id: 'tr13', name: 'عقد صيانة المصاعد', type: 'عقد', icon: '📄', status: 'expired', daysLeft: -10, expiryDate: '2025-06-16', projectId: 'p5', createdBy: 'عبدالله الشمري' },
 ]
 
 export const INITIAL_ASSETS: Asset[] = [
@@ -78,6 +86,12 @@ export const INITIAL_ASSETS: Asset[] = [
   { id: 'as5', projectId: 'p2', name: 'مكيفات مركزية', category: 'equipment', purchaseDate: '2023-05-01', purchaseValue: 45000, supplier: 'مقاول التكييف', status: 'active', maintenance: [
     { id: 'mn4', date: '2025-05-15', type: 'فحص', cost: 600, note: 'فحص وتنظيف موسمي', createdBy: 'محمد العمري' },
   ], createdBy: 'محمد العمري' },
+  { id: 'as6', projectId: 'p1', name: 'أثاث مكتبي (مكاتب وكراسي)', category: 'furniture', purchaseDate: '2024-02-20', purchaseValue: 32000, supplier: 'معرض المكاتب', warrantyEnd: '2026-02-20', status: 'active', maintenance: [], note: 'أثاث الإدارة', createdBy: 'محمد العمري' },
+  { id: 'as7', projectId: 'p5', name: 'مبنى العيادة', category: 'property', purchaseDate: '2022-08-01', purchaseValue: 1850000, supplier: 'تطوير عقاري', status: 'active', maintenance: [], note: 'العقار الرئيسي', createdBy: 'د. ليلى الحربي' },
+  { id: 'as8', projectId: 'p3', name: 'فرن قديم (مستبعَد)', category: 'equipment', purchaseDate: '2020-05-10', purchaseValue: 9000, status: 'retired', maintenance: [
+    { id: 'mn5', date: '2024-12-01', type: 'عطل', cost: 0, note: 'تعذّر الإصلاح — استُبعد', createdBy: 'محمد الزيد' },
+  ], note: 'خارج الخدمة', createdBy: 'محمد الزيد' },
+  { id: 'as9', projectId: 'p4', name: 'لوازم وتجهيزات متنوعة', category: 'other', purchaseDate: '2024-09-15', purchaseValue: 5000, status: 'active', maintenance: [], createdBy: 'فهد الدوسري' },
 ]
 
 export const INITIAL_REQUESTS: RequestItem[] = [
@@ -89,6 +103,8 @@ export const INITIAL_REQUESTS: RequestItem[] = [
   { id: 'r6', title: 'تعويض مستلزمات طبية', amount: 6300, requestedBy: 'د. ليلى الحربي', status: 'approved', date: '2025-06-18', type: 'مصروف', projectId: 'p5', createdBy: 'د. ليلى الحربي' },
   { id: 'r7', title: 'طلب إجازة مدفوعة', amount: 0, requestedBy: 'عبدالله الشمري', status: 'pending', date: '2025-06-22', type: 'أخرى', projectId: 'p5', createdBy: 'عبدالله الشمري' },
   { id: 'r8', title: 'صرف بدل مواصلات', amount: 800, requestedBy: 'فهد الدوسري', status: 'approved', date: '2025-06-14', type: 'مصروف', projectId: 'p4', createdBy: 'فهد الدوسري' },
+  { id: 'r9', title: 'طلب تحويل بين المشاريع', amount: 10000, requestedBy: 'محمد العمري', status: 'pending', date: '2025-06-25', type: 'تحويل', projectId: 'p1', createdBy: 'محمد العمري' },
+  { id: 'r10', title: 'صيانة مكيف القاعة', amount: 1300, requestedBy: 'هند المطيري', status: 'approved', date: '2025-06-16', type: 'صيانة', projectId: 'p5', createdBy: 'هند المطيري' },
 ]
 
 export const INITIAL_DOCUMENTS: DocItem[] = [
@@ -101,6 +117,8 @@ export const INITIAL_DOCUMENTS: DocItem[] = [
   { id: 'd7', name: 'ترخيص وزارة الصحة', type: 'وثيقة رسمية', date: '2024-07-24', size: '1.1 MB', status: 'processed', projectId: 'p5', aiRead: true, createdBy: 'د. ليلى الحربي' },
   { id: 'd8', name: 'كشف حساب العيادة', type: 'كشف حساب', date: '2025-06-22', size: '420 KB', status: 'processed', projectId: 'p5', aiRead: true, createdBy: 'عبدالله الشمري' },
   { id: 'd9', name: 'فاتورة المدارس', type: 'فاتورة', date: '2025-06-12', size: '156 KB', status: 'pending', projectId: 'p6', aiRead: false, createdBy: 'محمد العمري' },
+  { id: 'd10', name: 'ملف سياسات الشركة', type: 'ملف عام', date: '2025-06-05', size: '600 KB', status: 'pending', projectId: 'p1', aiRead: false, createdBy: 'سارة المحمد' },
+  { id: 'd11', name: 'كشف حساب متجر أناقة', type: 'كشف حساب', date: '2025-06-20', size: '512 KB', status: 'processed', projectId: 'p4', aiRead: true, createdBy: 'فهد الدوسري' },
 ]
 
 export const INITIAL_NOTIFS: Notif[] = [
@@ -122,6 +140,9 @@ export const INITIAL_AUDIT: AuditEntry[] = [
   { id: 'a1', action: 'تسجيل دخول', entity: 'النظام', detail: 'تسجيل دخول ناجح', user: 'محمد العمري', ts: '2025-06-26 09:12' },
   { id: 'a2', action: 'إنشاء', entity: 'عملية مالية', detail: 'إيراد مبيعات — 12,000 ر.س', user: 'محمد العمري', ts: '2025-06-26 09:20' },
   { id: 'a3', action: 'اعتماد', entity: 'طلب', detail: 'اعتماد طلب صرف مصروفات السفر', user: 'سارة المحمد', ts: '2025-06-25 16:40' },
+  { id: 'a4', action: 'سداد', entity: 'ذمة', detail: 'سداد ذمة سوق الخضار — 3,000 ر.س', user: 'محمد الزيد', ts: '2025-06-22 15:30' },
+  { id: 'a5', action: 'تعديل', entity: 'مشروع', detail: 'تحديث وصف شركة النخيل', user: 'محمد العمري', ts: '2025-06-21 10:05' },
+  { id: 'a6', action: 'حذف', entity: 'مستند', detail: 'حذف مسودة فاتورة مكررة', user: 'سارة المحمد', ts: '2025-06-20 09:40' },
 ]
 
 export const INITIAL_MEMBERS: Member[] = [
@@ -151,6 +172,11 @@ export const INITIAL_MEMBER_TXNS: MemberTxn[] = [
   { id: 'mt7', projectId: 'p4', memberId: 'm9', type: 'custody', amount: 1500, note: 'عهدة تغليف وشحن', date: '2025-06-21', status: 'accepted', direction: 'to_member', createdBy: 'نورة القحطاني' },
   { id: 'mt8', projectId: 'p5', memberId: 'm11', type: 'custody', amount: 2400, note: 'عهدة مستلزمات', date: '2025-06-18', status: 'accepted', direction: 'to_member', createdBy: 'د. ليلى الحربي' },
   { id: 'mt9', projectId: 'p5', memberId: 'm12', type: 'expense', amount: 600, note: 'تعويض مواصلات', date: '2025-06-22', status: 'pending', direction: 'to_member', createdBy: 'عبدالله الشمري' },
+  { id: 'mt10', projectId: 'p1', memberId: 'm3', type: 'bonus', amount: 1500, note: 'مكافأة أداء', date: '2025-06-24', status: 'accepted', direction: 'to_member', createdBy: 'محمد العمري' },
+  { id: 'mt11', projectId: 'p1', memberId: 'm4', type: 'advance', amount: 3000, note: 'سلفة على الراتب', date: '2025-06-20', status: 'accepted', direction: 'to_member', createdBy: 'محمد العمري' },
+  { id: 'mt12', projectId: 'p5', memberId: 'm11', type: 'salary', amount: 8000, note: 'راتب يونيو', date: '2025-06-25', status: 'accepted', direction: 'to_member', createdBy: 'عبدالله الشمري' },
+  { id: 'mt13', projectId: 'p1', memberId: 'm3', type: 'supply', amount: 4500, note: 'توريد تحصيل مبيعات', date: '2025-06-26', status: 'accepted', direction: 'from_member', createdBy: 'أحمد العلي' },
+  { id: 'mt14', projectId: 'p3', memberId: 'm7', type: 'deduction', amount: 200, note: 'خصم نقص في الصندوق', date: '2025-06-24', status: 'pending', direction: 'from_member', createdBy: 'محمد الزيد' },
 ]
 
 export const INITIAL_RECEIVABLES: Receivable[] = [
@@ -160,6 +186,8 @@ export const INITIAL_RECEIVABLES: Receivable[] = [
   { id: 'rc4', projectId: 'p1', kind: 'payable', party: 'مورد المعدات المكتبية', amount: 9500, dueDate: '2025-07-10', date: '2025-06-12', status: 'open', payments: [], note: 'فاتورة توريد آجلة', createdBy: 'محمد العمري' },
   { id: 'rc5', projectId: 'p3', kind: 'payable', party: 'سوق الخضار المركزي', amount: 6200, dueDate: '2025-06-30', date: '2025-06-17', status: 'partial', payments: [{ id: 'pm2', amount: 3000, date: '2025-06-22', createdBy: 'محمد الزيد' }], note: 'مستحقات مواد خام', createdBy: 'محمد الزيد' },
   { id: 'rc6', projectId: 'p5', kind: 'payable', memberId: 'm11', party: 'عبدالله الشمري (مندوب مشتريات)', amount: 2400, dueDate: '2025-07-08', date: '2025-06-18', status: 'open', payments: [], note: 'مبالغ صرفها المندوب تُستحق له', createdBy: 'د. ليلى الحربي' },
+  { id: 'rc7', projectId: 'p1', kind: 'receivable', party: 'عميل التجزئة - طلب #501', amount: 5000, dueDate: '2025-06-15', date: '2025-05-20', status: 'settled', payments: [{ id: 'pm3', amount: 5000, date: '2025-06-14', note: 'سداد كامل', createdBy: 'محمد العمري' }], note: 'مسددة بالكامل', createdBy: 'محمد العمري' },
+  { id: 'rc8', projectId: 'p4', kind: 'payable', party: 'شركة الشحن السريع', amount: 7800, dueDate: '2025-06-20', date: '2025-06-05', status: 'open', payments: [], note: 'متأخرة السداد', createdBy: 'نورة القحطاني' },
 ]
 
 export const INITIAL_COMMITMENTS: Commitment[] = [
@@ -171,6 +199,10 @@ export const INITIAL_COMMITMENTS: Commitment[] = [
   { id: 'cm6', projectId: 'p1', kind: 'subscription', direction: 'out', name: 'اشتراك Adobe', party: 'Adobe', amount: 240, freq: 'monthly', startDate: '2025-01-08', paidCount: 5, nextDue: '2025-07-08', active: true, payments: [], createdBy: 'أحمد العلي' },
   { id: 'cm7', projectId: 'p4', kind: 'subscription', direction: 'out', name: 'اشتراك منصة سلة', party: 'سلة', amount: 1200, freq: 'monthly', startDate: '2025-01-10', paidCount: 5, nextDue: '2025-07-10', active: true, payments: [], createdBy: 'فهد الدوسري' },
   { id: 'cm8', projectId: 'p5', kind: 'subscription', direction: 'out', name: 'نظام الحجوزات', party: 'مزوّد النظام', amount: 800, freq: 'yearly', startDate: '2024-10-24', paidCount: 1, nextDue: '2025-10-24', active: true, payments: [], createdBy: 'عبدالله الشمري' },
+  { id: 'cm9', projectId: 'p3', kind: 'obligation', direction: 'out', name: 'أجور عمالة أسبوعية', party: 'مكتب التوظيف', amount: 1800, freq: 'weekly', startDate: '2025-06-02', paidCount: 3, nextDue: '2025-06-30', active: true, payments: [], note: 'تُدفع كل أسبوع', createdBy: 'محمد الزيد' },
+  { id: 'cm10', projectId: 'p1', kind: 'subscription', direction: 'out', name: 'ترخيص برنامج محاسبة', party: 'مزوّد البرمجيات', amount: 2400, freq: 'quarterly', startDate: '2025-04-15', paidCount: 1, nextDue: '2025-07-15', active: true, payments: [], createdBy: 'أحمد العلي' },
+  { id: 'cm11', projectId: 'p2', kind: 'installment', direction: 'out', name: 'قسط أثاث المنزل', party: 'معرض الديار', amount: 1200, freq: 'monthly', startDate: '2025-02-10', totalCount: 10, paidCount: 4, nextDue: '2025-07-10', active: true, payments: [], createdBy: 'محمد العمري' },
+  { id: 'cm12', projectId: 'p6', kind: 'obligation', direction: 'out', name: 'اشتراك نادي رياضي (موقوف)', party: 'النادي', amount: 300, freq: 'monthly', startDate: '2025-01-01', paidCount: 5, nextDue: '2025-07-01', active: false, payments: [], note: 'موقوف مؤقتاً', createdBy: 'منى العمري' },
 ]
 
 export const INITIAL_SURVEYS: Survey[] = [
@@ -186,6 +218,29 @@ export const INITIAL_SURVEYS: Survey[] = [
       { id: 'r1', answers: { q1: 5, q2: 'ممتازة', q3: 'خدمة رائعة' }, submittedAt: '2025-06-16', respondent: 'عميل 1' },
       { id: 'r2', answers: { q1: 4, q2: 'جيدة', q3: '' }, submittedAt: '2025-06-17', respondent: 'عميل 2' },
       { id: 'r3', answers: { q1: 5, q2: 'ممتازة', q3: 'سريعون جداً' }, submittedAt: '2025-06-18', respondent: 'عميل 3' },
+    ],
+  },
+  {
+    id: 'sv2', title: 'استبيان رضا الموظفين — الربع الثاني', surveyType: 'employee', projectId: 'p1',
+    status: 'active', createdAt: '2025-06-10',
+    questions: [
+      { id: 'q1', text: 'مدى رضاك عن بيئة العمل', kind: 'rating', required: true },
+      { id: 'q2', text: 'هل تشعر بالتقدير في عملك؟', kind: 'yesno' },
+      { id: 'q3', text: 'ما مدى ترشيحك للعمل هنا لصديق؟', kind: 'nps' },
+      { id: 'q4', text: 'عدد سنوات خبرتك', kind: 'number' },
+      { id: 'q5', text: 'ما الذي يحفّزك أكثر؟', kind: 'multi', options: ['الراتب', 'التطوّر المهني', 'بيئة العمل', 'المرونة', 'التقدير'] },
+      { id: 'q6', text: 'اقتراحاتك للتحسين', kind: 'text' },
+    ],
+    respondents: [
+      { id: 'rsp1', name: 'أحمد العلي', email: 'ahmad@example.com', source: 'member', responded: true },
+      { id: 'rsp2', name: 'سارة المحمد', email: 'sara@example.com', source: 'member', responded: true },
+      { id: 'rsp3', name: 'خالد السعد', email: 'khalid@example.com', source: 'member', responded: false },
+      { id: 'rsp4', name: 'زائر خارجي', email: 'guest@example.com', source: 'excel', responded: true },
+    ],
+    responses: [
+      { id: 'r1', respondentId: 'rsp1', answers: { q1: 4, q2: 'نعم', q3: 9, q4: 5, q5: ['الراتب', 'التطوّر المهني'], q6: 'بيئة عمل ممتازة' }, submittedAt: '2025-06-12', respondent: 'أحمد العلي' },
+      { id: 'r2', respondentId: 'rsp2', answers: { q1: 5, q2: 'نعم', q3: 10, q4: 8, q5: ['التقدير', 'المرونة'], q6: '' }, submittedAt: '2025-06-13', respondent: 'سارة المحمد' },
+      { id: 'r3', respondentId: 'rsp4', answers: { q1: 3, q2: 'لا', q3: 6, q4: 2, q5: ['الراتب'], q6: 'نحتاج مرونة أكثر في الدوام' }, submittedAt: '2025-06-14', respondent: 'زائر خارجي' },
     ],
   },
 ]
