@@ -10,6 +10,8 @@ import { txErrors } from '@/helpers/txAnalysis'
 import { CURRENT_USER } from '@/constants'
 import type { Transaction, TxType } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
+import ChartCard from '@/components/charts/ChartCard.vue'
+import DonutChart from '@/components/charts/DonutChart.vue'
 import TxFormModal from '../modals/TxFormModal.vue'
 import TxDetailsModal from '../modals/TxDetailsModal.vue'
 
@@ -58,6 +60,8 @@ const stats = computed(() => [
 ])
 
 // توزيع المصروفات حسب التصنيف
+const CAT_PALETTE = ['#dc2626', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d', '#2563eb', '#059669']
+const catView = ref<'donut' | 'bar'>('donut')
 const expenseByCat = computed(() => {
   const map: Record<string, number> = {}
   txns.value.filter((t) => t.type === 'expense').forEach((t) => {
@@ -65,7 +69,8 @@ const expenseByCat = computed(() => {
   })
   const entries = Object.entries(map).sort((a, b) => b[1] - a[1])
   const max = Math.max(...entries.map((e) => e[1]), 1)
-  return { entries, max }
+  const donut = entries.map(([label, value], i) => ({ label, value, color: CAT_PALETTE[i % CAT_PALETTE.length] }))
+  return { entries, max, donut }
 })
 
 function isFlagged(t: Transaction) {
@@ -155,16 +160,27 @@ function clearFilters() {
     </div>
 
     <!-- توزيع المصروفات حسب التصنيف -->
-    <div v-if="expenseByCat.entries.length" class="app-card breakdown">
-      <span class="breakdown__title">توزيع المصروفات حسب التصنيف</span>
-      <div v-for="[cat, val] in expenseByCat.entries" :key="cat" class="breakdown__row">
-        <span class="breakdown__label">{{ cat }}</span>
-        <div class="breakdown__track">
-          <div class="breakdown__fill" :style="{ width: `${(val / expenseByCat.max) * 100}%` }" />
+    <ChartCard
+      v-if="expenseByCat.entries.length && settingsStore.prefs.showCharts"
+      v-model="catView"
+      title="توزيع المصروفات حسب التصنيف"
+      class="breakdown-card"
+      :views="[
+        { id: 'donut', icon: '🍩', label: 'دائري' },
+        { id: 'bar', icon: '📊', label: 'أشرطة' },
+      ]"
+    >
+      <DonutChart v-if="catView === 'donut'" :data="expenseByCat.donut" :size="150" center-label="مصروفات" />
+      <div v-else class="breakdown">
+        <div v-for="(d, i) in expenseByCat.donut" :key="d.label" class="breakdown__row">
+          <span class="breakdown__label">{{ d.label }}</span>
+          <div class="breakdown__track">
+            <div class="breakdown__fill" :style="{ width: `${(d.value / expenseByCat.max) * 100}%`, background: CAT_PALETTE[i % CAT_PALETTE.length] }" />
+          </div>
+          <span class="breakdown__val">{{ fmtNum(d.value) }}</span>
         </div>
-        <span class="breakdown__val">{{ fmtNum(val) }}</span>
       </div>
-    </div>
+    </ChartCard>
 
     <!-- جدول العمليات -->
     <div class="app-card table-card">
@@ -341,17 +357,11 @@ function clearFilters() {
   }
 }
 
-.breakdown {
-  padding: 20px;
+.breakdown-card {
   margin-block-end: 20px;
+}
 
-  &__title {
-    font-weight: 600;
-    font-size: 14px;
-    display: block;
-    margin-block-end: 16px;
-  }
-
+.breakdown {
   &__row {
     display: flex;
     align-items: center;

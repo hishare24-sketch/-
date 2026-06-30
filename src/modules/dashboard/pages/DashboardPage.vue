@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { computed, toRef } from 'vue'
+import { computed, ref, toRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
 import { fmtNum } from '@/helpers/format'
 import { useDashboard, PERIODS } from '../composables/useDashboard'
-import IncomeExpenseChart from '../components/IncomeExpenseChart.vue'
+import ChartCard from '@/components/charts/ChartCard.vue'
+import BarChart from '@/components/charts/BarChart.vue'
+import LineChart from '@/components/charts/LineChart.vue'
 
 const router = useRouter()
 const projectsStore = useProjectsStore()
 const settingsStore = useSettingsStore()
 const { activeProjectId, activeProject, projects } = storeToRefs(projectsStore)
+const { prefs } = storeToRefs(settingsStore)
 
 const { period, stats, txns, urgentTrackings, monthlyData } = useDashboard(
   toRef(projectsStore, 'activeProjectId'),
@@ -20,6 +23,14 @@ const { period, stats, txns, urgentTrackings, monthlyData } = useDashboard(
 
 const recentTxns = computed(() => txns.value.slice(0, 5))
 const helpEntry = computed(() => settingsStore.help.dashboard)
+
+// بيانات الرسم (تسلسل الإيرادات/المصروفات)
+const chartView = ref<'bar' | 'line'>('bar')
+const chartLabels = computed(() => monthlyData.value.map((d) => d.month))
+const chartSeries = computed(() => [
+  { name: 'إيرادات', color: '#3b82f6', values: monthlyData.value.map((d) => d.income) },
+  { name: 'مصروفات', color: '#f87171', values: monthlyData.value.map((d) => d.expense) },
+])
 </script>
 
 <template>
@@ -61,7 +72,19 @@ const helpEntry = computed(() => settingsStore.help.dashboard)
 
     <!-- الرسم البياني + التنبيهات العاجلة -->
     <div class="dashboard__row">
-      <IncomeExpenseChart :data="monthlyData" />
+      <ChartCard
+        v-if="prefs.showCharts"
+        v-model="chartView"
+        title="الإيرادات والمصروفات"
+        :views="[
+          { id: 'bar', icon: '📊', label: 'أعمدة' },
+          { id: 'line', icon: '📈', label: 'خطّي' },
+        ]"
+      >
+        <BarChart v-if="chartView === 'bar'" :labels="chartLabels" :series="chartSeries" />
+        <LineChart v-else :labels="chartLabels" :series="chartSeries" />
+      </ChartCard>
+      <div v-else class="charts-off app-card">الرسوم مخفية — فعّلها من الإعدادات.</div>
 
       <div class="urgent app-card">
         <div class="urgent__head">
@@ -155,6 +178,13 @@ const helpEntry = computed(() => settingsStore.help.dashboard)
       grid-template-columns: 1fr;
     }
   }
+}
+
+.charts-off {
+  padding: 30px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 .select {
