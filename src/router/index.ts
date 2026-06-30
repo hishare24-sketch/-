@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/AuthStore'
 import { dashboardRoutes } from '@/modules/dashboard/dashboardRoutes'
 import { projectsRoutes } from '@/modules/projects/projectsRoutes'
+import { financeRoutes } from '@/modules/finance/financeRoutes'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -15,6 +16,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/modules/projects/ProjectsModule.vue'),
     meta: { layout: 'default' },
     children: projectsRoutes,
+  },
+  {
+    path: '/finance',
+    component: () => import('@/modules/finance/FinanceModule.vue'),
+    meta: { layout: 'default' },
+    children: financeRoutes,
   },
   {
     path: '/launcher',

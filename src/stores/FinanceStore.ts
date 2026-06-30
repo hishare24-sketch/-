@@ -2,8 +2,13 @@ import { defineStore } from 'pinia'
 import type { Transaction } from '@/interfaces/models'
 import { INITIAL_TRANSACTIONS } from '@/data/seed'
 import { useProjectsStore } from '@/stores/ProjectsStore'
+import { computeBalance } from '@/helpers/calc'
+import { uid } from '@/helpers/id'
 
-// متجر الحركات المالية (يُثرى بالـ CRUD في المرحلة 4)
+// نوع حمولة الحفظ (id اختياري عند الإنشاء)
+export type TxPayload = Omit<Transaction, 'id'> & { id?: string }
+
+// متجر الحركات المالية
 export const useFinanceStore = defineStore('finance', {
   state: () => ({
     transactions: [...INITIAL_TRANSACTIONS] as Transaction[],
@@ -13,21 +18,63 @@ export const useFinanceStore = defineStore('finance', {
     byProject: (s) => (projectId: string) =>
       s.transactions.filter((t) => t.projectId === projectId),
 
-    // الرصيد المحسوب = الرصيد الافتتاحي + الإيرادات − المصروفات ± التحويلات
     balanceOf() {
       return (projectId: string): number => {
         const projectsStore = useProjectsStore()
         const project = projectsStore.projectById(projectId)
         if (!project) return 0
-        let bal = project.balance
-        for (const t of this.transactions) {
-          if (t.projectId !== projectId) continue
-          if (t.type === 'income') bal += t.amount
-          else if (t.type === 'expense') bal -= t.amount
-          else if (t.type === 'transfer') bal += t.transferDir === 'in' ? t.amount : -t.amount
-        }
-        return bal
+        return computeBalance(project, this.transactions)
       }
+    },
+  },
+
+  actions: {
+    // الحفظ: التحويل بين مشروعين يُنشئ قيدين مرتبطين (صادر + وارد)
+    saveTransaction(payload: TxPayload) {
+      if (payload.id) {
+        const i = this.transactions.findIndex((t) => t.id === payload.id)
+        if (i !== -1) this.transactions[i] = { ...this.transactions[i], ...payload, id: payload.id }
+        return
+      }
+
+      if (payload.type === 'transfer' && payload.toProject) {
+        const linkId = uid('lnk')
+        this.transactions.unshift({
+          ...payload,
+          id: uid('t'),
+          type: 'transfer',
+          transferDir: 'out',
+          linkId,
+        })
+        this.transactions.unshift({
+          ...payload,
+          id: uid('t'),
+          projectId: payload.toProject,
+          toProject: payload.projectId,
+          type: 'transfer',
+          transferDir: 'in',
+          linkId,
+        })
+        return
+      }
+
+      this.transactions.unshift({ ...payload, id: uid('t') })
+    },
+
+    deleteTransaction(id: string) {
+      const tx = this.transactions.find((t) => t.id === id)
+      // حذف الطرف المرتبط في التحويلات أيضاً
+      if (tx?.linkId) {
+        this.transactions = this.transactions.filter((t) => t.linkId !== tx.linkId)
+      } else {
+        this.transactions = this.transactions.filter((t) => t.id !== id)
+      }
+    },
+
+    // تصحيح المبلغ السالب (جعله موجباً)
+    fixAmount(id: string) {
+      const t = this.transactions.find((x) => x.id === id)
+      if (t) t.amount = Math.abs(t.amount)
     },
   },
 })

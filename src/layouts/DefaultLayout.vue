@@ -14,7 +14,8 @@ const collapsed = ref(false)
 const navItems = computed(() => [
   { title: t('nav.dashboard'), icon: '📊', to: { name: 'dashboard-page' }, show: true },
   { title: t('nav.projects'), icon: '🏢', to: { name: 'projects-page' }, show: true },
-  { title: t('nav.finance'), icon: '💰', to: { name: 'section', params: { key: 'finance' } }, show: true },
+  { title: t('nav.finance'), icon: '💰', to: { name: 'finance-page' }, show: true },
+  { title: 'السجل المالي', icon: '⛃', to: { name: 'ledger-page' }, show: true },
   { title: t('nav.receivables'), icon: '🧾', to: { name: 'section', params: { key: 'receivables' } }, show: true },
   { title: t('nav.commitments'), icon: '📌', to: { name: 'section', params: { key: 'commitments' } }, show: true },
   { title: t('nav.assets'), icon: '🚗', to: { name: 'section', params: { key: 'assets' } }, show: true },
