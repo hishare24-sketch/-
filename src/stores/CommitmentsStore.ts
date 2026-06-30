@@ -32,13 +32,15 @@ export const useCommitmentsStore = defineStore('commitments', {
       const c = this.commitments.find((x) => x.id === id)
       if (c) c.active = !c.active
     },
-    // تسجيل دفعة → عملية مالية فعلية + تقديم تاريخ الاستحقاق
-    payCommitment(id: string) {
+    // تسجيل دفعة (مع تفاصيل اختيارية) → عملية مالية فعلية + تقديم تاريخ الاستحقاق
+    payCommitment(id: string, opts?: { amount?: number; date?: string; note?: string }) {
       const c = this.commitments.find((x) => x.id === id)
       if (!c) return
       const isOut = c.direction === 'out'
+      const amount = opts?.amount ?? c.amount
+      const date = opts?.date ?? today()
       const dueLabel = `دفعة ${c.paidCount + 1}${c.totalCount ? `/${c.totalCount}` : ''}`
-      c.payments.push({ id: uid('cp'), amount: c.amount, date: today(), dueLabel, createdBy: CURRENT_USER })
+      c.payments.push({ id: uid('cp'), amount, date, dueLabel, createdBy: CURRENT_USER })
       c.paidCount += 1
       const reachedEnd = c.totalCount != null && c.paidCount >= c.totalCount
       if (reachedEnd) c.active = false
@@ -49,16 +51,16 @@ export const useCommitmentsStore = defineStore('commitments', {
         projectId: c.projectId,
         type: isOut ? 'expense' : 'income',
         description: `${c.name} (${kindLabel} - ${dueLabel})`,
-        amount: c.amount,
+        amount,
         category: c.kind === 'subscription' ? 'اشتراكات' : c.kind === 'installment' ? 'أقساط' : 'التزامات',
-        date: today(),
+        date,
         hasDoc: false,
         source: c.party,
         memberId: c.memberId,
-        note: `دفعة ${FREQ_LABEL[c.freq]}`,
+        note: opts?.note?.trim() || `دفعة ${FREQ_LABEL[c.freq]}`,
         createdBy: CURRENT_USER,
       })
-      useAuditStore().log(isOut ? 'دفع' : 'استلام', 'التزام دوري', `${c.name} — ${fmt(c.amount)}`)
+      useAuditStore().log(isOut ? 'دفع' : 'استلام', 'التزام دوري', `${c.name} — ${fmt(amount)}`)
     },
   },
 })

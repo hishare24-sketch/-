@@ -13,6 +13,7 @@ import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import ToggleActivationSwitch from '@/components/shared/ToggleActivationSwitch.vue'
 import CommitmentFormModal from '../modals/CommitmentFormModal.vue'
 import CommitmentDetailsModal from '../modals/CommitmentDetailsModal.vue'
+import PayCommitmentModal from '../modals/PayCommitmentModal.vue'
 
 const commitmentsStore = useCommitmentsStore()
 const projectsStore = useProjectsStore()
@@ -70,11 +71,12 @@ const kindLabel = (k: CommitmentKind) => COMMITMENT_KINDS.find((x) => x.id === k
 // المودالات
 const showForm = ref(false)
 const viewing = ref<Commitment | null>(null)
+const paying = ref<Commitment | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 
 function payFromView(c: Commitment) {
   viewing.value = null
-  commitmentsStore.payCommitment(c.id)
+  paying.value = c
 }
 
 async function onDelete(c: Commitment) {
@@ -85,7 +87,7 @@ function onToggle(c: Commitment) {
   commitmentsStore.toggleCommitment(c.id)
 }
 function onPay(c: Commitment) {
-  commitmentsStore.payCommitment(c.id)
+  paying.value = c
 }
 </script>
 
@@ -178,6 +180,7 @@ function onPay(c: Commitment) {
 
     <CommitmentFormModal v-if="showForm" :project-id="activeProjectId" @close="showForm = false" />
     <CommitmentDetailsModal v-if="viewing" :commitment="viewing" @pay="payFromView" @close="viewing = null" />
+    <PayCommitmentModal v-if="paying" :commitment="paying" @close="paying = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>

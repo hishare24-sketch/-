@@ -6,6 +6,7 @@ import { useAssetsStore } from '@/stores/AssetsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { assetMaintCost } from '@/helpers/calc'
 import { fmt, fmtNum } from '@/helpers/format'
+import { daysBetween } from '@/helpers/date'
 import { ASSET_CATEGORIES, ASSET_STATUS } from '@/constants'
 import type { Asset, AssetCategory } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
@@ -52,6 +53,16 @@ const stats = computed(() => [
 ])
 
 const catInfo = (c: AssetCategory) => ASSET_CATEGORIES.find((x) => x.id === c)!
+
+// تتبّع الضمان: حالة الضمان حسب الأيام المتبقية
+function warrantyInfo(a: Asset) {
+  if (!a.warrantyEnd) return null
+  const d = daysBetween(a.warrantyEnd)
+  if (d < 0) return { label: 'الضمان منتهٍ', days: d, color: '#dc2626', bg: '#fef2f2' }
+  if (d <= 30) return { label: `الضمان: ${d} يوم`, days: d, color: '#d97706', bg: '#fffbeb' }
+  return { label: 'الضمان ساري', days: d, color: '#059669', bg: '#ecfdf5' }
+}
+const holderName = (a: Asset) => (a.memberId ? projectsStore.memberById(a.memberId)?.name : null)
 
 // المودالات
 const showForm = ref(false)
@@ -125,21 +136,31 @@ async function onDelete(a: Asset) {
             {{ ASSET_STATUS[a.status].label }}
           </span>
         </div>
+
         <span class="asset__name asset__clickable" @click="viewing = a">
           {{ a.name }}
           <span v-if="a.attachments?.length" class="asset__clip" title="مرفقات">📎{{ a.attachments.length }}</span>
         </span>
         <span class="asset__meta">{{ catInfo(a.category).label }} · {{ projectsStore.projectById(a.projectId)?.name }}</span>
 
-        <div class="asset__rows">
-          <div><span>القيمة</span><strong>{{ fmt(a.purchaseValue) }}</strong></div>
-          <div v-if="a.warrantyEnd"><span>الضمان حتى</span><strong>{{ a.warrantyEnd }}</strong></div>
-          <div v-if="a.usageMeter != null"><span>العداد</span><strong>{{ fmtNum(a.usageMeter) }} {{ a.usageUnit }}</strong></div>
-          <div v-if="a.maintenance.length"><span>الصيانة ({{ a.maintenance.length }})</span><strong>{{ fmt(assetMaintCost(a)) }}</strong></div>
+        <!-- تتبّع: شارات الضمان والمسؤول -->
+        <div class="asset__chips">
+          <span v-if="warrantyInfo(a)" class="chip" :style="{ background: warrantyInfo(a)!.bg, color: warrantyInfo(a)!.color }">
+            🛡️ {{ warrantyInfo(a)!.label }}
+          </span>
+          <span v-if="holderName(a)" class="chip chip--neutral">👤 {{ holderName(a) }}</span>
         </div>
 
+        <div class="asset__rows">
+          <div><span>القيمة</span><strong>{{ fmt(a.purchaseValue) }}</strong></div>
+          <div v-if="a.usageMeter != null"><span>العداد</span><strong>{{ fmtNum(a.usageMeter) }} {{ a.usageUnit }}</strong></div>
+          <div><span>الصيانة ({{ a.maintenance.length }})</span><strong>{{ fmt(assetMaintCost(a)) }}</strong></div>
+        </div>
+
+        <!-- أكشن: استعراض · صيانة · حذف -->
         <div class="asset__actions">
-          <button class="app-btn app-btn--outlined maint-btn" @click="maintAsset = a">🔧 صيانة</button>
+          <button class="app-btn app-btn--outlined act-btn" @click="viewing = a">👁 استعراض</button>
+          <button class="app-btn act-btn act-btn--maint" @click="maintAsset = a">🔧 صيانة</button>
           <button class="icon-btn icon-btn--danger" title="حذف" @click="onDelete(a)">🗑️</button>
         </div>
       </div>
@@ -278,6 +299,13 @@ async function onDelete(a: Asset) {
   &__clip { font-size: 11px; color: var(--primary); margin-inline-start: 6px; }
   &__meta { font-size: 12px; color: var(--text-muted); }
 
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-block-start: 10px;
+  }
+
   &__rows {
     display: flex;
     flex-direction: column;
@@ -301,7 +329,22 @@ async function onDelete(a: Asset) {
   }
 }
 
-.maint-btn { flex: 1; padding: 8px; font-size: 13px; }
+.chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+
+  &--neutral { background: var(--bg); color: var(--text-muted); }
+}
+
+.act-btn {
+  flex: 1;
+  padding: 8px;
+  font-size: 12.5px;
+
+  &--maint { background: var(--primary); }
+}
 
 .icon-btn {
   inline-size: 36px;
