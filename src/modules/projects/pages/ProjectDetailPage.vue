@@ -3,9 +3,12 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useFinanceStore } from '@/stores/FinanceStore'
+import { useDocumentsStore } from '@/stores/DocumentsStore'
+import { useTrackingsStore } from '@/stores/TrackingsStore'
+import { useRequestsStore } from '@/stores/RequestsStore'
 import { fmt, fmtNum } from '@/helpers/format'
 import { ROLES } from '@/constants'
-import type { Member } from '@/interfaces/models'
+import type { Member, DocItem } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import ChartCard from '@/components/charts/ChartCard.vue'
 import BarChart from '@/components/charts/BarChart.vue'
@@ -13,11 +16,18 @@ import LineChart from '@/components/charts/LineChart.vue'
 import MemberFormModal from '../modals/MemberFormModal.vue'
 import MemberTxnFormModal from '../modals/MemberTxnFormModal.vue'
 import MemberDetailsModal from '../modals/MemberDetailsModal.vue'
+import TxFormModal from '@/modules/finance/modals/TxFormModal.vue'
+import TrackingFormModal from '@/modules/trackings/modals/TrackingFormModal.vue'
+import RequestFormModal from '@/modules/requests/modals/RequestFormModal.vue'
+import DocFormModal from '@/modules/documents/modals/DocFormModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 const projectsStore = useProjectsStore()
 const financeStore = useFinanceStore()
+const documentsStore = useDocumentsStore()
+const trackingsStore = useTrackingsStore()
+const requestsStore = useRequestsStore()
 
 const projectId = computed(() => route.params.id as string)
 const project = computed(() => projectsStore.projectById(projectId.value))
@@ -32,6 +42,29 @@ const balance = computed(() => financeStore.balanceOf(projectId.value))
 const projMembers = computed(() => projectsStore.membersByProject(projectId.value))
 
 const roleOf = (m: Member) => ROLES.find((r) => r.id === m.role)!
+
+// موارد المشروع
+const projDocs = computed(() => documentsStore.byProject(projectId.value))
+const projTrackings = computed(() => trackingsStore.byProject(projectId.value))
+const projReqs = computed(() => requestsStore.byProject(projectId.value))
+const pendingReqs = computed(() => projReqs.value.filter((r) => r.status === 'pending'))
+const urgentTrackings = computed(() => projTrackings.value.filter((t) => t.status !== 'active'))
+
+const resources = computed(() => [
+  { label: '📄 المستندات', count: projDocs.value.length, route: 'documents-page' },
+  { label: '🛡️ المتابعات والضمانات', count: projTrackings.value.length, route: 'trackings-page' },
+  { label: '📥 الطلبات', count: projReqs.value.length, route: 'requests-page' },
+  { label: '⏳ طلبات معلقة', count: pendingReqs.value.length, route: 'requests-page' },
+])
+
+function goSection(name: string) {
+  projectsStore.setActiveProject(projectId.value)
+  router.push({ name })
+}
+
+// إجراءات سريعة (إنشاء عنصر مرتبط بالمشروع)
+type QuickAction = 'tx' | 'doc' | 'tracking' | 'request'
+const quick = ref<QuickAction | null>(null)
 
 // التدفقات الشهرية
 const monthly = computed(() => {
@@ -126,18 +159,101 @@ const pendingTxns = computed(() =>
     </div>
 
     <!-- نظرة عامة -->
-    <div v-if="tab === 'overview'" class="ov-stats">
-      <div class="ov-stat app-card">
-        <span class="ov-stat__icon" style="background: #ecfdf5">📈</span>
-        <div><span class="ov-stat__label">إجمالي الإيرادات</span><strong style="color: #15803d">{{ fmt(income) }}</strong></div>
+    <div v-if="tab === 'overview'" class="ov">
+      <!-- إجراء سريع -->
+      <div class="quick app-card">
+        <span class="quick__label">إجراء سريع:</span>
+        <button class="quick__btn quick__btn--ok" @click="quick = 'tx'">💰 عملية مالية</button>
+        <button class="quick__btn quick__btn--info" @click="quick = 'doc'">📄 مستند</button>
+        <button class="quick__btn quick__btn--warn" @click="quick = 'tracking'">🛡️ متابعة</button>
+        <button class="quick__btn quick__btn--purple" @click="quick = 'request'">📝 طلب</button>
       </div>
-      <div class="ov-stat app-card">
-        <span class="ov-stat__icon" style="background: #fef2f2">📉</span>
-        <div><span class="ov-stat__label">إجمالي المصروفات</span><strong style="color: #b91c1c">{{ fmt(expense) }}</strong></div>
+
+      <!-- بطاقات الإحصائيات -->
+      <div class="ov-stats">
+        <div class="ov-card" style="background: #ecfdf5">
+          <span class="ov-card__icon">📈</span>
+          <strong style="color: #15803d">{{ fmt(income) }}</strong>
+          <span class="ov-card__label">إجمالي الإيرادات</span>
+        </div>
+        <div class="ov-card" style="background: #fef2f2">
+          <span class="ov-card__icon">📉</span>
+          <strong style="color: #b91c1c">{{ fmt(expense) }}</strong>
+          <span class="ov-card__label">إجمالي المصروفات</span>
+        </div>
+        <div class="ov-card" style="background: #eff6ff">
+          <span class="ov-card__icon">💰</span>
+          <strong style="color: #1d4ed8">{{ fmt(income - expense) }}</strong>
+          <span class="ov-card__label">صافي الربح</span>
+        </div>
+        <div class="ov-card" style="background: #faf5ff">
+          <span class="ov-card__icon">👥</span>
+          <strong style="color: #7c3aed">{{ projMembers.length }}</strong>
+          <span class="ov-card__label">عدد الأعضاء</span>
+        </div>
       </div>
-      <div class="ov-stat app-card">
-        <span class="ov-stat__icon" style="background: #eff6ff">🧮</span>
-        <div><span class="ov-stat__label">عدد العمليات</span><strong>{{ txns.length }}</strong></div>
+
+      <!-- الموارد + الإشعارات الإجرائية -->
+      <div class="ov-grid">
+        <div class="app-card panel">
+          <span class="panel__title">الموارد والمستندات</span>
+          <button v-for="r in resources" :key="r.label" class="res-row" @click="goSection(r.route)">
+            <span>{{ r.label }}</span>
+            <span class="res-row__n">{{ r.count }} <span class="res-row__chev">‹</span></span>
+          </button>
+        </div>
+
+        <div class="app-card panel">
+          <span class="panel__title">الإشعارات الإجرائية</span>
+          <div v-if="!pendingReqs.length && !urgentTrackings.length" class="panel__empty">لا توجد إجراءات مطلوبة ✅</div>
+          <div v-for="r in pendingReqs" :key="r.id" class="note note--warn">
+            <span>⏳</span>
+            <div>
+              <span class="note__title">{{ r.title }}</span>
+              <span class="note__sub">طلب بانتظار الاعتماد — {{ fmtNum(r.amount) }} ر.س</span>
+            </div>
+          </div>
+          <div v-for="t in urgentTrackings" :key="t.id" class="note" :class="t.status === 'expired' ? 'note--danger' : 'note--warn'">
+            <span>{{ t.icon }}</span>
+            <div>
+              <span class="note__title">{{ t.name }}</span>
+              <span class="note__sub">{{ t.status === 'expired' ? 'منتهٍ — يتطلب تجديد' : `ينتهي خلال ${t.daysLeft} يوم` }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- مستندات + متابعات المشروع -->
+      <div v-if="projDocs.length || projTrackings.length" class="ov-grid">
+        <div v-if="projDocs.length" class="app-card panel">
+          <div class="panel__head">
+            <span class="panel__title">📄 مستندات المشروع</span>
+            <button class="link-btn" @click="goSection('documents-page')">عرض الكل ‹</button>
+          </div>
+          <button v-for="d in projDocs.slice(0, 4)" :key="d.id" class="item" @click="goSection('documents-page')">
+            <span class="item__icon">📄</span>
+            <div class="item__info">
+              <span class="item__name">{{ d.name }}</span>
+              <span class="item__sub">{{ d.type }} · {{ d.date }}</span>
+            </div>
+            <span class="item__action">⚡ إجراءات</span>
+          </button>
+        </div>
+
+        <div v-if="projTrackings.length" class="app-card panel">
+          <div class="panel__head">
+            <span class="panel__title">🛡️ متابعات المشروع</span>
+            <button class="link-btn" @click="goSection('trackings-page')">عرض الكل ‹</button>
+          </div>
+          <button v-for="t in projTrackings.slice(0, 4)" :key="t.id" class="item" @click="goSection('trackings-page')">
+            <span class="item__icon">{{ t.icon }}</span>
+            <div class="item__info">
+              <span class="item__name">{{ t.name }}</span>
+              <span class="item__sub" :class="{ 'is-expired': t.status === 'expired' }">{{ t.status === 'expired' ? 'منتهٍ' : `${t.daysLeft} يوم` }}</span>
+            </div>
+            <span class="item__chev">‹</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -212,6 +328,13 @@ const pendingTxns = computed(() =>
     />
     <MemberTxnFormModal v-if="showTxnForm" :project-id="projectId" @close="showTxnForm = false" />
     <MemberDetailsModal v-if="viewingMember" :member="viewingMember" @close="viewingMember = null" />
+
+    <!-- نماذج الإجراء السريع (مرتبطة بالمشروع) -->
+    <TxFormModal v-if="quick === 'tx'" :project-id="projectId" :tx="null" @close="quick = null" />
+    <DocFormModal v-if="quick === 'doc'" :project-id="projectId" @close="quick = null" />
+    <TrackingFormModal v-if="quick === 'tracking'" :project-id="projectId" :tracking="null" @close="quick = null" />
+    <RequestFormModal v-if="quick === 'request'" :project-id="projectId" @close="quick = null" />
+
     <ConfirmModal ref="confirmRef" />
   </section>
 
@@ -351,38 +474,149 @@ const pendingTxns = computed(() =>
   }
 }
 
+.ov {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+// إجراء سريع
+.quick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  flex-wrap: wrap;
+
+  &__label { font-weight: 600; font-size: 13px; color: var(--text-muted); }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+
+    &--ok { background: #ecfdf5; color: #059669; }
+    &--info { background: #ecfeff; color: #0891b2; }
+    &--warn { background: #fffbeb; color: #d97706; }
+    &--purple { background: #faf5ff; color: #7c3aed; }
+
+    &:hover { filter: brightness(0.97); }
+  }
+}
+
 .ov-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 14px;
 }
 
-.ov-stat {
+.ov-card {
+  border-radius: 14px;
+  padding: 16px;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 4px;
+
+  &__icon { font-size: 22px; }
+  &__label { font-size: 12px; color: var(--text-muted); }
+
+  strong { font-size: 18px; }
+}
+
+.ov-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.panel {
   padding: 18px;
 
-  &__icon {
-    inline-size: 40px;
-    block-size: 40px;
-    border-radius: 10px;
+  &__head {
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 18px;
+    justify-content: space-between;
+    margin-block-end: 12px;
   }
 
-  &__label {
-    display: block;
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-block-end: 2px;
-  }
+  &__title { font-weight: 600; font-size: 15px; }
+  &__empty { padding: 16px 0; text-align: center; color: var(--text-muted); font-size: 13px; }
+}
 
-  strong {
-    font-size: 17px;
-  }
+.res-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  inline-size: 100%;
+  padding: 11px 0;
+  border: none;
+  border-block-end: 1px solid var(--border);
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+
+  &:last-child { border-block-end: none; }
+  &:hover { color: var(--primary); }
+
+  &__n { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+  &__chev { color: var(--text-muted); font-weight: 400; }
+}
+
+.note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-block-end: 8px;
+
+  &--warn { background: #fffbeb; }
+  &--danger { background: #fef2f2; }
+
+  &__title { display: block; font-size: 12.5px; font-weight: 500; }
+  &__sub { font-size: 11.5px; color: var(--text-muted); }
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  inline-size: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 9px;
+  background: var(--bg);
+  font-family: inherit;
+  cursor: pointer;
+  margin-block-end: 6px;
+  text-align: start;
+
+  &:hover { background: var(--primary-soft); }
+
+  &__icon { font-size: 18px; }
+  &__info { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; }
+  &__name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  &__sub { font-size: 11px; color: var(--text-muted); &.is-expired { color: #b91c1c; } }
+  &__action { font-size: 11.5px; font-weight: 600; color: var(--primary); background: var(--primary-soft); padding: 5px 10px; border-radius: 8px; flex-shrink: 0; }
+  &__chev { color: var(--text-muted); }
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .bar {
