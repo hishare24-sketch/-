@@ -8,6 +8,7 @@ import type {
   Asset,
   MemberTxnType,
   CommitmentFreq,
+  CommitmentKind,
   UserPrefs,
   CustomLists,
   HelpTexts,
@@ -129,6 +130,12 @@ export const MEMBER_TXN_TYPES: {
   { id: 'supply', label: 'توريد/تحصيل', icon: '📥', direction: 'from_member', desc: 'مبلغ يورّده العضو للمشروع (تحصيل مندوب)' },
   { id: 'settlement', label: 'تسوية/إرجاع', icon: '↩️', direction: 'from_member', desc: 'استرجاع مبلغ من العضو' },
   { id: 'deduction', label: 'خصم/تصفية', icon: '➖', direction: 'from_member', desc: 'خصم من رصيد العضو' },
+]
+
+export const COMMITMENT_KINDS: { id: CommitmentKind; label: string; icon: string }[] = [
+  { id: 'installment', label: 'قسط', icon: '🏦' },
+  { id: 'obligation', label: 'التزام دوري', icon: '🔁' },
+  { id: 'subscription', label: 'اشتراك', icon: '💳' },
 ]
 
 export const FREQ_DAYS: Record<CommitmentFreq, number> = {
