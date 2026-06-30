@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/AuthStore'
 import { dashboardRoutes } from '@/modules/dashboard/dashboardRoutes'
+import { projectsRoutes } from '@/modules/projects/projectsRoutes'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -8,6 +9,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/modules/dashboard/DashboardModule.vue'),
     meta: { layout: 'default' },
     children: dashboardRoutes,
+  },
+  {
+    path: '/projects',
+    component: () => import('@/modules/projects/ProjectsModule.vue'),
+    meta: { layout: 'default' },
+    children: projectsRoutes,
   },
   {
     path: '/launcher',

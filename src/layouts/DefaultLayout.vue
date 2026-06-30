@@ -13,7 +13,7 @@ const collapsed = ref(false)
 // show يعتمد على الصلاحيات (تُترك true حالياً لعدم تفعيل الدخول الإجباري)
 const navItems = computed(() => [
   { title: t('nav.dashboard'), icon: '📊', to: { name: 'dashboard-page' }, show: true },
-  { title: t('nav.projects'), icon: '🏢', to: { name: 'section', params: { key: 'projects' } }, show: true },
+  { title: t('nav.projects'), icon: '🏢', to: { name: 'projects-page' }, show: true },
   { title: t('nav.finance'), icon: '💰', to: { name: 'section', params: { key: 'finance' } }, show: true },
   { title: t('nav.receivables'), icon: '🧾', to: { name: 'section', params: { key: 'receivables' } }, show: true },
   { title: t('nav.commitments'), icon: '📌', to: { name: 'section', params: { key: 'commitments' } }, show: true },
