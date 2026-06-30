@@ -5,6 +5,8 @@ import { projectsRoutes } from '@/modules/projects/projectsRoutes'
 import { financeRoutes } from '@/modules/finance/financeRoutes'
 import { receivablesRoutes } from '@/modules/receivables/receivablesRoutes'
 import { commitmentsRoutes } from '@/modules/commitments/commitmentsRoutes'
+import { assetsRoutes } from '@/modules/assets/assetsRoutes'
+import { trackingsRoutes } from '@/modules/trackings/trackingsRoutes'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -36,6 +38,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/modules/commitments/CommitmentsModule.vue'),
     meta: { layout: 'default' },
     children: commitmentsRoutes,
+  },
+  {
+    path: '/assets',
+    component: () => import('@/modules/assets/AssetsModule.vue'),
+    meta: { layout: 'default' },
+    children: assetsRoutes,
+  },
+  {
+    path: '/trackings',
+    component: () => import('@/modules/trackings/TrackingsModule.vue'),
+    meta: { layout: 'default' },
+    children: trackingsRoutes,
   },
   {
     path: '/launcher',
