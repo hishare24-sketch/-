@@ -24,15 +24,26 @@ const helpEntry = computed(() => settingsStore.help.commitments)
 const kindTab = ref<'all' | CommitmentKind>('all')
 const search = ref('')
 const fProject = ref('all')
+const fStatus = ref('all')
+const sort = ref<'due' | 'amount'>('due')
 const projects = computed(() => projectsStore.projects)
 
 const filtered = computed(() =>
   commitments.value
     .filter((c) => (kindTab.value === 'all' ? true : c.kind === kindTab.value))
     .filter((c) => (fProject.value === 'all' ? true : c.projectId === fProject.value))
+    .filter((c) =>
+      fStatus.value === 'all'
+        ? true
+        : fStatus.value === 'active'
+          ? c.active && !commitmentDone(c)
+          : fStatus.value === 'done'
+            ? commitmentDone(c)
+            : !c.active,
+    )
     .filter((c) => (search.value.trim() === '' ? true : (c.name + (c.party ?? '')).includes(search.value.trim())))
     .slice()
-    .sort((a, b) => a.nextDue.localeCompare(b.nextDue)),
+    .sort((a, b) => (sort.value === 'amount' ? b.amount - a.amount : a.nextDue.localeCompare(b.nextDue))),
 )
 
 // الأثر الشهري التقديري (توحيد كل التزام نشط إلى أساس شهري)
@@ -114,6 +125,16 @@ function onPay(c: Commitment) {
       <select v-model="fProject" class="filters__select">
         <option value="all">كل المشاريع</option>
         <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+      </select>
+      <select v-model="fStatus" class="filters__select">
+        <option value="all">كل الحالات</option>
+        <option value="active">نشط</option>
+        <option value="paused">موقوف</option>
+        <option value="done">مكتمل</option>
+      </select>
+      <select v-model="sort" class="filters__select">
+        <option value="due">الأقرب استحقاقاً</option>
+        <option value="amount">الأعلى مبلغاً</option>
       </select>
     </div>
 

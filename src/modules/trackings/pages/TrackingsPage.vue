@@ -20,15 +20,19 @@ const helpEntry = computed(() => settingsStore.help.trackings)
 const statusTab = ref<'all' | TrackingStatus>('all')
 const search = ref('')
 const fProject = ref('all')
+const fType = ref('all')
+const sort = ref<'soonest' | 'latest'>('soonest')
 const projects = computed(() => projectsStore.projects)
+const trackingTypeOptions = computed(() => ['all', ...new Set(trackings.value.map((t) => t.type))])
 
 const filtered = computed(() =>
   trackings.value
     .filter((t) => (statusTab.value === 'all' ? true : t.status === statusTab.value))
     .filter((t) => (fProject.value === 'all' ? true : t.projectId === fProject.value))
+    .filter((t) => (fType.value === 'all' ? true : t.type === fType.value))
     .filter((t) => (search.value.trim() === '' ? true : t.name.includes(search.value.trim())))
     .slice()
-    .sort((a, b) => a.daysLeft - b.daysLeft),
+    .sort((a, b) => (sort.value === 'latest' ? b.daysLeft - a.daysLeft : a.daysLeft - b.daysLeft)),
 )
 
 const stats = computed(() => [
@@ -111,6 +115,13 @@ async function onDelete(t: Tracking) {
       <select v-model="fProject" class="filters__select">
         <option value="all">كل المشاريع</option>
         <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+      </select>
+      <select v-model="fType" class="filters__select">
+        <option v-for="ty in trackingTypeOptions" :key="ty" :value="ty">{{ ty === 'all' ? 'كل الأنواع' : ty }}</option>
+      </select>
+      <select v-model="sort" class="filters__select">
+        <option value="soonest">الأقرب انتهاءً</option>
+        <option value="latest">الأبعد انتهاءً</option>
       </select>
     </div>
 

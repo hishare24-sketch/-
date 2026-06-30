@@ -7,12 +7,33 @@ const auditStore = useAuditStore()
 const { entries } = storeToRefs(auditStore)
 
 const search = ref('')
+const fAction = ref('all')
+const fUser = ref('all')
+const sort = ref<'newest' | 'oldest'>('newest')
+
+const actionOptions = computed(() => ['all', ...new Set(entries.value.map((e) => e.action))])
+const userOptions = computed(() => ['all', ...new Set(entries.value.map((e) => e.user))])
+
+const hasFilter = computed(() => fAction.value !== 'all' || fUser.value !== 'all' || sort.value !== 'newest' || search.value !== '')
+function clearFilters() {
+  fAction.value = 'all'
+  fUser.value = 'all'
+  sort.value = 'newest'
+  search.value = ''
+}
+
 const filtered = computed(() =>
-  entries.value.filter((e) =>
-    search.value.trim() === ''
-      ? true
-      : (e.action + e.entity + e.detail + e.user).includes(search.value.trim()),
-  ),
+  entries.value
+    .filter((e) => (fAction.value === 'all' ? true : e.action === fAction.value))
+    .filter((e) => (fUser.value === 'all' ? true : e.user === fUser.value))
+    .filter((e) =>
+      search.value.trim() === '' ? true : (e.action + e.entity + e.detail + e.user).includes(search.value.trim()),
+    )
+    .slice()
+    .sort((a, b) => {
+      const order = a.ts.localeCompare(b.ts)
+      return sort.value === 'newest' ? -order : order
+    }),
 )
 
 const actionColor: Record<string, string> = {
@@ -37,7 +58,20 @@ const colorOf = (a: string) => actionColor[a] ?? '#6b7280'
       </div>
     </header>
 
-    <input v-model="search" type="text" placeholder="🔍 بحث في السجل..." class="search" />
+    <div class="filters">
+      <input v-model="search" type="text" placeholder="🔍 بحث في السجل..." class="filters__search" />
+      <select v-model="fAction" class="filters__select">
+        <option v-for="a in actionOptions" :key="a" :value="a">{{ a === 'all' ? 'كل الإجراءات' : a }}</option>
+      </select>
+      <select v-model="fUser" class="filters__select">
+        <option v-for="u in userOptions" :key="u" :value="u">{{ u === 'all' ? 'كل المستخدمين' : u }}</option>
+      </select>
+      <select v-model="sort" class="filters__select">
+        <option value="newest">الأحدث أولاً</option>
+        <option value="oldest">الأقدم أولاً</option>
+      </select>
+      <button v-if="hasFilter" class="app-btn app-btn--ghost" @click="clearFilters">مسح</button>
+    </div>
 
     <div class="app-card timeline">
       <div v-if="!filtered.length" class="empty">لا توجد سجلات مطابقة.</div>
@@ -68,15 +102,33 @@ const colorOf = (a: string) => actionColor[a] ?? '#6b7280'
   }
 }
 
-.search {
-  inline-size: 100%;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-  font-size: 14px;
+.filters {
+  display: flex;
+  gap: 8px;
   margin-block-end: 16px;
-  &:focus { outline: none; border-color: var(--primary); }
+  flex-wrap: wrap;
+
+  &__search {
+    flex: 1;
+    min-inline-size: 160px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 14px;
+    &:focus { outline: none; border-color: var(--primary); }
+  }
+
+  &__select {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
 }
 
 .timeline {

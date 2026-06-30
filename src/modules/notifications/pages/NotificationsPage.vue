@@ -12,8 +12,35 @@ const projectsStore = useProjectsStore()
 const { notifs } = storeToRefs(notificationsStore)
 
 const filter = ref<'all' | 'unread'>('all')
+const fType = ref('all')
+const sort = ref<'newest' | 'oldest'>('newest')
+const search = ref('')
+
+const typeOptions = [
+  { v: 'all', l: 'كل الأنواع' },
+  { v: 'danger', l: '🔴 خطر' },
+  { v: 'warning', l: '🟠 تحذير' },
+  { v: 'success', l: '🟢 نجاح' },
+  { v: 'info', l: '🔵 معلومة' },
+]
+
+const hasFilter = computed(() => fType.value !== 'all' || sort.value !== 'newest' || search.value !== '')
+function clearFilters() {
+  fType.value = 'all'
+  sort.value = 'newest'
+  search.value = ''
+}
+
 const filtered = computed(() =>
-  notifs.value.filter((n) => (filter.value === 'unread' ? !n.read : true)),
+  notifs.value
+    .filter((n) => (filter.value === 'unread' ? !n.read : true))
+    .filter((n) => (fType.value === 'all' ? true : n.type === fType.value))
+    .filter((n) => (search.value.trim() === '' ? true : (n.title + n.body).includes(search.value.trim())))
+    .slice()
+    .sort((a, b) => {
+      const order = (a.ts ?? '').localeCompare(b.ts ?? '')
+      return sort.value === 'newest' ? -order : order
+    }),
 )
 
 const typeMeta: Record<string, { icon: string; color: string; bg: string }> = {
@@ -60,6 +87,18 @@ function openNotif(n: Notif) {
       <button class="tabs__btn" :class="{ 'is-active': filter === 'unread' }" @click="filter = 'unread'">
         غير المقروءة
       </button>
+    </div>
+
+    <div class="filters">
+      <input v-model="search" type="text" placeholder="🔍 بحث في الإشعارات..." class="filters__search" />
+      <select v-model="fType" class="filters__select">
+        <option v-for="o in typeOptions" :key="o.v" :value="o.v">{{ o.l }}</option>
+      </select>
+      <select v-model="sort" class="filters__select">
+        <option value="newest">الأحدث أولاً</option>
+        <option value="oldest">الأقدم أولاً</option>
+      </select>
+      <button v-if="hasFilter" class="app-btn app-btn--ghost" @click="clearFilters">مسح</button>
     </div>
 
     <div class="list">
@@ -121,6 +160,35 @@ function openNotif(n: Notif) {
     font-weight: 500;
 
     &.is-active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  }
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  margin-block-end: 16px;
+  flex-wrap: wrap;
+
+  &__search {
+    flex: 1;
+    min-inline-size: 160px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 14px;
+    &:focus { outline: none; border-color: var(--primary); }
+  }
+
+  &__select {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
   }
 }
 

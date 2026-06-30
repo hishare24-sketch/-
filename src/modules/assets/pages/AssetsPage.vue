@@ -20,13 +20,24 @@ const { activeProjectId } = storeToRefs(projectsStore)
 const catTab = ref<'all' | AssetCategory>('all')
 const search = ref('')
 const fProject = ref('all')
+const fStatus = ref('all')
+const sort = ref<'newest' | 'valueHigh' | 'valueLow'>('newest')
 const projects = computed(() => projectsStore.projects)
 
 const filtered = computed(() =>
   assets.value
     .filter((a) => (catTab.value === 'all' ? true : a.category === catTab.value))
     .filter((a) => (fProject.value === 'all' ? true : a.projectId === fProject.value))
-    .filter((a) => (search.value.trim() === '' ? true : a.name.includes(search.value.trim()))),
+    .filter((a) => (fStatus.value === 'all' ? true : a.status === fStatus.value))
+    .filter((a) => (search.value.trim() === '' ? true : a.name.includes(search.value.trim())))
+    .slice()
+    .sort((a, b) =>
+      sort.value === 'valueHigh'
+        ? b.purchaseValue - a.purchaseValue
+        : sort.value === 'valueLow'
+          ? a.purchaseValue - b.purchaseValue
+          : b.purchaseDate.localeCompare(a.purchaseDate),
+    ),
 )
 
 const totalValue = computed(() => assets.value.reduce((s, a) => s + a.purchaseValue, 0))
@@ -90,6 +101,17 @@ async function onDelete(a: Asset) {
       <select v-model="fProject" class="filters__select">
         <option value="all">كل المشاريع</option>
         <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+      </select>
+      <select v-model="fStatus" class="filters__select">
+        <option value="all">كل الحالات</option>
+        <option value="active">نشط</option>
+        <option value="maintenance">تحت الصيانة</option>
+        <option value="retired">مستبعَد</option>
+      </select>
+      <select v-model="sort" class="filters__select">
+        <option value="newest">الأحدث شراءً</option>
+        <option value="valueHigh">الأعلى قيمة</option>
+        <option value="valueLow">الأقل قيمة</option>
       </select>
     </div>
 

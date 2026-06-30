@@ -21,6 +21,27 @@ const stats = computed(() => [
   { label: 'إجمالي الردود', value: String(surveys.value.reduce((s, sv) => s + sv.responses.length, 0)), icon: '💬', color: '#7e22ce', bg: '#faf5ff' },
 ])
 
+// الفلاتر والفرز
+const search = ref('')
+const fStatus = ref('all')
+const sort = ref<'newest' | 'responses'>('newest')
+
+const visibleSurveys = computed(() =>
+  surveys.value
+    .filter((s) => (fStatus.value === 'all' ? true : s.status === fStatus.value))
+    .filter((s) => (search.value.trim() === '' ? true : s.title.includes(search.value.trim())))
+    .slice()
+    .sort((a, b) =>
+      sort.value === 'responses' ? b.responses.length - a.responses.length : b.createdAt.localeCompare(a.createdAt),
+    ),
+)
+const hasFilter = computed(() => fStatus.value !== 'all' || sort.value !== 'newest' || search.value !== '')
+function clearFilters() {
+  fStatus.value = 'all'
+  sort.value = 'newest'
+  search.value = ''
+}
+
 const tplIcon = (type: string) => SURVEY_TEMPLATES.find((t) => t.id === type)?.icon ?? '📋'
 
 function statusInfo(s: Survey['status']) {
@@ -74,9 +95,24 @@ async function onDelete(s: Survey) {
       </div>
     </div>
 
+    <div class="filters">
+      <input v-model="search" type="text" placeholder="🔍 بحث في الاستبيانات..." class="filters__search" />
+      <select v-model="fStatus" class="filters__select">
+        <option value="all">كل الحالات</option>
+        <option value="active">نشط</option>
+        <option value="closed">مغلق</option>
+        <option value="draft">مسودة</option>
+      </select>
+      <select v-model="sort" class="filters__select">
+        <option value="newest">الأحدث</option>
+        <option value="responses">الأكثر ردوداً</option>
+      </select>
+      <button v-if="hasFilter" class="app-btn app-btn--ghost" @click="clearFilters">مسح</button>
+    </div>
+
     <div class="grid">
-      <div v-if="!surveys.length" class="empty app-card">لا توجد استبيانات. أنشئ واحداً من قالب جاهز.</div>
-      <div v-for="s in surveys" :key="s.id" class="survey app-card">
+      <div v-if="!visibleSurveys.length" class="empty app-card">لا توجد استبيانات مطابقة.</div>
+      <div v-for="s in visibleSurveys" :key="s.id" class="survey app-card">
         <div class="survey__top">
           <span class="survey__icon">{{ tplIcon(s.surveyType) }}</span>
           <span class="survey__status" :style="{ background: statusInfo(s.status).bg, color: statusInfo(s.status).c }">
@@ -143,6 +179,35 @@ async function onDelete(s: Survey) {
   &__label { display: block; font-size: 12px; color: var(--text-muted); margin-block-end: 6px; }
   &__value { font-size: 17px; font-weight: 700; }
   &__icon { inline-size: 42px; block-size: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 19px; }
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  margin-block-end: 16px;
+  flex-wrap: wrap;
+
+  &__search {
+    flex: 1;
+    min-inline-size: 160px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 14px;
+    &:focus { outline: none; border-color: var(--primary); }
+  }
+
+  &__select {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
 }
 
 .grid {

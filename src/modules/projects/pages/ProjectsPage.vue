@@ -18,6 +18,33 @@ const { projects } = storeToRefs(projectsStore)
 
 const helpEntry = computed(() => settingsStore.help.projects)
 
+// الفلاتر والفرز
+const search = ref('')
+const fType = ref('all')
+const sort = ref<'name' | 'balanceHigh' | 'balanceLow'>('name')
+
+const projectTypes = computed(() => ['all', ...new Set(projects.value.map((p) => p.type).filter(Boolean) as string[])])
+
+const visibleProjects = computed(() =>
+  projects.value
+    .filter((p) => (fType.value === 'all' ? true : p.type === fType.value))
+    .filter((p) => (search.value.trim() === '' ? true : p.name.includes(search.value.trim())))
+    .slice()
+    .sort((a, b) =>
+      sort.value === 'name'
+        ? a.name.localeCompare(b.name)
+        : sort.value === 'balanceHigh'
+          ? financeStore.balanceOf(b.id) - financeStore.balanceOf(a.id)
+          : financeStore.balanceOf(a.id) - financeStore.balanceOf(b.id),
+    ),
+)
+const hasFilter = computed(() => fType.value !== 'all' || sort.value !== 'name' || search.value !== '')
+function clearFilters() {
+  fType.value = 'all'
+  sort.value = 'name'
+  search.value = ''
+}
+
 const stats = computed(() => {
   const totalBalance = projects.value.reduce((s, p) => s + financeStore.balanceOf(p.id), 0)
   const income = financeStore.transactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
@@ -91,8 +118,22 @@ async function onDelete(p: Project) {
       </div>
     </div>
 
+    <div class="filters">
+      <input v-model="search" type="text" placeholder="🔍 بحث عن مشروع..." class="filters__search" />
+      <select v-model="fType" class="filters__select">
+        <option v-for="t in projectTypes" :key="t" :value="t">{{ t === 'all' ? 'كل الأنواع' : t }}</option>
+      </select>
+      <select v-model="sort" class="filters__select">
+        <option value="name">الاسم (أ-ي)</option>
+        <option value="balanceHigh">الأعلى رصيداً</option>
+        <option value="balanceLow">الأقل رصيداً</option>
+      </select>
+      <button v-if="hasFilter" class="app-btn app-btn--ghost" @click="clearFilters">مسح</button>
+    </div>
+
     <div class="projects__grid">
-      <div v-for="p in projects" :key="p.id" class="project-card app-card">
+      <div v-if="!visibleProjects.length" class="empty app-card">لا توجد مشاريع مطابقة.</div>
+      <div v-for="p in visibleProjects" :key="p.id" class="project-card app-card">
         <div class="project-card__top">
           <span class="project-card__avatar" :style="{ background: p.color + '20' }">{{ p.icon }}</span>
           <div class="project-card__title">
@@ -174,6 +215,42 @@ async function onDelete(p: Project) {
     grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
     gap: 18px;
   }
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  margin-block-end: 16px;
+  flex-wrap: wrap;
+
+  &__search {
+    flex: 1;
+    min-inline-size: 160px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 14px;
+    &:focus { outline: none; border-color: var(--primary); }
+  }
+
+  &__select {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+}
+
+.empty {
+  grid-column: 1 / -1;
+  padding: 30px;
+  text-align: center;
+  color: var(--text-muted);
 }
 
 .help-note {

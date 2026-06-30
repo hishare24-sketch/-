@@ -27,6 +27,8 @@ const helpEntry = computed(() => settingsStore.help.documents)
 const typeTab = ref('all')
 const search = ref('')
 const fProject = ref('all')
+const fStatus = ref('all')
+const sort = ref<'newest' | 'oldest' | 'name'>('newest')
 const projects = computed(() => projectsStore.projects)
 
 const types = computed(() => ['all', ...new Set(documents.value.map((d) => d.type))])
@@ -35,9 +37,12 @@ const filtered = computed(() =>
   documents.value
     .filter((d) => (typeTab.value === 'all' ? true : d.type === typeTab.value))
     .filter((d) => (fProject.value === 'all' ? true : d.projectId === fProject.value))
+    .filter((d) => (fStatus.value === 'all' ? true : fStatus.value === 'processed' ? d.aiRead : !d.aiRead))
     .filter((d) => (search.value.trim() === '' ? true : d.name.includes(search.value.trim())))
     .slice()
-    .sort((a, b) => b.date.localeCompare(a.date)),
+    .sort((a, b) =>
+      sort.value === 'name' ? a.name.localeCompare(b.name) : sort.value === 'oldest' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date),
+    ),
 )
 
 const stats = computed(() => [
@@ -116,6 +121,16 @@ async function onDelete(d: DocItem) {
       <select v-model="fProject" class="filters__select">
         <option value="all">كل المشاريع</option>
         <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+      </select>
+      <select v-model="fStatus" class="filters__select">
+        <option value="all">كل الحالات</option>
+        <option value="processed">معالَج</option>
+        <option value="pending">قيد المعالجة</option>
+      </select>
+      <select v-model="sort" class="filters__select">
+        <option value="newest">الأحدث</option>
+        <option value="oldest">الأقدم</option>
+        <option value="name">الاسم</option>
       </select>
     </div>
 
