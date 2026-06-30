@@ -105,3 +105,135 @@ a {
     color: var(--text-muted);
   }
 }
+
+// منع التمرير الأفقي غير المقصود على الجوال
+html,
+body {
+  overflow-x: hidden;
+}
+
+// ═══════════════════════════════════════════
+//  ضبط الريسبونس العام للجوال (يطبّق على كل الشاشات)
+//  يستخدم !important لتجاوز الأنماط المحلية (scoped) عند الحاجة
+// ═══════════════════════════════════════════
+@media (max-width: 640px) {
+  // عناوين الصفحات أصغر
+  h1 {
+    font-size: 19px !important;
+  }
+
+  // ترويسة كل صفحة: تتراص عمودياً والعناصر بعرض كامل
+  [class$='__header'] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  // مجموعات التحكم في الترويسات (محددات الفترة/المشروع وأزرار الإضافة) بعرض كامل
+  [class$='__controls'] {
+    inline-size: 100%;
+    flex-wrap: wrap;
+
+    > * {
+      flex: 1 1 auto;
+    }
+  }
+
+  // زر الإضافة المنفرد في الترويسة يمتد بعرض كامل
+  [class$='__header'] > .app-btn {
+    inline-size: 100%;
+  }
+
+  // بطاقات الإحصائيات: عمودان مدمجان بدل عمود واحد عريض
+  [class$='__stats'] {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  .stat {
+    padding: 12px !important;
+    gap: 8px !important;
+  }
+
+  .stat__value,
+  .stat__icon ~ div .stat__value {
+    font-size: 14px !important;
+    word-break: break-word;
+  }
+
+  .stat__label {
+    font-size: 11px !important;
+  }
+
+  .stat__icon {
+    inline-size: 34px !important;
+    block-size: 34px !important;
+    font-size: 16px !important;
+  }
+
+  // التبويبات: تمرير أفقي بدل الالتفاف المزدحم
+  .tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    &__btn {
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+  }
+
+  // أشرطة الفلاتر: كل عنصر بعرض مناسب
+  .filters {
+    &__search {
+      flex: 1 1 100% !important;
+    }
+
+    &__select,
+    select {
+      flex: 1 1 calc(50% - 4px);
+    }
+  }
+
+  // شبكات البطاقات: عمود واحد
+  .grid,
+  [class$='__grid'] {
+    grid-template-columns: 1fr !important;
+  }
+
+  // الجداول: خط أصغر مع تمرير أفقي
+  table {
+    font-size: 12px !important;
+  }
+
+  // النماذج (المودالات): مساحة أنسب
+  .modal-overlay,
+  .cm-overlay,
+  .help-overlay {
+    padding: 12px !important;
+    align-items: flex-start !important;
+  }
+
+  .modal__body {
+    padding: 16px !important;
+  }
+
+  // عنوان الشريط العلوي لا يزدحم
+  .navbar__title {
+    font-size: 12.5px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// شاشات صغيرة جداً: بطاقة إحصائية واحدة بالعرض الكامل تبقى مقروءة
+@media (max-width: 360px) {
+  [class$='__stats'] {
+    grid-template-columns: 1fr !important;
+  }
+}
