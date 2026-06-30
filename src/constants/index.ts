@@ -161,6 +161,91 @@ export const FREQ_LABEL: Record<CommitmentFreq, string> = {
   yearly: 'سنوي',
 }
 
+// باقات الاشتراك (مجانية + 3 مدفوعة) — الأسعار بالريال السعودي
+export interface PricingPlan {
+  id: string
+  name: string
+  tagline: string
+  monthly: number
+  yearly: number // = شهري × 10 (شهران مجاناً)
+  color: string
+  tag?: string
+  features: string[]
+}
+
+export const PRICING_PLANS: PricingPlan[] = [
+  {
+    id: 'free',
+    name: 'المجانية',
+    tagline: 'للبدء وتجربة النظام',
+    monthly: 0,
+    yearly: 0,
+    color: '#6b7280',
+    features: [
+      'مشروع واحد',
+      'حتى 3 أعضاء',
+      'الإدارة المالية الأساسية',
+      'حتى 50 عملية شهرياً',
+      'المتابعات والمستندات (محدودة)',
+      'دعم مجتمعي',
+    ],
+  },
+  {
+    id: 'basic',
+    name: 'الأساسية',
+    tagline: 'للمشاريع الصغيرة والأفراد',
+    monthly: 49,
+    yearly: 490,
+    color: '#0891b2',
+    features: [
+      'حتى 3 مشاريع',
+      'حتى 10 أعضاء',
+      'كل الموديولات الأساسية',
+      'الذمم والالتزامات والأصول',
+      'تصدير Excel',
+      'سجل العمليات',
+      'دعم عبر البريد',
+    ],
+  },
+  {
+    id: 'pro',
+    name: 'الاحترافية',
+    tagline: 'للشركات النامية',
+    monthly: 99,
+    yearly: 990,
+    color: '#2563eb',
+    tag: 'الأكثر شيوعاً',
+    features: [
+      'مشاريع غير محدودة',
+      'حتى 25 عضواً',
+      'الاستبيانات الاحترافية',
+      'تحليل المستندات بالذكاء الاصطناعي',
+      'تصدير Excel و PDF',
+      'سجل تدقيق كامل',
+      'تخصيص الثيم والألوان',
+      'دعم ذو أولوية',
+    ],
+  },
+  {
+    id: 'business',
+    name: 'الأعمال',
+    tagline: 'للمؤسسات والفرق الكبيرة',
+    monthly: 199,
+    yearly: 1990,
+    color: '#7c3aed',
+    features: [
+      'كل ميزات الاحترافية',
+      'أعضاء غير محدودين',
+      'صلاحيات وأدوار متقدمة',
+      'تكاملات خارجية (API / Webhook)',
+      'روابط مشاركة عامة',
+      'مدير حساب مخصّص',
+      'نسخ احتياطي تلقائي',
+      'دعم 24/7',
+    ],
+  },
+]
+
 // قائمة كل الشاشات (لاختيار الشاشة عند إضافة شرح)
 export const SCREENS: { id: string; label: string }[] = [
   { id: 'dashboard', label: 'لوحة التحكم' },

@@ -16,6 +16,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: true, // يتيح الوصول من أي جهاز/متصفح على نفس الشبكة عبر IP الجهاز
     port: 5173,
   },
 })

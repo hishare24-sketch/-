@@ -23,6 +23,8 @@ export const useSettingsStore = defineStore('settings', {
     help: JSON.parse(JSON.stringify(DEFAULT_HELP)) as HelpTexts,
     themeMode: 'light' as ThemeMode,
     customTheme: {} as CustomTheme,
+    currentPlan: 'free' as string,
+    billing: 'monthly' as 'monthly' | 'yearly',
   }),
 
   getters: {
@@ -63,6 +65,14 @@ export const useSettingsStore = defineStore('settings', {
     },
     removeHelp(key: HelpKey) {
       delete this.help[key]
+    },
+
+    // ── الاشتراك ──
+    setPlan(planId: string) {
+      this.currentPlan = planId
+    },
+    setBilling(cycle: 'monthly' | 'yearly') {
+      this.billing = cycle
     },
 
     // ── الثيم ──

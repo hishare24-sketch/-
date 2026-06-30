@@ -2,12 +2,12 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSettingsStore, type CustomTheme } from '@/stores/SettingsStore'
-import { THEME_PRESETS, SCREENS } from '@/constants'
+import { THEME_PRESETS, SCREENS, PRICING_PLANS } from '@/constants'
 import type { CustomLists, UserPrefs } from '@/interfaces/models'
 import ToggleActivationSwitch from '@/components/shared/ToggleActivationSwitch.vue'
 
 const settingsStore = useSettingsStore()
-const { prefs, lists, help, themeMode, customTheme, hasCustomTheme } = storeToRefs(settingsStore)
+const { prefs, lists, help, themeMode, customTheme, hasCustomTheme, currentPlan, billing } = storeToRefs(settingsStore)
 
 // حقول الألوان الدقيقة
 const colorFields: { key: keyof CustomTheme; label: string; fallback: string }[] = [
@@ -230,18 +230,62 @@ const integrations = [
           </div>
         </div>
 
-        <!-- الاشتراك -->
-        <div v-else class="app-card panel subscription">
-          <span class="subscription__badge">الباقة الحالية</span>
-          <h2>الباقة الاحترافية</h2>
-          <p class="muted">مشاريع غير محدودة · كل الموديولات · تصدير Excel/PDF · دعم أولوية</p>
-          <ul class="subscription__features">
-            <li>✅ مشاريع وأعضاء بلا حدود</li>
-            <li>✅ الذمم والالتزامات والأصول</li>
-            <li>✅ الاستبيانات والتقارير</li>
-            <li>✅ سجل تدقيق كامل</li>
-          </ul>
-          <button class="app-btn">إدارة الاشتراك</button>
+        <!-- الاشتراك والباقات -->
+        <div v-else class="plans">
+          <!-- مبدّل الفوترة -->
+          <div class="billing">
+            <button class="billing__btn" :class="{ 'is-active': billing === 'monthly' }" @click="settingsStore.setBilling('monthly')">شهري</button>
+            <button class="billing__btn" :class="{ 'is-active': billing === 'yearly' }" @click="settingsStore.setBilling('yearly')">
+              سنوي <span class="billing__save">وفّر شهرين</span>
+            </button>
+          </div>
+
+          <div class="plans__grid">
+            <div
+              v-for="plan in PRICING_PLANS"
+              :key="plan.id"
+              class="plan app-card"
+              :class="{ 'is-current': plan.id === currentPlan, 'is-featured': !!plan.tag }"
+              :style="plan.tag ? { borderColor: plan.color } : {}"
+            >
+              <span v-if="plan.tag" class="plan__tag" :style="{ background: plan.color }">{{ plan.tag }}</span>
+
+              <span class="plan__name" :style="{ color: plan.color }">{{ plan.name }}</span>
+              <span class="plan__tagline">{{ plan.tagline }}</span>
+
+              <div class="plan__price">
+                <template v-if="(billing === 'monthly' ? plan.monthly : plan.yearly) === 0">
+                  <span class="plan__amount">مجاناً</span>
+                </template>
+                <template v-else>
+                  <span class="plan__amount">{{ billing === 'monthly' ? plan.monthly : plan.yearly }}</span>
+                  <span class="plan__unit">ر.س / {{ billing === 'monthly' ? 'شهر' : 'سنة' }}</span>
+                </template>
+              </div>
+
+              <ul class="plan__features">
+                <li v-for="f in plan.features" :key="f">✓ {{ f }}</li>
+              </ul>
+
+              <button
+                v-if="plan.id === currentPlan"
+                class="app-btn app-btn--outlined plan__btn"
+                disabled
+              >
+                ✓ باقتك الحالية
+              </button>
+              <button
+                v-else
+                class="app-btn plan__btn"
+                :style="{ background: plan.color }"
+                @click="settingsStore.setPlan(plan.id)"
+              >
+                {{ plan.monthly === 0 ? 'التحويل للمجانية' : 'الترقية' }}
+              </button>
+            </div>
+          </div>
+
+          <p class="plans__note">💳 الدفع آمن · يمكنك تغيير أو إلغاء باقتك في أي وقت · الأسعار شاملة ضريبة القيمة المضافة.</p>
         </div>
       </div>
     </div>
@@ -601,26 +645,107 @@ const integrations = [
   &__desc { font-size: 12px; color: var(--text-muted); }
 }
 
-.subscription {
-  &__badge {
-    display: inline-block;
-    background: var(--primary-soft);
-    color: var(--primary);
-    font-size: 12px;
-    font-weight: 600;
-    padding: 4px 14px;
-    border-radius: 20px;
-    margin-block-end: 12px;
+// ── الباقات ──
+.plans {
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
   }
+
+  &__note {
+    margin-block-start: 18px;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+}
+
+.billing {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 4px;
+  margin-block-end: 20px;
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.is-active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  }
+
+  &__save {
+    font-size: 11px;
+    background: #ecfdf5;
+    color: #059669;
+    padding: 1px 8px;
+    border-radius: 20px;
+  }
+}
+
+.plan {
+  position: relative;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+
+  &.is-featured { border-width: 2px; }
+  &.is-current { background: var(--primary-soft); }
+
+  &__tag {
+    position: absolute;
+    inset-block-start: -10px;
+    inset-inline-start: 50%;
+    transform: translateX(50%);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 14px;
+    border-radius: 20px;
+  }
+
+  &__name { font-size: 18px; font-weight: 800; }
+  &__tagline { font-size: 12px; color: var(--text-muted); margin-block-end: 16px; }
+
+  &__price {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-block-end: 18px;
+    padding-block-end: 16px;
+    border-block-end: 1px solid var(--border);
+  }
+
+  &__amount { font-size: 30px; font-weight: 800; }
+  &__unit { font-size: 12px; color: var(--text-muted); }
 
   &__features {
     list-style: none;
-    margin-block: 16px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 9px;
+    flex: 1;
+    margin-block-end: 18px;
 
-    li { font-size: 14px; }
+    li { font-size: 13px; color: var(--text); }
+  }
+
+  &__btn {
+    inline-size: 100%;
+
+    &:disabled { opacity: 0.7; cursor: default; }
   }
 }
 </style>

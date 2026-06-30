@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useNotificationsStore } from '@/stores/NotificationsStore'
 import { useTasks } from '@/modules/tasks/composables/useTasks'
 import themeConfig from '@themeConfig'
 
 const { t } = useI18n()
+const router = useRouter()
+
+// رجوع للشاشة السابقة (عام لكل الشاشات)
+function goBack() {
+  if (window.history.length > 1) router.back()
+  else router.push({ name: 'dashboard-page' })
+}
 
 const collapsed = ref(false)
 const mobileOpen = ref(false)
@@ -69,6 +77,10 @@ const navItems = computed(() => [
     <div class="content-wrapper">
       <header class="navbar">
         <button class="navbar__toggle" @click="toggleNav">☰</button>
+        <button class="navbar__back" title="رجوع للخلف" @click="goBack">
+          <span class="navbar__back-arrow">›</span>
+          <span class="navbar__back-text">رجوع</span>
+        </button>
         <div class="navbar__title">{{ t('app.subtitle') }}</div>
         <div class="navbar__spacer" />
         <RouterLink :to="{ name: 'notifications-page' }" class="navbar__bell" title="الإشعارات">
@@ -202,6 +214,31 @@ const navItems = computed(() => [
     color: var(--text-muted);
   }
 
+  &__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+
+    &:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    &-arrow {
+      font-size: 16px;
+      line-height: 1;
+    }
+  }
+
   &__title {
     font-weight: 600;
     color: var(--text);
@@ -282,7 +319,8 @@ const navItems = computed(() => [
     padding: 0 14px;
   }
 
-  .navbar__user {
+  .navbar__user,
+  .navbar__back-text {
     display: none;
   }
 }
