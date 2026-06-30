@@ -1,0 +1,82 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+
+// نافذة تأكيد عامة (للحذف وغيره) — تُستدعى عبر ref
+const isOpen = ref(false)
+const title = ref('تأكيد')
+const message = ref('')
+let resolver: ((ok: boolean) => void) | null = null
+
+function open(opts: { title?: string; message: string }): Promise<boolean> {
+  title.value = opts.title ?? 'تأكيد'
+  message.value = opts.message
+  isOpen.value = true
+  return new Promise((resolve) => {
+    resolver = resolve
+  })
+}
+
+function close(ok: boolean) {
+  isOpen.value = false
+  resolver?.(ok)
+  resolver = null
+}
+
+defineExpose({ open })
+</script>
+
+<template>
+  <Teleport to="body">
+    <div v-if="isOpen" class="cm-overlay" @click.self="close(false)">
+      <div class="cm-dialog app-card">
+        <h3 class="cm-title">{{ title }}</h3>
+        <p class="cm-message">{{ message }}</p>
+        <div class="cm-actions">
+          <button class="app-btn app-btn--ghost" @click="close(false)">إلغاء</button>
+          <button class="app-btn cm-danger" @click="close(true)">تأكيد</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+</template>
+
+<style lang="scss" scoped>
+.cm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.cm-dialog {
+  inline-size: 100%;
+  max-inline-size: 380px;
+  padding: 24px;
+}
+
+.cm-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin-block-end: 8px;
+}
+
+.cm-message {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-block-end: 20px;
+}
+
+.cm-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.cm-danger {
+  background: var(--error);
+}
+</style>

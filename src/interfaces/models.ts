@@ -1,0 +1,318 @@
+// ═══════════════════════════════════════════
+//  نماذج البيانات المشتركة (منقولة من legacy/App.tsx)
+//  المصدر الموحّد لأنواع الكيانات — تستوردها الموديولات
+// ═══════════════════════════════════════════
+
+export type TxType = 'income' | 'expense' | 'transfer'
+export type TrackingStatus = 'active' | 'expiring' | 'expired'
+export type RequestStatus = 'pending' | 'approved' | 'rejected'
+
+// مرفق موحّد (صورة/ملف) — المعاينة في الجلسة، الرفع الفعلي عبر backend لاحقاً
+export interface Attachment {
+  id: string
+  name: string
+  kind: 'image' | 'file'
+  size: string
+  preview?: string
+  fileType?: string
+  uploadDate?: string
+}
+
+export interface Project {
+  id: string
+  name: string
+  icon: string
+  balance: number
+  color: string
+  type?: string
+  description?: string
+  image?: string
+  gallery?: string[]
+}
+
+export type MemberRole = 'owner' | 'manager' | 'member' | 'viewer'
+
+export interface Member {
+  id: string
+  projectId: string
+  name: string
+  email: string
+  role: MemberRole
+  permissions: string[]
+  balance?: number
+  status?: 'active' | 'invited'
+  image?: string
+}
+
+// حركات عهد/تسوية الأعضاء (طلب → قبول/رفض)
+export type MemberTxnType =
+  | 'custody'
+  | 'settlement'
+  | 'expense'
+  | 'deduction'
+  | 'supply'
+  | 'bonus'
+  | 'advance'
+  | 'salary'
+export type MemberTxnStatus = 'pending' | 'accepted' | 'rejected'
+
+export interface MemberTxn {
+  id: string
+  projectId: string
+  memberId: string
+  type: MemberTxnType
+  amount: number
+  note?: string
+  date: string
+  status: MemberTxnStatus
+  direction: 'to_member' | 'from_member'
+  attachments?: Attachment[]
+  createdBy?: string
+}
+
+// الذمم (مدينة/دائنة)
+export type ReceivableKind = 'receivable' | 'payable'
+export type ReceivableStatus = 'open' | 'partial' | 'settled'
+
+export interface ReceivablePayment {
+  id: string
+  amount: number
+  date: string
+  note?: string
+  createdBy?: string
+}
+
+export interface Receivable {
+  id: string
+  projectId: string
+  kind: ReceivableKind
+  party: string
+  memberId?: string
+  amount: number
+  dueDate?: string
+  date: string
+  status: ReceivableStatus
+  payments: ReceivablePayment[]
+  note?: string
+  attachments?: Attachment[]
+  createdBy?: string
+}
+
+// الالتزامات الدورية (أقساط/التزامات/اشتراكات)
+export type CommitmentKind = 'installment' | 'obligation' | 'subscription'
+export type CommitmentFreq = 'monthly' | 'quarterly' | 'yearly' | 'weekly'
+export type CommitmentDir = 'out' | 'in'
+
+export interface CommitmentPayment {
+  id: string
+  amount: number
+  date: string
+  dueLabel: string
+  createdBy?: string
+}
+
+export interface Commitment {
+  id: string
+  projectId: string
+  kind: CommitmentKind
+  direction: CommitmentDir
+  name: string
+  party?: string
+  memberId?: string
+  amount: number
+  freq: CommitmentFreq
+  startDate: string
+  totalCount?: number
+  paidCount: number
+  nextDue: string
+  active: boolean
+  payments: CommitmentPayment[]
+  note?: string
+  attachments?: Attachment[]
+  createdBy?: string
+}
+
+// الأصول الملموسة
+export type AssetCategory = 'vehicle' | 'device' | 'equipment' | 'furniture' | 'property' | 'other'
+
+export interface MaintenanceEntry {
+  id: string
+  date: string
+  type: 'صيانة' | 'عطل' | 'فحص'
+  cost: number
+  note: string
+  createdBy?: string
+  attachments?: Attachment[]
+}
+
+export interface Asset {
+  id: string
+  projectId: string
+  name: string
+  category: AssetCategory
+  purchaseDate: string
+  purchaseValue: number
+  supplier?: string
+  warrantyEnd?: string
+  serial?: string
+  usageMeter?: number
+  usageUnit?: string
+  status: 'active' | 'maintenance' | 'retired'
+  memberId?: string
+  maintenance: MaintenanceEntry[]
+  note?: string
+  attachments?: Attachment[]
+  createdBy?: string
+}
+
+export interface Transaction {
+  id: string
+  projectId: string
+  type: TxType
+  description: string
+  amount: number
+  category: string
+  date: string
+  hasDoc: boolean
+  note?: string
+  toProject?: string
+  transferDir?: 'out' | 'in'
+  linkId?: string
+  source?: string
+  memberId?: string
+  attachments?: Attachment[]
+  createdBy?: string
+}
+
+export interface Tracking {
+  id: string
+  name: string
+  type: string
+  icon: string
+  status: TrackingStatus
+  daysLeft: number
+  expiryDate: string
+  projectId: string
+  note?: string
+  memberId?: string
+  attachments?: Attachment[]
+  createdBy?: string
+}
+
+export interface RequestItem {
+  id: string
+  title: string
+  amount: number
+  requestedBy: string
+  status: RequestStatus
+  date: string
+  type: string
+  projectId: string
+  note?: string
+  memberId?: string
+  attachments?: Attachment[]
+  createdBy?: string
+}
+
+export interface DocItem {
+  id: string
+  name: string
+  type: string
+  date: string
+  size: string
+  status: string
+  projectId: string
+  aiRead: boolean
+  attachments?: Attachment[]
+  createdBy?: string
+}
+
+// الاستبيانات
+export interface SurveyQuestion {
+  id: string
+  text: string
+  kind: 'single' | 'multi' | 'rating' | 'text'
+  options?: string[]
+}
+
+export interface SurveyResponse {
+  id: string
+  answers: Record<string, string | string[] | number>
+  submittedAt: string
+  respondent?: string
+}
+
+export interface Survey {
+  id: string
+  title: string
+  description?: string
+  surveyType: string
+  projectId?: string
+  questions: SurveyQuestion[]
+  responses: SurveyResponse[]
+  status: 'draft' | 'active' | 'closed'
+  createdAt: string
+  maxResponses?: number
+  closeDate?: string
+}
+
+export type Page =
+  | 'overview' | 'tasks' | 'dashboard' | 'projects' | 'projectDetail' | 'finance'
+  | 'ledger' | 'reports' | 'receivables' | 'commitments' | 'documents' | 'trackings'
+  | 'assets' | 'requests' | 'notifications' | 'settings' | 'integrations'
+  | 'subscription' | 'memberDetail' | 'audit' | 'customize' | 'colorCustomize' | 'surveys'
+
+export interface Notif {
+  id: string
+  type: string
+  title: string
+  body: string
+  time: string
+  read: boolean
+  link?: Page
+  projectId?: string
+  section?: string
+  memberId?: string
+  itemId?: string
+  ts?: string
+}
+
+export interface AuditEntry {
+  id: string
+  action: string
+  entity: string
+  detail: string
+  user: string
+  ts: string
+}
+
+// تفضيلات المستخدم (تتحكم بالعرض عبر الأقسام)
+export interface UserPrefs {
+  showStats: boolean
+  showCharts: boolean
+  defaultPeriod: string
+  compactCards: boolean
+  showQuickActions: boolean
+  confirmDelete: boolean
+  statsAutoScroll: boolean
+  statsScrollSeconds: number
+  statsLayout: 'horizontal' | 'vertical'
+}
+
+// قوائم قابلة للتخصيص (من صفحة التخصيص)
+export interface CustomLists {
+  txCategories: string[]
+  projectTypes: string[]
+  docTypes: string[]
+  partyTypes: string[]
+}
+
+export type HelpKey =
+  | 'dashboard' | 'projects' | 'finance' | 'ledger' | 'receivables'
+  | 'commitments' | 'documents' | 'trackings' | 'requests' | 'members'
+export interface HelpEntry {
+  title: string
+  body: string
+  show: boolean
+}
+export type HelpTexts = Record<HelpKey, HelpEntry>
