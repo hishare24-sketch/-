@@ -10,6 +10,9 @@ import { trackingsRoutes } from '@/modules/trackings/trackingsRoutes'
 import { requestsRoutes } from '@/modules/requests/requestsRoutes'
 import { documentsRoutes } from '@/modules/documents/documentsRoutes'
 import { surveysRoutes } from '@/modules/surveys/surveysRoutes'
+import { notificationsRoutes } from '@/modules/notifications/notificationsRoutes'
+import { auditRoutes } from '@/modules/audit/auditRoutes'
+import { tasksRoutes } from '@/modules/tasks/tasksRoutes'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -71,6 +74,24 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/modules/surveys/SurveysModule.vue'),
     meta: { layout: 'default' },
     children: surveysRoutes,
+  },
+  {
+    path: '/notifications',
+    component: () => import('@/modules/notifications/NotificationsModule.vue'),
+    meta: { layout: 'default' },
+    children: notificationsRoutes,
+  },
+  {
+    path: '/audit',
+    component: () => import('@/modules/audit/AuditModule.vue'),
+    meta: { layout: 'default' },
+    children: auditRoutes,
+  },
+  {
+    path: '/tasks',
+    component: () => import('@/modules/tasks/TasksModule.vue'),
+    meta: { layout: 'default' },
+    children: tasksRoutes,
   },
   {
     path: '/launcher',

@@ -1,18 +1,24 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useAuthStore } from '@/stores/AuthStore'
+import { storeToRefs } from 'pinia'
+import { useNotificationsStore } from '@/stores/NotificationsStore'
+import { useTasks } from '@/modules/tasks/composables/useTasks'
 import themeConfig from '@themeConfig'
 
 const { t } = useI18n()
-const { hasPermission } = useAuthStore()
 
 const collapsed = ref(false)
+
+const notificationsStore = useNotificationsStore()
+const { unreadCount } = storeToRefs(notificationsStore)
+const { totalCount: tasksCount } = useTasks()
 
 // عناصر القائمة الجانبية — كل قسم له مساره الخاص (الأقسام غير المبنية تذهب لصفحة "قيد الإنشاء")
 // show يعتمد على الصلاحيات (تُترك true حالياً لعدم تفعيل الدخول الإجباري)
 const navItems = computed(() => [
   { title: t('nav.dashboard'), icon: '📊', to: { name: 'dashboard-page' }, show: true },
+  { title: 'الإجراءات المطلوبة', icon: '✅', to: { name: 'tasks-page' }, show: true, badge: tasksCount.value },
   { title: t('nav.projects'), icon: '🏢', to: { name: 'projects-page' }, show: true },
   { title: t('nav.finance'), icon: '💰', to: { name: 'finance-page' }, show: true },
   { title: 'السجل المالي', icon: '⛃', to: { name: 'ledger-page' }, show: true },
@@ -23,6 +29,8 @@ const navItems = computed(() => [
   { title: t('nav.requests'), icon: '📥', to: { name: 'requests-page' }, show: true },
   { title: t('nav.documents'), icon: '📄', to: { name: 'documents-page' }, show: true },
   { title: t('nav.surveys'), icon: '📋', to: { name: 'surveys-page' }, show: true },
+  { title: t('nav.notifications'), icon: '🔔', to: { name: 'notifications-page' }, show: true, badge: unreadCount.value },
+  { title: 'سجل التدقيق', icon: '🗂️', to: { name: 'audit-page' }, show: true },
   { title: t('nav.settings'), icon: '⚙️', to: { name: 'section', params: { key: 'settings' } }, show: true },
 ])
 </script>
@@ -41,6 +49,7 @@ const navItems = computed(() => [
           <RouterLink v-if="item.show" :to="item.to" class="nav-item">
             <span class="nav-item__icon">{{ item.icon }}</span>
             <span v-if="!collapsed" class="nav-item__title">{{ item.title }}</span>
+            <span v-if="item.badge" class="nav-item__badge">{{ item.badge }}</span>
           </RouterLink>
         </template>
       </nav>
@@ -52,6 +61,10 @@ const navItems = computed(() => [
         <button class="navbar__toggle" @click="collapsed = !collapsed">☰</button>
         <div class="navbar__title">{{ t('app.subtitle') }}</div>
         <div class="navbar__spacer" />
+        <RouterLink :to="{ name: 'notifications-page' }" class="navbar__bell" title="الإشعارات">
+          🔔
+          <span v-if="unreadCount" class="navbar__bell-count">{{ unreadCount }}</span>
+        </RouterLink>
         <div class="navbar__user">👤 محمد العمري</div>
       </header>
 
@@ -132,6 +145,22 @@ const navItems = computed(() => [
     font-size: 18px;
     flex-shrink: 0;
   }
+
+  &__badge {
+    margin-inline-start: auto;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--error);
+    color: #fff;
+    border-radius: 99px;
+    padding: 1px 7px;
+    min-inline-size: 18px;
+    text-align: center;
+  }
+
+  &.router-link-exact-active .nav-item__badge {
+    background: rgba(255, 255, 255, 0.3);
+  }
 }
 
 .content-wrapper {
@@ -164,6 +193,27 @@ const navItems = computed(() => [
 
   &__spacer {
     flex: 1;
+  }
+
+  &__bell {
+    position: relative;
+    font-size: 18px;
+    text-decoration: none;
+    padding: 4px;
+
+    &-count {
+      position: absolute;
+      inset-block-start: -2px;
+      inset-inline-end: -4px;
+      font-size: 10px;
+      font-weight: 700;
+      background: var(--error);
+      color: #fff;
+      border-radius: 99px;
+      padding: 0 5px;
+      min-inline-size: 16px;
+      text-align: center;
+    }
   }
 
   &__user {
