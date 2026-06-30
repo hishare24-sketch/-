@@ -8,6 +8,8 @@ import type { Survey } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import SurveyBuilderModal from '../modals/SurveyBuilderModal.vue'
 import SurveyResultsModal from '../modals/SurveyResultsModal.vue'
+import RespondentsModal from '../modals/RespondentsModal.vue'
+import FillSurveyModal from '../modals/FillSurveyModal.vue'
 
 const surveysStore = useSurveysStore()
 const projectsStore = useProjectsStore()
@@ -30,6 +32,8 @@ function statusInfo(s: Survey['status']) {
 const showBuilder = ref(false)
 const editing = ref<Survey | null>(null)
 const viewing = ref<Survey | null>(null)
+const managing = ref<Survey | null>(null)
+const filling = ref<Survey | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 
 function openCreate() {
@@ -87,6 +91,8 @@ async function onDelete(s: Survey) {
         </span>
         <div class="survey__actions">
           <button class="app-btn app-btn--outlined view-btn" @click="viewing = s">📊 النتائج</button>
+          <button class="icon-btn" title="المستبينون" @click="managing = s">👥</button>
+          <button class="icon-btn" title="تعبئة" :disabled="s.status !== 'active'" @click="filling = s">✍️</button>
           <button class="icon-btn" title="تعديل" @click="openEdit(s)">✎</button>
           <button class="icon-btn" :title="s.status === 'active' ? 'إغلاق' : 'تفعيل'" @click="toggleStatus(s)">
             {{ s.status === 'active' ? '🔒' : '🔓' }}
@@ -98,6 +104,8 @@ async function onDelete(s: Survey) {
 
     <SurveyBuilderModal v-if="showBuilder" :survey="editing" @close="showBuilder = false" />
     <SurveyResultsModal v-if="viewing" :survey="viewing" @close="viewing = null" />
+    <RespondentsModal v-if="managing" :survey="managing" @close="managing = null" />
+    <FillSurveyModal v-if="filling" :survey="filling" @close="filling = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>
@@ -194,5 +202,6 @@ async function onDelete(s: Survey) {
 
   &:hover { border-color: var(--primary); }
   &--danger:hover { border-color: var(--error); color: var(--error); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 </style>

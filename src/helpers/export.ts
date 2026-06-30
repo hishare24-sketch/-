@@ -19,6 +19,16 @@ export function loadXLSX(): Promise<any> {
   return _xlsxPromise
 }
 
+// استيراد أول ورقة من ملف .xlsx كمصفوفة كائنات
+export async function importXLSX(file: File): Promise<Record<string, any>[]> {
+  const XLSX = await loadXLSX()
+  const data = await file.arrayBuffer()
+  const wb = XLSX.read(data, { type: 'array' })
+  const firstSheet = wb.SheetNames[0]
+  if (!firstSheet) return []
+  return XLSX.utils.sheet_to_json(wb.Sheets[firstSheet]) as Record<string, any>[]
+}
+
 // تصدير ورقة أو أكثر إلى ملف .xlsx واحد
 export async function exportXLSX(
   fileName: string,
