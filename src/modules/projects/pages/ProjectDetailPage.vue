@@ -7,6 +7,9 @@ import { fmt, fmtNum } from '@/helpers/format'
 import { ROLES } from '@/constants'
 import type { Member } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
+import ChartCard from '@/components/charts/ChartCard.vue'
+import BarChart from '@/components/charts/BarChart.vue'
+import LineChart from '@/components/charts/LineChart.vue'
 import MemberFormModal from '../modals/MemberFormModal.vue'
 import MemberTxnFormModal from '../modals/MemberTxnFormModal.vue'
 import MemberDetailsModal from '../modals/MemberDetailsModal.vue'
@@ -43,6 +46,14 @@ const monthly = computed(() => {
   const max = Math.max(...months.map((m) => Math.max(byMonth[m].income, byMonth[m].expense)), 1)
   return { rows: months.map((m) => ({ month: m, ...byMonth[m] })), max }
 })
+
+// بيانات رسم التدفقات
+const flowView = ref<'line' | 'bar'>('line')
+const flowLabels = computed(() => monthly.value.rows.map((r) => r.month.slice(5)))
+const flowSeries = computed(() => [
+  { name: 'وارد', color: '#3b82f6', values: monthly.value.rows.map((r) => r.income) },
+  { name: 'صادر', color: '#f87171', values: monthly.value.rows.map((r) => r.expense) },
+])
 
 // المودالات
 const showMemberForm = ref(false)
@@ -178,21 +189,20 @@ const pendingTxns = computed(() =>
     </div>
 
     <!-- التدفقات النقدية -->
-    <div v-else class="app-card cashflow">
-      <span class="cashflow__title">التدفقات النقدية الشهرية</span>
+    <ChartCard
+      v-else
+      v-model="flowView"
+      title="التدفقات النقدية الشهرية"
+      :collapsible="false"
+      :views="[
+        { id: 'line', icon: '📈', label: 'خطّي' },
+        { id: 'bar', icon: '📊', label: 'أعمدة' },
+      ]"
+    >
       <div v-if="!monthly.rows.length" class="cashflow__empty">لا توجد عمليات.</div>
-      <div v-for="row in monthly.rows" :key="row.month" class="cashflow__row">
-        <span class="cashflow__month">{{ row.month }}</span>
-        <div class="cashflow__bars">
-          <div class="cashflow__bar cashflow__bar--income" :style="{ width: `${(row.income / monthly.max) * 100}%` }">
-            <span v-if="row.income">{{ fmtNum(row.income) }}</span>
-          </div>
-          <div class="cashflow__bar cashflow__bar--expense" :style="{ width: `${(row.expense / monthly.max) * 100}%` }">
-            <span v-if="row.expense">{{ fmtNum(row.expense) }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+      <LineChart v-else-if="flowView === 'line'" :labels="flowLabels" :series="flowSeries" />
+      <BarChart v-else :labels="flowLabels" :series="flowSeries" />
+    </ChartCard>
 
     <MemberFormModal
       v-if="showMemberForm"

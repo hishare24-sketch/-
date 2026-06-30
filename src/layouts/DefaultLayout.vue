@@ -9,6 +9,13 @@ import themeConfig from '@themeConfig'
 const { t } = useI18n()
 
 const collapsed = ref(false)
+const mobileOpen = ref(false)
+
+// على الجوال: فتح/إغلاق الدرج · على سطح المكتب: طيّ الشريط
+function toggleNav() {
+  if (window.innerWidth <= 768) mobileOpen.value = !mobileOpen.value
+  else collapsed.value = !collapsed.value
+}
 
 const notificationsStore = useNotificationsStore()
 const { unreadCount } = storeToRefs(notificationsStore)
@@ -36,19 +43,22 @@ const navItems = computed(() => [
 </script>
 
 <template>
-  <div class="default-layout" :class="{ 'is-collapsed': collapsed }">
+  <div class="default-layout" :class="{ 'is-collapsed': collapsed, 'is-mobile-open': mobileOpen }">
+    <!-- خلفية معتمة للجوال -->
+    <div v-if="mobileOpen" class="backdrop" @click="mobileOpen = false" />
+
     <!-- الشريط الجانبي -->
     <aside class="sidebar">
       <div class="sidebar__brand">
         <span class="sidebar__logo">{{ themeConfig.app.logo }}</span>
-        <span v-if="!collapsed" class="sidebar__title">{{ t('app.name') }}</span>
+        <span class="sidebar__title">{{ t('app.name') }}</span>
       </div>
 
       <nav class="sidebar__nav">
         <template v-for="(item, i) in navItems" :key="i">
-          <RouterLink v-if="item.show" :to="item.to" class="nav-item">
+          <RouterLink v-if="item.show" :to="item.to" class="nav-item" @click="mobileOpen = false">
             <span class="nav-item__icon">{{ item.icon }}</span>
-            <span v-if="!collapsed" class="nav-item__title">{{ item.title }}</span>
+            <span class="nav-item__title">{{ item.title }}</span>
             <span v-if="item.badge" class="nav-item__badge">{{ item.badge }}</span>
           </RouterLink>
         </template>
@@ -58,7 +68,7 @@ const navItems = computed(() => [
     <!-- المحتوى -->
     <div class="content-wrapper">
       <header class="navbar">
-        <button class="navbar__toggle" @click="collapsed = !collapsed">☰</button>
+        <button class="navbar__toggle" @click="toggleNav">☰</button>
         <div class="navbar__title">{{ t('app.subtitle') }}</div>
         <div class="navbar__spacer" />
         <RouterLink :to="{ name: 'notifications-page' }" class="navbar__bell" title="الإشعارات">
@@ -87,10 +97,16 @@ const navItems = computed(() => [
   border-inline-start: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  transition: inline-size 0.2s ease;
+  transition: inline-size 0.2s ease, transform 0.25s ease;
 
   .is-collapsed & {
     inline-size: 72px;
+  }
+
+  // إخفاء النصوص عند الطيّ (سطح المكتب)
+  .is-collapsed & &__title,
+  .is-collapsed & .nav-item__title {
+    display: none;
   }
 
   &__brand {
@@ -227,5 +243,47 @@ const navItems = computed(() => [
   flex: 1;
   padding: 24px;
   overflow-y: auto;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  z-index: 90;
+}
+
+// ── الجوال: الشريط الجانبي يصبح درجاً منزلقاً ──
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-end: 0;
+    z-index: 100;
+    inline-size: 250px !important;
+    transform: translateX(100%);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .is-mobile-open .sidebar {
+    transform: translateX(0);
+  }
+
+  // إظهار النصوص دائماً في الدرج (تجاهل وضع الطيّ على الجوال)
+  .is-collapsed .sidebar .nav-item__title,
+  .is-collapsed .sidebar .sidebar__title {
+    display: inline;
+  }
+
+  .page-content {
+    padding: 16px;
+  }
+
+  .navbar {
+    padding: 0 14px;
+  }
+
+  .navbar__user {
+    display: none;
+  }
 }
 </style>
