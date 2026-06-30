@@ -125,6 +125,12 @@ const routes: RouteRecordRaw[] = [
     meta: { layout: 'blank' },
   },
   {
+    path: '/s/:shareId',
+    name: 'public-survey',
+    component: () => import('@/pages/PublicSurveyPage.vue'),
+    meta: { layout: 'blank' },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/pages/ErrorPage.vue'),
