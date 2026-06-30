@@ -5,7 +5,9 @@ import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useRequestsStore } from '@/stores/RequestsStore'
 import { REQUEST_TYPES, CURRENT_USER } from '@/constants'
 import { today } from '@/helpers/date'
+import type { Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ projectId: string }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -22,6 +24,7 @@ const form = reactive({
   requestedBy: CURRENT_USER,
   memberId: '',
   note: '',
+  attachments: [] as Attachment[],
 })
 
 const projMembers = computed(() => projectsStore.membersByProject(form.projectId))
@@ -39,6 +42,7 @@ function save() {
     date: today(),
     memberId: form.memberId || undefined,
     note: form.note.trim() || undefined,
+    attachments: form.attachments,
   })
   emit('close')
 }
@@ -82,6 +86,11 @@ function save() {
     <div class="field">
       <label>ملاحظات (اختياري)</label>
       <textarea v-model="form.note" rows="2" placeholder="مبرر الطلب أو تفاصيل..."></textarea>
+    </div>
+
+    <div class="field">
+      <label>المرفقات (صور / ملفات)</label>
+      <AttachmentsField v-model="form.attachments" />
     </div>
 
     <template #footer>

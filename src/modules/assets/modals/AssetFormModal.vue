@@ -5,8 +5,9 @@ import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useAssetsStore } from '@/stores/AssetsStore'
 import { ASSET_CATEGORIES, CURRENT_USER } from '@/constants'
 import { today } from '@/helpers/date'
-import type { AssetCategory } from '@/interfaces/models'
+import type { AssetCategory, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ projectId: string }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -28,6 +29,7 @@ const form = reactive({
   usageUnit: '',
   memberId: '',
   note: '',
+  attachments: [] as Attachment[],
 })
 
 const projMembers = computed(() => projectsStore.membersByProject(form.projectId))
@@ -50,6 +52,7 @@ function save() {
     memberId: form.memberId || undefined,
     maintenance: [],
     note: form.note.trim() || undefined,
+    attachments: form.attachments,
     createdBy: CURRENT_USER,
   })
   emit('close')
@@ -125,6 +128,11 @@ function save() {
     <div class="field">
       <label>ملاحظات (اختياري)</label>
       <textarea v-model="form.note" rows="2"></textarea>
+    </div>
+
+    <div class="field">
+      <label>المرفقات (فاتورة، صور)</label>
+      <AttachmentsField v-model="form.attachments" />
     </div>
 
     <template #footer>

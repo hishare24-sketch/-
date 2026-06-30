@@ -3,8 +3,9 @@ import { reactive, computed } from 'vue'
 import { useAssetsStore } from '@/stores/AssetsStore'
 import { CURRENT_USER } from '@/constants'
 import { today } from '@/helpers/date'
-import type { Asset, MaintenanceEntry } from '@/interfaces/models'
+import type { Asset, MaintenanceEntry, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ asset: Asset }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -22,6 +23,7 @@ const form = reactive({
   date: today(),
   cost: null as number | null,
   note: '',
+  attachments: [] as Attachment[],
 })
 
 const valid = computed(() => form.cost != null && form.cost >= 0)
@@ -33,6 +35,7 @@ function save() {
     date: form.date,
     cost: Number(form.cost),
     note: form.note.trim(),
+    attachments: form.attachments,
     createdBy: CURRENT_USER,
   })
   emit('close')
@@ -60,6 +63,11 @@ function save() {
     <div class="field">
       <label>الوصف</label>
       <textarea v-model="form.note" rows="2" placeholder="تفاصيل الصيانة أو العطل..."></textarea>
+    </div>
+
+    <div class="field">
+      <label>المرفقات (فاتورة، تقرير فحص، صور)</label>
+      <AttachmentsField v-model="form.attachments" />
     </div>
 
     <p class="hint">ℹ️ ستُسجّل التكلفة كمصروف فعلي في الإدارة المالية للمشروع.</p>

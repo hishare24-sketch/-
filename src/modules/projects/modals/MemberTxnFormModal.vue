@@ -5,8 +5,9 @@ import { MEMBER_TXN_TYPES, CURRENT_USER } from '@/constants'
 import { uid } from '@/helpers/id'
 import { today } from '@/helpers/date'
 import { fmtNum } from '@/helpers/format'
-import type { MemberTxnType } from '@/interfaces/models'
+import type { MemberTxnType, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ projectId: string }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -23,6 +24,7 @@ const form = reactive({
   type: 'custody' as MemberTxnType,
   amount: null as number | null,
   note: '',
+  attachments: [] as Attachment[],
 })
 
 const valid = computed(() => form.memberId && form.amount != null && form.amount > 0)
@@ -40,6 +42,7 @@ function save() {
     date: today(),
     status: 'accepted',
     direction: info.direction,
+    attachments: form.attachments,
     createdBy: CURRENT_USER,
   })
   emit('close')
@@ -93,6 +96,11 @@ function save() {
       <div class="field">
         <label>ملاحظات (اختياري)</label>
         <textarea v-model="form.note" rows="2"></textarea>
+      </div>
+
+      <div class="field">
+        <label>المرفقات (صور / ملفات)</label>
+        <AttachmentsField v-model="form.attachments" />
       </div>
     </template>
 

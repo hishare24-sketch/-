@@ -66,7 +66,7 @@ const helpEntry = computed(() => settingsStore.help.dashboard)
       <div class="urgent app-card">
         <div class="urgent__head">
           <span class="urgent__title">تنبيهات عاجلة</span>
-          <button class="link-btn" @click="router.push({ name: 'home' })">عرض الكل</button>
+          <button class="link-btn" @click="router.push({ name: 'trackings-page' })">عرض الكل</button>
         </div>
         <div v-if="!urgentTrackings.length" class="urgent__empty">✅ لا توجد تنبيهات عاجلة</div>
         <div

@@ -5,8 +5,9 @@ import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useCommitmentsStore } from '@/stores/CommitmentsStore'
 import { COMMITMENT_KINDS, FREQ_LABEL, CURRENT_USER } from '@/constants'
 import { today } from '@/helpers/date'
-import type { CommitmentKind, CommitmentFreq, CommitmentDir } from '@/interfaces/models'
+import type { CommitmentKind, CommitmentFreq, CommitmentDir, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ projectId: string }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -27,6 +28,7 @@ const form = reactive({
   freq: 'monthly' as CommitmentFreq,
   startDate: today(),
   totalCount: null as number | null,
+  attachments: [] as Attachment[],
 })
 
 const valid = computed(() => form.name.trim() && form.amount != null && form.amount > 0)
@@ -47,6 +49,7 @@ function save() {
     nextDue: form.startDate,
     active: true,
     payments: [],
+    attachments: form.attachments,
     createdBy: CURRENT_USER,
   })
   emit('close')
@@ -104,6 +107,11 @@ function save() {
     <div v-if="form.kind === 'installment'" class="field">
       <label>عدد الدفعات الكلي (اختياري للأقساط)</label>
       <input v-model.number="form.totalCount" type="number" placeholder="مثال: 36" />
+    </div>
+
+    <div class="field">
+      <label>المرفقات (عقد، صور)</label>
+      <AttachmentsField v-model="form.attachments" />
     </div>
 
     <template #footer>

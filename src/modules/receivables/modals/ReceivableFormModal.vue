@@ -5,8 +5,9 @@ import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useReceivablesStore } from '@/stores/ReceivablesStore'
 import { today } from '@/helpers/date'
 import { CURRENT_USER } from '@/constants'
-import type { ReceivableKind } from '@/interfaces/models'
+import type { ReceivableKind, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ projectId: string }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -22,6 +23,7 @@ const form = reactive({
   amount: null as number | null,
   dueDate: '',
   note: '',
+  attachments: [] as Attachment[],
 })
 
 const valid = computed(() => form.party.trim() && form.amount != null && form.amount > 0)
@@ -38,6 +40,7 @@ function save() {
     status: 'open',
     payments: [],
     note: form.note.trim() || undefined,
+    attachments: form.attachments,
     createdBy: CURRENT_USER,
   })
   emit('close')
@@ -74,6 +77,11 @@ function save() {
     <div class="field">
       <label>ملاحظات (اختياري)</label>
       <textarea v-model="form.note" rows="2"></textarea>
+    </div>
+
+    <div class="field">
+      <label>المرفقات (صور / ملفات)</label>
+      <AttachmentsField v-model="form.attachments" />
     </div>
 
     <template #footer>

@@ -5,8 +5,9 @@ import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useTrackingsStore } from '@/stores/TrackingsStore'
 import { TRACKING_TYPES } from '@/constants'
 import { daysBetween, statusFromDays } from '@/helpers/date'
-import type { Tracking } from '@/interfaces/models'
+import type { Tracking, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ projectId: string; tracking: Tracking | null }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -22,6 +23,7 @@ const form = reactive({
   expiryDate: props.tracking?.expiryDate ?? '',
   memberId: props.tracking?.memberId ?? '',
   note: props.tracking?.note ?? '',
+  attachments: (props.tracking?.attachments ? [...props.tracking.attachments] : []) as Attachment[],
 })
 
 const projMembers = computed(() => projectsStore.membersByProject(form.projectId))
@@ -42,6 +44,7 @@ function save() {
     projectId: form.projectId,
     note: form.note.trim() || undefined,
     memberId: form.memberId || undefined,
+    attachments: form.attachments,
   })
   emit('close')
 }
@@ -88,6 +91,11 @@ function save() {
     <div class="field">
       <label>ملاحظات (اختياري)</label>
       <textarea v-model="form.note" rows="2" placeholder="رقم الضمان، الجهة، تفاصيل..."></textarea>
+    </div>
+
+    <div class="field">
+      <label>المرفقات (صور / ملفات)</label>
+      <AttachmentsField v-model="form.attachments" />
     </div>
 
     <template #footer>
