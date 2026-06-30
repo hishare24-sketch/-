@@ -13,6 +13,7 @@ import { surveysRoutes } from '@/modules/surveys/surveysRoutes'
 import { notificationsRoutes } from '@/modules/notifications/notificationsRoutes'
 import { auditRoutes } from '@/modules/audit/auditRoutes'
 import { tasksRoutes } from '@/modules/tasks/tasksRoutes'
+import { settingsRoutes } from '@/modules/settings/settingsRoutes'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -92,6 +93,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/modules/tasks/TasksModule.vue'),
     meta: { layout: 'default' },
     children: tasksRoutes,
+  },
+  {
+    path: '/settings',
+    component: () => import('@/modules/settings/SettingsModule.vue'),
+    meta: { layout: 'default' },
+    children: settingsRoutes,
   },
   {
     path: '/launcher',

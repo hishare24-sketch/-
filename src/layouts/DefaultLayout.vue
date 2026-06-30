@@ -31,7 +31,7 @@ const navItems = computed(() => [
   { title: t('nav.surveys'), icon: '📋', to: { name: 'surveys-page' }, show: true },
   { title: t('nav.notifications'), icon: '🔔', to: { name: 'notifications-page' }, show: true, badge: unreadCount.value },
   { title: 'سجل التدقيق', icon: '🗂️', to: { name: 'audit-page' }, show: true },
-  { title: t('nav.settings'), icon: '⚙️', to: { name: 'section', params: { key: 'settings' } }, show: true },
+  { title: t('nav.settings'), icon: '⚙️', to: { name: 'settings-page' }, show: true },
 ])
 </script>
 
