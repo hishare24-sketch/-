@@ -16,6 +16,12 @@ const routes: RouteRecordRaw[] = [
     meta: { layout: 'default' },
   },
   {
+    path: '/section/:key',
+    name: 'section',
+    component: () => import('@/pages/ComingSoonPage.vue'),
+    meta: { layout: 'default' },
+  },
+  {
     path: '/login',
     name: 'login-page',
     component: () => import('@/pages/LoginPage.vue'),

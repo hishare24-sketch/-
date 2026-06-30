@@ -9,19 +9,20 @@ const { hasPermission } = useAuthStore()
 
 const collapsed = ref(false)
 
-// عناصر القائمة الجانبية — show يعتمد على الصلاحيات (تُترك true حالياً لعدم تفعيل الدخول)
+// عناصر القائمة الجانبية — كل قسم له مساره الخاص (الأقسام غير المبنية تذهب لصفحة "قيد الإنشاء")
+// show يعتمد على الصلاحيات (تُترك true حالياً لعدم تفعيل الدخول الإجباري)
 const navItems = computed(() => [
   { title: t('nav.dashboard'), icon: '📊', to: { name: 'dashboard-page' }, show: true },
-  { title: t('nav.projects'), icon: '🏢', to: { name: 'home' }, show: hasPermission('view_projects') || true },
-  { title: t('nav.finance'), icon: '💰', to: { name: 'home' }, show: true },
-  { title: t('nav.receivables'), icon: '🧾', to: { name: 'home' }, show: true },
-  { title: t('nav.commitments'), icon: '📌', to: { name: 'home' }, show: true },
-  { title: t('nav.assets'), icon: '🚗', to: { name: 'home' }, show: true },
-  { title: t('nav.trackings'), icon: '🔔', to: { name: 'home' }, show: true },
-  { title: t('nav.requests'), icon: '📥', to: { name: 'home' }, show: true },
-  { title: t('nav.documents'), icon: '📄', to: { name: 'home' }, show: true },
-  { title: t('nav.surveys'), icon: '📋', to: { name: 'home' }, show: true },
-  { title: t('nav.settings'), icon: '⚙️', to: { name: 'home' }, show: true },
+  { title: t('nav.projects'), icon: '🏢', to: { name: 'section', params: { key: 'projects' } }, show: true },
+  { title: t('nav.finance'), icon: '💰', to: { name: 'section', params: { key: 'finance' } }, show: true },
+  { title: t('nav.receivables'), icon: '🧾', to: { name: 'section', params: { key: 'receivables' } }, show: true },
+  { title: t('nav.commitments'), icon: '📌', to: { name: 'section', params: { key: 'commitments' } }, show: true },
+  { title: t('nav.assets'), icon: '🚗', to: { name: 'section', params: { key: 'assets' } }, show: true },
+  { title: t('nav.trackings'), icon: '🔔', to: { name: 'section', params: { key: 'trackings' } }, show: true },
+  { title: t('nav.requests'), icon: '📥', to: { name: 'section', params: { key: 'requests' } }, show: true },
+  { title: t('nav.documents'), icon: '📄', to: { name: 'section', params: { key: 'documents' } }, show: true },
+  { title: t('nav.surveys'), icon: '📋', to: { name: 'section', params: { key: 'surveys' } }, show: true },
+  { title: t('nav.settings'), icon: '⚙️', to: { name: 'section', params: { key: 'settings' } }, show: true },
 ])
 </script>
 
