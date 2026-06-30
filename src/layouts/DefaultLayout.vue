@@ -11,7 +11,7 @@ const collapsed = ref(false)
 
 // عناصر القائمة الجانبية — show يعتمد على الصلاحيات (تُترك true حالياً لعدم تفعيل الدخول)
 const navItems = computed(() => [
-  { title: t('nav.dashboard'), icon: '📊', to: { name: 'home' }, show: true },
+  { title: t('nav.dashboard'), icon: '📊', to: { name: 'dashboard-page' }, show: true },
   { title: t('nav.projects'), icon: '🏢', to: { name: 'home' }, show: hasPermission('view_projects') || true },
   { title: t('nav.finance'), icon: '💰', to: { name: 'home' }, show: true },
   { title: t('nav.receivables'), icon: '🧾', to: { name: 'home' }, show: true },
