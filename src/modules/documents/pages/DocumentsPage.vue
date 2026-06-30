@@ -5,8 +5,16 @@ import { useDocumentsStore } from '@/stores/DocumentsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
 import type { DocItem } from '@/interfaces/models'
+import type { FormPreset } from '@/interfaces/forms'
+import type { DocActionKind } from '../docAI'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import DocFormModal from '../modals/DocFormModal.vue'
+import DocDetailsModal from '../modals/DocDetailsModal.vue'
+import TxFormModal from '@/modules/finance/modals/TxFormModal.vue'
+import TrackingFormModal from '@/modules/trackings/modals/TrackingFormModal.vue'
+import AssetFormModal from '@/modules/assets/modals/AssetFormModal.vue'
+import CommitmentFormModal from '@/modules/commitments/modals/CommitmentFormModal.vue'
+import ReceivableFormModal from '@/modules/receivables/modals/ReceivableFormModal.vue'
 
 const documentsStore = useDocumentsStore()
 const projectsStore = useProjectsStore()
@@ -47,11 +55,26 @@ const docIcon = (type: string) => {
 }
 
 const showForm = ref(false)
+const viewing = ref<DocItem | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 
-function process(d: DocItem) {
-  documentsStore.markProcessed(d.id)
+// نموذج الإجراء المُنشأ من المستند (مع تعبئة مسبقة)
+const action = ref<{ kind: DocActionKind; preset: FormPreset } | null>(null)
+function onDocAction(payload: { kind: DocActionKind; preset: FormPreset }) {
+  viewing.value = null
+  action.value = payload
 }
+function closeAction() {
+  action.value = null
+}
+
+// بعد إنشاء مستند مع خيار التحليل التلقائي → افتح التحليل الذكي مباشرة
+function onDocCreated(docId: string) {
+  showForm.value = false
+  const doc = documentsStore.documents.find((d) => d.id === docId)
+  if (doc) viewing.value = doc
+}
+
 async function onDelete(d: DocItem) {
   const ok = await confirmRef.value?.open({ title: 'حذف المستند', message: `حذف "${d.name}"؟` })
   if (ok) documentsStore.deleteDoc(d.id)
@@ -105,17 +128,31 @@ async function onDelete(d: DocItem) {
             {{ d.aiRead ? '✓ معالَج' : 'قيد المعالجة' }}
           </span>
         </div>
-        <span class="doc__name">{{ d.name }}</span>
+        <span class="doc__name doc__clickable" @click="viewing = d">
+          {{ d.name }}
+          <span v-if="d.attachments?.length" class="doc__clip" title="مرفقات">📎{{ d.attachments.length }}</span>
+        </span>
         <span class="doc__meta">{{ d.type }} · {{ projectsStore.projectById(d.projectId)?.name }}</span>
         <span class="doc__sub">{{ d.date }} · {{ d.size }}</span>
         <div class="doc__actions">
-          <button v-if="!d.aiRead" class="app-btn app-btn--outlined proc-btn" @click="process(d)">⚡ معالجة</button>
+          <button class="app-btn app-btn--outlined proc-btn" @click="viewing = d">
+            {{ d.aiRead ? '✨ تحليل وإجراءات' : '✨ تحليل ذكي' }}
+          </button>
           <button class="icon-btn icon-btn--danger" title="حذف" @click="onDelete(d)">🗑️</button>
         </div>
       </div>
     </div>
 
-    <DocFormModal v-if="showForm" :project-id="activeProjectId" @close="showForm = false" />
+    <DocFormModal v-if="showForm" :project-id="activeProjectId" @created="onDocCreated" @close="showForm = false" />
+    <DocDetailsModal v-if="viewing" :doc="viewing" @action="onDocAction" @close="viewing = null" />
+
+    <!-- نماذج الإجراءات المُنشأة من المستند (تعبئة مسبقة) -->
+    <TxFormModal v-if="action?.kind === 'tx'" :project-id="action.preset.projectId ?? activeProjectId" :tx="null" :preset="action.preset" @close="closeAction" />
+    <TrackingFormModal v-if="action?.kind === 'tracking'" :project-id="action.preset.projectId ?? activeProjectId" :tracking="null" :preset="action.preset" @close="closeAction" />
+    <AssetFormModal v-if="action?.kind === 'asset'" :project-id="action.preset.projectId ?? activeProjectId" :preset="action.preset" @close="closeAction" />
+    <CommitmentFormModal v-if="action?.kind === 'commitment'" :project-id="action.preset.projectId ?? activeProjectId" :preset="action.preset" @close="closeAction" />
+    <ReceivableFormModal v-if="action?.kind === 'receivable'" :project-id="action.preset.projectId ?? activeProjectId" :preset="action.preset" @close="closeAction" />
+
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>
@@ -258,6 +295,8 @@ async function onDelete(d: DocItem) {
   }
 
   &__name { font-weight: 700; font-size: 14px; }
+  &__clickable { cursor: pointer; }
+  &__clip { font-size: 11px; color: var(--primary); margin-inline-start: 4px; }
   &__meta { font-size: 12px; color: var(--text-muted); }
   &__sub { font-size: 11px; color: var(--text-muted); }
 

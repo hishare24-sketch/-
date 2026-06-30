@@ -8,10 +8,11 @@ import { TX_TYPES, CURRENT_USER } from '@/constants'
 import { today } from '@/helpers/date'
 import { analyzeTx } from '@/helpers/txAnalysis'
 import type { Transaction, TxType } from '@/interfaces/models'
+import type { FormPreset } from '@/interfaces/forms'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
-const props = defineProps<{ projectId: string; tx: Transaction | null }>()
+const props = defineProps<{ projectId: string; tx: Transaction | null; preset?: FormPreset }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const projectsStore = useProjectsStore()
@@ -20,17 +21,18 @@ const settingsStore = useSettingsStore()
 const { projects } = storeToRefs(projectsStore)
 
 const cats = settingsStore.lists.txCategories
+const ps = props.preset
 
 const form = reactive({
-  type: (props.tx?.type ?? 'expense') as TxType,
-  projectId: props.tx?.projectId ?? props.projectId,
-  description: props.tx?.description ?? '',
-  amount: (props.tx?.amount ?? null) as number | null,
-  category: props.tx?.category ?? cats[0],
+  type: (props.tx?.type ?? ps?.type ?? 'expense') as TxType,
+  projectId: props.tx?.projectId ?? ps?.projectId ?? props.projectId,
+  description: props.tx?.description ?? ps?.description ?? '',
+  amount: (props.tx?.amount ?? ps?.amount ?? null) as number | null,
+  category: props.tx?.category ?? ps?.category ?? cats[0],
   date: props.tx?.date ?? today(),
   toProject: props.tx?.toProject ?? projects.value.find((p) => p.id !== props.projectId)?.id ?? '',
-  source: props.tx?.source ?? '',
-  note: props.tx?.note ?? '',
+  source: props.tx?.source ?? ps?.source ?? '',
+  note: props.tx?.note ?? ps?.note ?? '',
   attachments: props.tx?.attachments ? [...props.tx.attachments] : [],
 })
 

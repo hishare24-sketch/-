@@ -6,23 +6,25 @@ import { useTrackingsStore } from '@/stores/TrackingsStore'
 import { TRACKING_TYPES } from '@/constants'
 import { daysBetween, statusFromDays } from '@/helpers/date'
 import type { Tracking, Attachment } from '@/interfaces/models'
+import type { FormPreset } from '@/interfaces/forms'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
-const props = defineProps<{ projectId: string; tracking: Tracking | null }>()
+const props = defineProps<{ projectId: string; tracking: Tracking | null; preset?: FormPreset }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const projectsStore = useProjectsStore()
 const trackingsStore = useTrackingsStore()
 const { projects } = storeToRefs(projectsStore)
+const ps = props.preset
 
 const form = reactive({
-  name: props.tracking?.name ?? '',
-  type: props.tracking?.type ?? TRACKING_TYPES[0].id,
-  projectId: props.tracking?.projectId ?? props.projectId,
-  expiryDate: props.tracking?.expiryDate ?? '',
+  name: props.tracking?.name ?? ps?.name ?? '',
+  type: props.tracking?.type ?? ps?.trackingType ?? TRACKING_TYPES[0].id,
+  projectId: props.tracking?.projectId ?? ps?.projectId ?? props.projectId,
+  expiryDate: props.tracking?.expiryDate ?? ps?.expiryDate ?? '',
   memberId: props.tracking?.memberId ?? '',
-  note: props.tracking?.note ?? '',
+  note: props.tracking?.note ?? ps?.note ?? '',
   attachments: (props.tracking?.attachments ? [...props.tracking.attachments] : []) as Attachment[],
 })
 

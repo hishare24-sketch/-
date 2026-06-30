@@ -19,11 +19,11 @@ export const useDocumentsStore = defineStore('documents', {
 
   actions: {
     saveDoc(payload: DocPayload) {
-      if (payload.id) {
-        const i = this.documents.findIndex((d) => d.id === payload.id)
-        if (i !== -1) this.documents[i] = { ...this.documents[i], ...payload, id: payload.id }
+      const existing = payload.id ? this.documents.findIndex((d) => d.id === payload.id) : -1
+      if (existing !== -1) {
+        this.documents[existing] = { ...this.documents[existing], ...payload, id: payload.id! }
       } else {
-        this.documents.unshift({ ...payload, id: uid('d'), createdBy: CURRENT_USER })
+        this.documents.unshift({ ...payload, id: payload.id ?? uid('d'), createdBy: CURRENT_USER })
       }
     },
     deleteDoc(id: string) {

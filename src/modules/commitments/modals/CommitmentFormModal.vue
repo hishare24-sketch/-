@@ -6,25 +6,27 @@ import { useCommitmentsStore } from '@/stores/CommitmentsStore'
 import { COMMITMENT_KINDS, FREQ_LABEL, CURRENT_USER } from '@/constants'
 import { today } from '@/helpers/date'
 import type { CommitmentKind, CommitmentFreq, CommitmentDir, Attachment } from '@/interfaces/models'
+import type { FormPreset } from '@/interfaces/forms'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
-const props = defineProps<{ projectId: string }>()
+const props = defineProps<{ projectId: string; preset?: FormPreset }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const projectsStore = useProjectsStore()
 const commitmentsStore = useCommitmentsStore()
 const { projects } = storeToRefs(projectsStore)
+const ps = props.preset
 
 const freqs = Object.keys(FREQ_LABEL) as CommitmentFreq[]
 
 const form = reactive({
   kind: 'installment' as CommitmentKind,
   direction: 'out' as CommitmentDir,
-  projectId: props.projectId,
-  name: '',
-  party: '',
-  amount: null as number | null,
+  projectId: ps?.projectId ?? props.projectId,
+  name: ps?.name ?? '',
+  party: ps?.party ?? '',
+  amount: (ps?.amount ?? null) as number | null,
   freq: 'monthly' as CommitmentFreq,
   startDate: today(),
   totalCount: null as number | null,

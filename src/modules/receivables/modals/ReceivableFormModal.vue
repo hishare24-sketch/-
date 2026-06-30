@@ -6,23 +6,25 @@ import { useReceivablesStore } from '@/stores/ReceivablesStore'
 import { today } from '@/helpers/date'
 import { CURRENT_USER } from '@/constants'
 import type { ReceivableKind, Attachment } from '@/interfaces/models'
+import type { FormPreset } from '@/interfaces/forms'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
-const props = defineProps<{ projectId: string }>()
+const props = defineProps<{ projectId: string; preset?: FormPreset }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const projectsStore = useProjectsStore()
 const receivablesStore = useReceivablesStore()
 const { projects } = storeToRefs(projectsStore)
+const ps = props.preset
 
 const form = reactive({
   kind: 'receivable' as ReceivableKind,
-  projectId: props.projectId,
-  party: '',
-  amount: null as number | null,
+  projectId: ps?.projectId ?? props.projectId,
+  party: ps?.party ?? '',
+  amount: (ps?.amount ?? null) as number | null,
   dueDate: '',
-  note: '',
+  note: ps?.note ?? '',
   attachments: [] as Attachment[],
 })
 

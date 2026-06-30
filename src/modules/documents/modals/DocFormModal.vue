@@ -5,12 +5,13 @@ import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useDocumentsStore } from '@/stores/DocumentsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
 import { today } from '@/helpers/date'
+import { uid } from '@/helpers/id'
 import type { Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ projectId: string }>()
-const emit = defineEmits<{ (e: 'close'): void }>()
+const emit = defineEmits<{ (e: 'close'): void; (e: 'created', docId: string): void }>()
 
 const projectsStore = useProjectsStore()
 const documentsStore = useDocumentsStore()
@@ -25,6 +26,7 @@ const form = reactive({
   projectId: props.projectId,
   date: today(),
   attachments: [] as Attachment[],
+  autoAnalyze: true,
 })
 
 const valid = computed(() => form.name.trim().length > 0)
@@ -50,7 +52,9 @@ const estimatedSize = computed(() =>
 
 function save() {
   if (!valid.value) return
+  const id = uid('d')
   documentsStore.saveDoc({
+    id,
     name: form.name.trim(),
     type: form.type,
     projectId: form.projectId,
@@ -60,6 +64,7 @@ function save() {
     aiRead: false,
     attachments: form.attachments,
   })
+  if (form.autoAnalyze) emit('created', id)
   emit('close')
 }
 </script>
@@ -103,6 +108,11 @@ function save() {
       <input v-model="form.date" type="date" />
     </div>
 
+    <label class="auto">
+      <input v-model="form.autoAnalyze" type="checkbox" />
+      ✨ تشغيل التحليل الذكي واستخراج البيانات بعد الإضافة
+    </label>
+
     <template #footer>
       <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
       <button class="app-btn" :disabled="!valid" @click="save">إضافة المستند</button>
@@ -143,6 +153,20 @@ function save() {
     font-size: 14px;
     &:focus { outline: none; border-color: var(--primary); }
   }
+}
+
+.auto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #7c3aed;
+  background: #faf5ff;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+
+  input { inline-size: 16px; block-size: 16px; }
 }
 
 .suggest {

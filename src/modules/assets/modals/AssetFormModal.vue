@@ -6,29 +6,31 @@ import { useAssetsStore } from '@/stores/AssetsStore'
 import { ASSET_CATEGORIES, CURRENT_USER } from '@/constants'
 import { today } from '@/helpers/date'
 import type { AssetCategory, Attachment } from '@/interfaces/models'
+import type { FormPreset } from '@/interfaces/forms'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
-const props = defineProps<{ projectId: string }>()
+const props = defineProps<{ projectId: string; preset?: FormPreset }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const projectsStore = useProjectsStore()
 const assetsStore = useAssetsStore()
 const { projects } = storeToRefs(projectsStore)
+const ps = props.preset
 
 const form = reactive({
-  name: '',
+  name: ps?.name ?? '',
   category: 'vehicle' as AssetCategory,
-  projectId: props.projectId,
+  projectId: ps?.projectId ?? props.projectId,
   purchaseDate: today(),
-  purchaseValue: null as number | null,
-  supplier: '',
-  warrantyEnd: '',
+  purchaseValue: (ps?.amount ?? null) as number | null,
+  supplier: ps?.supplier ?? '',
+  warrantyEnd: ps?.warrantyEnd ?? '',
   serial: '',
   usageMeter: null as number | null,
   usageUnit: '',
   memberId: '',
-  note: '',
+  note: ps?.note ?? '',
   attachments: [] as Attachment[],
 })
 
