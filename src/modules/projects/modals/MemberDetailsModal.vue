@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { fmt, fmtNum } from '@/helpers/format'
-import { ROLES, MEMBER_TXN_TYPES } from '@/constants'
+import { ROLES, MEMBER_TXN_TYPES, PERMISSIONS } from '@/constants'
 import type { Member, MemberTxn } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 
@@ -14,6 +14,7 @@ const role = computed(() => ROLES.find((r) => r.id === props.member.role)!)
 const txns = computed(() => projectsStore.txnsByMember(props.member.id))
 
 const txnInfo = (t: MemberTxn) => MEMBER_TXN_TYPES.find((x) => x.id === t.type)
+const permLabel = (id: string) => PERMISSIONS.find((p) => p.id === id)?.label ?? id
 function statusInfo(s: MemberTxn['status']) {
   if (s === 'accepted') return { l: 'مقبولة', c: '#059669', bg: '#ecfdf5' }
   if (s === 'rejected') return { l: 'مرفوضة', c: '#dc2626', bg: '#fef2f2' }
@@ -41,7 +42,7 @@ function statusInfo(s: MemberTxn['status']) {
     <div class="perms">
       <span class="perms__label">الصلاحيات ({{ member.permissions.length }})</span>
       <div class="perms__list">
-        <span v-for="p in member.permissions" :key="p" class="perm-chip">{{ p }}</span>
+        <span v-for="p in member.permissions" :key="p" class="perm-chip">{{ permLabel(p) }}</span>
       </div>
     </div>
 

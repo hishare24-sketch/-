@@ -8,7 +8,7 @@ import { useTrackingsStore } from '@/stores/TrackingsStore'
 import { useRequestsStore } from '@/stores/RequestsStore'
 import { fmt, fmtNum } from '@/helpers/format'
 import { txErrors } from '@/helpers/txAnalysis'
-import { ROLES, CURRENT_USER } from '@/constants'
+import { ROLES, CURRENT_USER, PERMISSIONS } from '@/constants'
 import type { Member, Transaction } from '@/interfaces/models'
 import TxDetailsModal from '@/modules/finance/modals/TxDetailsModal.vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
@@ -52,6 +52,18 @@ const CURRENT = CURRENT_USER
 const viewingTx = ref<Transaction | null>(null)
 
 const roleOf = (m: Member) => ROLES.find((r) => r.id === m.role)!
+const permLabel = (id: string) => PERMISSIONS.find((p) => p.id === id)?.label ?? id
+
+// كشف عدم تطابق رصيد العهدة (المخزّن مقابل مجموع الحركات المقبولة)
+function memberIssue(m: Member): string | null {
+  const computed = projectsStore.computedMemberBalance(m.id)
+  const stored = m.balance ?? 0
+  if (Math.abs(computed - stored) > 1) {
+    return `الرصيد المخزّن (${fmtNum(stored)}) لا يطابق مجموع الحركات المقبولة (${fmtNum(computed)}). الفرق: ${fmtNum(Math.abs(computed - stored))}. الحل: سجّل حركة تسوية تعيد الرصيد لمطابقة الواقع.`
+  }
+  return null
+}
+const expandedIssue = ref<string | null>(null)
 
 // موارد المشروع
 const projDocs = computed(() => documentsStore.byProject(projectId.value))
@@ -121,6 +133,29 @@ async function removeMember(m: Member) {
 const pendingTxns = computed(() =>
   projectsStore.memberTxns.filter((t) => t.projectId === projectId.value && t.status === 'pending'),
 )
+
+// بحث + فلتر الأعضاء بالدور
+const memberSearch = ref('')
+const roleFilter = ref<'all' | Member['role']>('all')
+const filteredMembers = computed(() =>
+  projMembers.value.filter((m) => {
+    if (roleFilter.value !== 'all' && m.role !== roleFilter.value) return false
+    const q = memberSearch.value.trim().toLowerCase()
+    if (q && !m.name.toLowerCase().includes(q) && !(m.email ?? '').toLowerCase().includes(q)) return false
+    return true
+  }),
+)
+
+// ملخّص الأعضاء
+const memberSummary = computed(() => {
+  const ms = projMembers.value
+  return {
+    total: ms.length,
+    custody: ms.reduce((s, m) => s + (m.balance ?? 0), 0),
+    invited: ms.filter((m) => m.status === 'invited').length,
+    issues: ms.filter((m) => memberIssue(m)).length,
+  }
+})
 </script>
 
 <template>
@@ -268,47 +303,127 @@ const pendingTxns = computed(() =>
     </div>
 
     <!-- الأعضاء -->
-    <div v-else-if="tab === 'members'">
+    <div v-else-if="tab === 'members'" class="ov">
+      <!-- ملخّص الأعضاء -->
+      <div class="ov-stats">
+        <div class="ov-card" style="background: #faf5ff">
+          <span class="ov-card__icon">👥</span>
+          <strong style="color: #7c3aed">{{ memberSummary.total }}</strong>
+          <span class="ov-card__label">إجمالي الأعضاء</span>
+        </div>
+        <div class="ov-card" style="background: #ecfdf5">
+          <span class="ov-card__icon">📤</span>
+          <strong style="color: #15803d">{{ fmt(memberSummary.custody) }}</strong>
+          <span class="ov-card__label">إجمالي العهد القائمة</span>
+        </div>
+        <div class="ov-card" style="background: #fffbeb">
+          <span class="ov-card__icon">✉️</span>
+          <strong style="color: #a16207">{{ memberSummary.invited }}</strong>
+          <span class="ov-card__label">دعوات معلّقة</span>
+        </div>
+        <div class="ov-card" :style="{ background: memberSummary.issues ? '#fef2f2' : '#eff6ff' }">
+          <span class="ov-card__icon">{{ memberSummary.issues ? '⚠️' : '✅' }}</span>
+          <strong :style="{ color: memberSummary.issues ? '#b91c1c' : '#1d4ed8' }">{{ memberSummary.issues }}</strong>
+          <span class="ov-card__label">تنبيهات رصيد</span>
+        </div>
+      </div>
+
+      <!-- شريط الأدوات -->
       <div class="bar">
-        <span class="bar__title">أعضاء المشروع ({{ projMembers.length }})</span>
+        <span class="bar__title">أعضاء المشروع ({{ filteredMembers.length }})</span>
         <div class="bar__actions">
           <button class="app-btn app-btn--outlined" @click="showTxnForm = true">＋ حركة رصيد</button>
           <button class="app-btn" @click="addMember">＋ عضو</button>
         </div>
       </div>
 
+      <!-- بحث + فلتر بالدور -->
+      <div class="mfilter app-card">
+        <input v-model="memberSearch" class="mfilter__search" type="search" placeholder="🔍 بحث بالاسم أو البريد…" />
+        <div class="mfilter__roles">
+          <button class="role-chip" :class="{ 'is-on': roleFilter === 'all' }" @click="roleFilter = 'all'">الكل</button>
+          <button
+            v-for="r in ROLES"
+            :key="r.id"
+            class="role-chip"
+            :class="{ 'is-on': roleFilter === r.id }"
+            :style="roleFilter === r.id ? { background: r.color + '18', color: r.color, borderColor: r.color + '55' } : {}"
+            @click="roleFilter = r.id"
+          >
+            {{ r.label }}
+          </button>
+        </div>
+      </div>
+
       <!-- حركات معلقة بانتظار القرار -->
       <div v-if="pendingTxns.length" class="pending app-card">
-        <span class="pending__title">⏳ حركات بانتظار القرار</span>
+        <span class="pending__title">⏳ حركات بانتظار القبول/الرفض</span>
         <div v-for="t in pendingTxns" :key="t.id" class="pending__row">
           <span>{{ projectsStore.memberById(t.memberId)?.name }} — {{ fmtNum(t.amount) }} ر.س</span>
           <span class="pending__note">{{ t.note }}</span>
           <div class="pending__btns">
-            <button class="mini-btn mini-btn--ok" @click="projectsStore.decideMemberTxn(t.id, 'accepted')">قبول</button>
-            <button class="mini-btn mini-btn--no" @click="projectsStore.decideMemberTxn(t.id, 'rejected')">رفض</button>
+            <button class="mini-btn mini-btn--ok" @click="projectsStore.decideMemberTxn(t.id, 'accepted')">✓ قبول</button>
+            <button class="mini-btn mini-btn--no" @click="projectsStore.decideMemberTxn(t.id, 'rejected')">✕ رفض</button>
           </div>
         </div>
       </div>
 
+      <!-- حالة فارغة -->
+      <div v-if="!filteredMembers.length" class="empty app-card">
+        <span class="empty__icon">👥</span>
+        <span class="empty__title">{{ projMembers.length ? 'لا يوجد أعضاء مطابقون للبحث' : 'لا يوجد أعضاء بعد' }}</span>
+        <span class="empty__sub">{{ projMembers.length ? 'جرّب تغيير الفلتر أو كلمة البحث.' : 'أضف أول طرف للمشروع لبدء إدارة الصلاحيات والعهد.' }}</span>
+        <button v-if="!projMembers.length" class="app-btn" @click="addMember">＋ إضافة عضو</button>
+      </div>
+
+      <!-- بطاقات الأعضاء -->
       <div class="members">
-        <div v-for="m in projMembers" :key="m.id" class="member app-card">
-          <span class="member__avatar member__clickable" :style="{ background: roleOf(m).color + '20', color: roleOf(m).color }" @click="viewingMember = m">
-            {{ m.name.charAt(0) }}
-          </span>
-          <div class="member__info member__clickable" @click="viewingMember = m">
-            <span class="member__name">{{ m.name }}</span>
-            <span class="member__email">{{ m.email }}</span>
+        <div v-for="m in filteredMembers" :key="m.id" class="member-card app-card">
+          <div class="member-card__top">
+            <span class="member__avatar member__clickable" :style="{ background: roleOf(m).color + '20', color: roleOf(m).color }" @click="viewingMember = m">
+              {{ m.name.charAt(0) }}
+            </span>
+            <div class="member__info member__clickable" @click="viewingMember = m">
+              <span class="member__name">
+                {{ m.name }}
+                <span v-if="m.status === 'invited'" class="badge badge--invite">دعوة معلّقة</span>
+                <button
+                  v-if="memberIssue(m)"
+                  class="badge badge--issue"
+                  title="مشكلة في الرصيد"
+                  @click.stop="expandedIssue = expandedIssue === m.id ? null : m.id"
+                >
+                  ⚠️
+                </button>
+              </span>
+              <span class="member__email">{{ m.email }}</span>
+            </div>
+            <span class="member__role" :style="{ background: roleOf(m).color + '18', color: roleOf(m).color }">
+              {{ roleOf(m).label }}
+            </span>
+            <div class="member__actions">
+              <button class="icon-btn" title="عرض الملف" @click="viewingMember = m">👤</button>
+              <button v-if="m.role !== 'owner'" class="icon-btn" title="تعديل" @click="editMember(m)">✎</button>
+              <button v-if="m.role !== 'owner'" class="icon-btn icon-btn--danger" title="حذف" @click="removeMember(m)">🗑️</button>
+            </div>
           </div>
-          <span class="member__role" :style="{ background: roleOf(m).color + '18', color: roleOf(m).color }">
-            {{ roleOf(m).label }}
-          </span>
-          <div class="member__balance">
-            <span>الرصيد</span>
-            <strong>{{ fmtNum(m.balance ?? 0) }}</strong>
+
+          <!-- لوحة عدم تطابق الرصيد -->
+          <div v-if="memberIssue(m) && expandedIssue === m.id" class="issue">
+            <div class="issue__head"><span>⚠️</span><strong>عدم تطابق في رصيد العهدة</strong></div>
+            <p class="issue__body">{{ memberIssue(m) }}</p>
+            <button class="app-btn app-btn--outlined app-btn--sm" @click="viewingMember = m">↗ فتح ملف العضو لتسجيل تسوية</button>
           </div>
-          <div class="member__actions">
-            <button class="icon-btn" title="تعديل" @click="editMember(m)">✎</button>
-            <button class="icon-btn icon-btn--danger" title="حذف" @click="removeMember(m)">🗑️</button>
+
+          <!-- رصيد العهدة -->
+          <div v-if="m.role !== 'owner'" class="member-card__balance">
+            <span>رصيد العضو (عُهد)</span>
+            <strong :class="{ 'is-pos': (m.balance ?? 0) > 0 }">{{ fmt(m.balance ?? 0) }}</strong>
+          </div>
+
+          <!-- الصلاحيات -->
+          <div v-if="m.permissions.length" class="member-card__perms">
+            <span v-for="p in m.permissions" :key="p" class="perm-chip">{{ permLabel(p) }}</span>
           </div>
         </div>
       </div>
@@ -903,19 +1018,139 @@ const pendingTxns = computed(() =>
   }
 }
 
+// شريط البحث والفلتر
+.mfilter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  flex-wrap: wrap;
+
+  &__search {
+    flex: 1;
+    min-inline-size: 180px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  &__roles { display: flex; gap: 6px; flex-wrap: wrap; }
+}
+
+.role-chip {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &.is-on { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); }
+}
+
+// حالة فارغة
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 20px;
+  text-align: center;
+
+  &__icon { font-size: 34px; }
+  &__title { font-weight: 600; font-size: 14px; }
+  &__sub { font-size: 12.5px; color: var(--text-muted); max-inline-size: 320px; }
+  .app-btn { margin-block-start: 6px; }
+}
+
 .members {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.member {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 18px;
-  flex-wrap: wrap;
+.member-card {
+  padding: 16px 18px;
 
+  &__top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  &__balance {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-block-start: 12px;
+    padding-block-start: 12px;
+    border-block-start: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+
+    strong { font-size: 15px; color: var(--text-muted); &.is-pos { color: #15803d; } }
+  }
+
+  &__perms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-block-start: 12px;
+    padding-block-start: 12px;
+    border-block-start: 1px solid var(--border);
+  }
+}
+
+.perm-chip {
+  font-size: 11px;
+  background: var(--bg);
+  color: var(--text-muted);
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 20px;
+  border: none;
+  font-family: inherit;
+  vertical-align: middle;
+
+  &--invite { background: #fffbeb; color: #a16207; }
+  &--issue { background: #fef2f2; cursor: pointer; padding: 1px 5px; }
+}
+
+.issue {
+  margin-block-start: 12px;
+  padding: 12px 14px;
+  background: #fef2f2;
+  border-radius: 10px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-block-end: 6px;
+
+    strong { font-size: 12.5px; color: #b91c1c; }
+  }
+
+  &__body { font-size: 12px; color: var(--text); line-height: 1.7; margin-block-end: 10px; }
+}
+
+.app-btn--sm { padding: 5px 12px; font-size: 12px; }
+
+.member {
   &__avatar {
     inline-size: 42px;
     block-size: 42px;
