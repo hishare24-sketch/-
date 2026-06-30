@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useSettingsStore } from '@/stores/SettingsStore'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BlankLayout from '@/layouts/BlankLayout.vue'
 import FormsLayout from '@/layouts/FormsLayout.vue'
 
 const route = useRoute()
+const settingsStore = useSettingsStore()
+
+// تطبيق الثيم (الوضع + الألوان المخصّصة) عند بدء التطبيق
+onMounted(() => settingsStore.applyTheme())
 
 const layout = computed(() => {
   switch (route.meta.layout) {

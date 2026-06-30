@@ -18,9 +18,18 @@ const { activeProjectId } = storeToRefs(projectsStore)
 const helpEntry = computed(() => settingsStore.help.requests)
 
 const statusTab = ref<'all' | RequestStatus>('all')
+const search = ref('')
+const fProject = ref('all')
+const fType = ref('all')
+const projects = computed(() => projectsStore.projects)
+const reqTypes = computed(() => ['all', ...new Set(requests.value.map((r) => r.type))])
+
 const filtered = computed(() =>
   requests.value
     .filter((r) => (statusTab.value === 'all' ? true : r.status === statusTab.value))
+    .filter((r) => (fProject.value === 'all' ? true : r.projectId === fProject.value))
+    .filter((r) => (fType.value === 'all' ? true : r.type === fType.value))
+    .filter((r) => (search.value.trim() === '' ? true : (r.title + r.requestedBy).includes(search.value.trim())))
     .slice()
     .sort((a, b) => b.date.localeCompare(a.date)),
 )
@@ -78,6 +87,17 @@ async function onDelete(r: RequestItem) {
       <button v-for="t in (['all', 'pending', 'approved', 'rejected'] as const)" :key="t" class="tabs__btn" :class="{ 'is-active': statusTab === t }" @click="statusTab = t">
         {{ t === 'all' ? 'الكل' : t === 'pending' ? 'معلقة' : t === 'approved' ? 'معتمدة' : 'مرفوضة' }}
       </button>
+    </div>
+
+    <div class="filters">
+      <input v-model="search" type="text" placeholder="🔍 بحث..." class="filters__search" />
+      <select v-model="fProject" class="filters__select">
+        <option value="all">كل المشاريع</option>
+        <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+      </select>
+      <select v-model="fType" class="filters__select">
+        <option v-for="t in reqTypes" :key="t" :value="t">{{ t === 'all' ? 'كل الأنواع' : t }}</option>
+      </select>
     </div>
 
     <div class="list">
@@ -177,6 +197,35 @@ async function onDelete(r: RequestItem) {
     font-weight: 500;
 
     &.is-active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  }
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  margin-block-end: 16px;
+  flex-wrap: wrap;
+
+  &__search {
+    flex: 1;
+    min-inline-size: 160px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 14px;
+    &:focus { outline: none; border-color: var(--primary); }
+  }
+
+  &__select {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
   }
 }
 

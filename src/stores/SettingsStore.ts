@@ -1,21 +1,41 @@
 import { defineStore } from 'pinia'
-import type { UserPrefs, CustomLists, HelpTexts, HelpKey } from '@/interfaces/models'
+import type { UserPrefs, CustomLists, HelpTexts, HelpKey, HelpEntry } from '@/interfaces/models'
 import { DEFAULT_PREFS, DEFAULT_LISTS, DEFAULT_HELP } from '@/constants'
-import themeConfig from '@themeConfig'
 
-// تفضيلات المستخدم والقوائم القابلة للتخصيص ونصوص المساعدة وألوان الواجهة
+export type ThemeMode = 'light' | 'dark'
+export interface CustomTheme {
+  primary?: string
+  bg?: string
+  surface?: string
+  text?: string
+  border?: string
+}
+
+// القيم الافتراضية للوضعين الفاتح والداكن
+const LIGHT = { bg: '#f8f9fb', surface: '#ffffff', text: '#111827', border: '#e5e7eb', muted: '#6b7280' }
+const DARK = { bg: '#0b0f17', surface: '#161b26', text: '#f1f5f9', border: '#2a3346', muted: '#94a3b8' }
+
+// تفضيلات المستخدم + القوائم + شروحات الأقسام + الثيم
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
     prefs: { ...DEFAULT_PREFS } as UserPrefs,
-    lists: { ...DEFAULT_LISTS } as CustomLists,
-    help: { ...DEFAULT_HELP } as HelpTexts,
-    primaryColor: themeConfig.theme.primary as string,
+    lists: JSON.parse(JSON.stringify(DEFAULT_LISTS)) as CustomLists,
+    help: JSON.parse(JSON.stringify(DEFAULT_HELP)) as HelpTexts,
+    themeMode: 'light' as ThemeMode,
+    customTheme: {} as CustomTheme,
   }),
 
+  getters: {
+    hasCustomTheme: (s) => Object.values(s.customTheme).some(Boolean),
+  },
+
   actions: {
+    // ── التفضيلات ──
     setPref<K extends keyof UserPrefs>(key: K, value: UserPrefs[K]) {
       this.prefs[key] = value
     },
+
+    // ── القوائم المخصّصة ──
     updateList<K extends keyof CustomLists>(key: K, value: string[]) {
       this.lists[key] = value
     },
@@ -26,18 +46,57 @@ export const useSettingsStore = defineStore('settings', {
     removeListItem(key: keyof CustomLists, item: string) {
       this.lists[key] = this.lists[key].filter((x) => x !== item)
     },
+
+    // ── شروحات الأقسام ──
     toggleHelp(key: HelpKey) {
       this.help[key].show = !this.help[key].show
     },
-    setPrimaryColor(color: string) {
-      this.primaryColor = color
-      this.applyPrimaryColor()
+    setHelp(key: HelpKey, patch: Partial<HelpEntry>) {
+      this.help[key] = { ...this.help[key], ...patch }
     },
-    // تطبيق اللون الأساسي على متغيّرات CSS
-    applyPrimaryColor() {
+    resetHelp(key: HelpKey) {
+      this.help[key] = { ...DEFAULT_HELP[key] }
+    },
+
+    // ── الثيم ──
+    setThemeMode(mode: ThemeMode) {
+      this.themeMode = mode
+      this.applyTheme()
+    },
+    toggleThemeMode() {
+      this.setThemeMode(this.themeMode === 'dark' ? 'light' : 'dark')
+    },
+    setCustomColor(key: keyof CustomTheme, value: string | undefined) {
+      if (value) this.customTheme[key] = value
+      else delete this.customTheme[key]
+      this.applyTheme()
+    },
+    setPreset(primary: string | undefined) {
+      this.setCustomColor('primary', primary)
+    },
+    resetTheme() {
+      this.customTheme = {}
+      this.applyTheme()
+    },
+    // تطبيق الوضع + الألوان المخصّصة على متغيّرات CSS في الجذر
+    applyTheme() {
       const root = document.documentElement
-      root.style.setProperty('--primary', this.primaryColor)
-      root.style.setProperty('--primary-soft', this.primaryColor + '14')
+      const base = this.themeMode === 'dark' ? DARK : LIGHT
+      root.setAttribute('data-theme', this.themeMode)
+
+      const primary = this.customTheme.primary ?? '#2563eb'
+      const bg = this.customTheme.bg ?? base.bg
+      const surface = this.customTheme.surface ?? base.surface
+      const text = this.customTheme.text ?? base.text
+      const border = this.customTheme.border ?? base.border
+
+      root.style.setProperty('--primary', primary)
+      root.style.setProperty('--primary-soft', primary + (this.themeMode === 'dark' ? '26' : '14'))
+      root.style.setProperty('--bg', bg)
+      root.style.setProperty('--surface', surface)
+      root.style.setProperty('--text', text)
+      root.style.setProperty('--text-muted', base.muted)
+      root.style.setProperty('--border', border)
     },
   },
 })

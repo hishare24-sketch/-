@@ -22,13 +22,33 @@ const helpEntry = computed(() => settingsStore.help.receivables)
 
 const kindTab = ref<'all' | ReceivableKind>('all')
 const search = ref('')
+const fProject = ref('all')
+const fStatus = ref('all')
+const sort = ref<'due' | 'amount' | 'newest'>('due')
+
+const projects = computed(() => projectsStore.projects)
+const hasFilter = computed(() => fProject.value !== 'all' || fStatus.value !== 'all' || sort.value !== 'due' || search.value !== '')
+function clearFilters() {
+  fProject.value = 'all'
+  fStatus.value = 'all'
+  sort.value = 'due'
+  search.value = ''
+}
 
 const filtered = computed(() =>
   receivables.value
     .filter((r) => (kindTab.value === 'all' ? true : r.kind === kindTab.value))
+    .filter((r) => (fProject.value === 'all' ? true : r.projectId === fProject.value))
+    .filter((r) => (fStatus.value === 'all' ? true : r.status === fStatus.value))
     .filter((r) => (search.value.trim() === '' ? true : (r.party + (r.note ?? '')).includes(search.value.trim())))
     .slice()
-    .sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999')),
+    .sort((a, b) =>
+      sort.value === 'amount'
+        ? recvRemaining(b) - recvRemaining(a)
+        : sort.value === 'newest'
+          ? b.date.localeCompare(a.date)
+          : (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999'),
+    ),
 )
 
 const totalRecv = computed(() => receivables.value.filter((r) => r.kind === 'receivable').reduce((s, r) => s + recvRemaining(r), 0))
@@ -89,7 +109,25 @@ async function onDelete(r: Receivable) {
       </button>
     </div>
 
-    <input v-model="search" type="text" placeholder="🔍 بحث في الذمم..." class="search" />
+    <div class="filters">
+      <input v-model="search" type="text" placeholder="🔍 بحث في الذمم..." class="filters__search" />
+      <select v-model="fProject" class="filters__select">
+        <option value="all">كل المشاريع</option>
+        <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+      </select>
+      <select v-model="fStatus" class="filters__select">
+        <option value="all">كل الحالات</option>
+        <option value="open">مفتوحة</option>
+        <option value="partial">جزئية</option>
+        <option value="settled">مسددة</option>
+      </select>
+      <select v-model="sort" class="filters__select">
+        <option value="due">الأقرب استحقاقاً</option>
+        <option value="amount">الأعلى متبقّياً</option>
+        <option value="newest">الأحدث</option>
+      </select>
+      <button v-if="hasFilter" class="app-btn app-btn--ghost" @click="clearFilters">مسح</button>
+    </div>
 
     <div class="list">
       <div v-if="!filtered.length" class="empty app-card">لا توجد ذمم مطابقة.</div>
@@ -194,16 +232,34 @@ async function onDelete(r: Receivable) {
   }
 }
 
-.search {
-  inline-size: 100%;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-  font-size: 14px;
+.filters {
+  display: flex;
+  gap: 8px;
   margin-block-end: 16px;
+  flex-wrap: wrap;
 
-  &:focus { outline: none; border-color: var(--primary); }
+  &__search {
+    flex: 1;
+    min-inline-size: 160px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 14px;
+
+    &:focus { outline: none; border-color: var(--primary); }
+  }
+
+  &__select {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
 }
 
 .list {

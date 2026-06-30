@@ -32,7 +32,7 @@ const colorOf = (a: string) => actionColor[a] ?? '#6b7280'
   <section class="audit">
     <header class="audit__header">
       <div>
-        <h1>سجل التدقيق</h1>
+        <h1>سجل العمليات</h1>
         <p>سجل بكل الأحداث والعمليات المهمة في النظام</p>
       </div>
     </header>

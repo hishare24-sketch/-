@@ -22,6 +22,16 @@ export const DEFAULT_PROJECT_TYPES = [
 
 export const PROJECT_COLORS = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#dc2626', '#0891b2']
 
+// لوحات الثيم الجاهزة (منقولة من legacy/App.tsx)
+export const THEME_PRESETS: { id: string; name: string; primary: string; swatch: [string, string] }[] = [
+  { id: 'blue', name: 'الأزرق (افتراضي)', primary: '#2563eb', swatch: ['#2563eb', '#1d4ed8'] },
+  { id: 'emerald', name: 'الزمردي', primary: '#059669', swatch: ['#059669', '#047857'] },
+  { id: 'violet', name: 'البنفسجي', primary: '#7c3aed', swatch: ['#7c3aed', '#6d28d9'] },
+  { id: 'rose', name: 'الوردي', primary: '#e11d48', swatch: ['#e11d48', '#be123c'] },
+  { id: 'amber', name: 'الكهرماني', primary: '#d97706', swatch: ['#d97706', '#b45309'] },
+  { id: 'slate', name: 'الرمادي', primary: '#475569', swatch: ['#475569', '#334155'] },
+]
+
 // الأدوار والصلاحيات
 export const ROLES: { id: MemberRole; label: string; desc: string; color: string }[] = [
   { id: 'owner', label: 'مالك المشروع', desc: 'تحكم كامل بكل شيء', color: '#7c3aed' },

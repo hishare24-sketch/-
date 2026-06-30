@@ -1,21 +1,30 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useSettingsStore } from '@/stores/SettingsStore'
-import { PROJECT_COLORS } from '@/constants'
+import { useSettingsStore, type CustomTheme } from '@/stores/SettingsStore'
+import { THEME_PRESETS } from '@/constants'
 import type { CustomLists, HelpKey, UserPrefs } from '@/interfaces/models'
 import ToggleActivationSwitch from '@/components/shared/ToggleActivationSwitch.vue'
 
 const settingsStore = useSettingsStore()
-const { prefs, lists, help, primaryColor } = storeToRefs(settingsStore)
+const { prefs, lists, help, themeMode, customTheme, hasCustomTheme } = storeToRefs(settingsStore)
+
+// حقول الألوان الدقيقة
+const colorFields: { key: keyof CustomTheme; label: string; fallback: string }[] = [
+  { key: 'primary', label: 'اللون الأساسي', fallback: '#2563eb' },
+  { key: 'bg', label: 'لون الخلفية', fallback: themeMode.value === 'dark' ? '#0b0f17' : '#f8f9fb' },
+  { key: 'surface', label: 'لون البطاقات', fallback: themeMode.value === 'dark' ? '#161b26' : '#ffffff' },
+  { key: 'text', label: 'لون النصوص', fallback: themeMode.value === 'dark' ? '#f1f5f9' : '#111827' },
+  { key: 'border', label: 'لون الحدود', fallback: themeMode.value === 'dark' ? '#2a3346' : '#e5e7eb' },
+]
 
 type Tab = 'prefs' | 'lists' | 'colors' | 'help' | 'integrations' | 'subscription'
 const tab = ref<Tab>('prefs')
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'prefs', label: 'التفضيلات', icon: '⚙️' },
   { id: 'lists', label: 'القوائم المخصّصة', icon: '🏷️' },
-  { id: 'colors', label: 'الألوان', icon: '🎨' },
-  { id: 'help', label: 'نصوص المساعدة', icon: '💡' },
+  { id: 'colors', label: 'الألوان والثيم', icon: '🎨' },
+  { id: 'help', label: 'شروحات الأقسام', icon: '💡' },
   { id: 'integrations', label: 'التكاملات', icon: '🔌' },
   { id: 'subscription', label: 'الاشتراك', icon: '💳' },
 ]
@@ -107,36 +116,86 @@ const integrations = [
           </div>
         </div>
 
-        <!-- الألوان -->
-        <div v-else-if="tab === 'colors'" class="app-card panel">
-          <h2>اللون الأساسي للتطبيق</h2>
-          <p class="muted">اختر اللون الذي يُطبَّق على الأزرار والروابط والعناصر النشطة.</p>
-          <div class="color-grid">
-            <button
-              v-for="c in PROJECT_COLORS"
-              :key="c"
-              class="color-swatch"
-              :class="{ 'is-active': primaryColor === c }"
-              :style="{ background: c }"
-              @click="settingsStore.setPrimaryColor(c)"
-            >
-              <span v-if="primaryColor === c">✓</span>
-            </button>
+        <!-- الألوان والثيم -->
+        <div v-else-if="tab === 'colors'" class="theme">
+          <!-- الوضع الفاتح/الداكن -->
+          <div class="app-card panel">
+            <div class="mode-row">
+              <div>
+                <h2 style="margin: 0">الوضع العام</h2>
+                <span class="muted" style="margin: 0">{{ themeMode === 'dark' ? '🌙 الوضع الليلي' : '☀️ الوضع النهاري' }}</span>
+              </div>
+              <ToggleActivationSwitch :model-value="themeMode === 'dark'" @update:model-value="settingsStore.toggleThemeMode()" />
+            </div>
           </div>
-          <div class="custom-color">
-            <label>لون مخصّص:</label>
-            <input type="color" :value="primaryColor" @input="settingsStore.setPrimaryColor(($event.target as HTMLInputElement).value)" />
-            <span class="custom-color__hex">{{ primaryColor }}</span>
+
+          <!-- لوحات جاهزة -->
+          <div class="app-card panel">
+            <h2>🎨 لوحات جاهزة</h2>
+            <p class="muted">اختر لوناً أساسياً بنقرة واحدة.</p>
+            <div class="presets">
+              <button
+                v-for="p in THEME_PRESETS"
+                :key="p.id"
+                class="preset"
+                :class="{ 'is-active': (customTheme.primary ?? '#2563eb') === p.primary }"
+                :style="(customTheme.primary ?? '#2563eb') === p.primary ? { borderColor: p.primary, background: p.primary + '15' } : {}"
+                @click="settingsStore.setPreset(p.id === 'blue' ? undefined : p.primary)"
+              >
+                <span class="preset__dot" :style="{ background: `linear-gradient(135deg, ${p.swatch[0]}, ${p.swatch[1]})` }" />
+                {{ p.name }}
+              </button>
+            </div>
           </div>
+
+          <!-- تخصيص دقيق -->
+          <div class="app-card panel">
+            <h2>🛠️ تخصيص دقيق</h2>
+            <p class="muted">تحكّم بكل لون على حدة.</p>
+            <div class="fine">
+              <div v-for="f in colorFields" :key="f.key" class="fine-row">
+                <span>{{ f.label }}</span>
+                <div class="fine-row__controls">
+                  <button v-if="customTheme[f.key]" class="reset-dot" title="إعادة للافتراضي" @click="settingsStore.setCustomColor(f.key, undefined)">↺</button>
+                  <input type="color" :value="customTheme[f.key] ?? f.fallback" @input="settingsStore.setCustomColor(f.key, ($event.target as HTMLInputElement).value)" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- معاينة حيّة -->
+          <div class="app-card panel">
+            <h2>معاينة حيّة</h2>
+            <div class="preview">
+              <span class="app-btn">زر أساسي</span>
+              <span class="preview__card">بطاقة</span>
+              <a class="preview__link">رابط ملوّن</a>
+            </div>
+          </div>
+
+          <button class="app-btn app-btn--outlined reset-all" :disabled="!hasCustomTheme" @click="settingsStore.resetTheme()">
+            ↺ العودة للألوان الافتراضية
+          </button>
         </div>
 
-        <!-- نصوص المساعدة -->
-        <div v-else-if="tab === 'help'" class="app-card panel">
-          <h2>إظهار نصوص المساعدة في الأقسام</h2>
-          <p class="muted">تحكّم بظهور الشرح التوضيحي أعلى كل قسم.</p>
-          <div v-for="k in helpKeys" :key="k" class="toggle-row">
-            <span>{{ help[k].title }}</span>
-            <ToggleActivationSwitch :model-value="help[k].show" @update:model-value="settingsStore.toggleHelp(k)" />
+        <!-- شروحات الأقسام (قابلة للتحرير) -->
+        <div v-else-if="tab === 'help'" class="help-edit">
+          <div class="app-card panel help-intro">
+            <h2>💡 شروحات الأقسام</h2>
+            <p class="muted" style="margin: 0">عدّل نص الشرح الذي يظهر أعلى كل قسم، أو أخفِه.</p>
+          </div>
+          <div v-for="k in helpKeys" :key="k" class="app-card help-card">
+            <div class="help-card__head">
+              <input v-model="help[k].title" class="help-card__title" />
+              <div class="help-card__toggle">
+                <span>{{ help[k].show ? 'ظاهر' : 'مخفي' }}</span>
+                <ToggleActivationSwitch :model-value="help[k].show" @update:model-value="settingsStore.toggleHelp(k)" />
+              </div>
+            </div>
+            <textarea v-model="help[k].body" rows="4" class="help-card__body"></textarea>
+            <div class="help-card__foot">
+              <button class="restore-btn" @click="settingsStore.resetHelp(k)">استعادة النص الافتراضي</button>
+            </div>
           </div>
         </div>
 
@@ -301,35 +360,186 @@ const integrations = [
   }
 }
 
-.color-grid {
+// ── الثيم ──
+.theme {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-block-end: 20px;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.color-swatch {
-  inline-size: 48px;
-  block-size: 48px;
-  border-radius: 14px;
-  border: 3px solid transparent;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 700;
-
-  &.is-active { border-color: var(--text); transform: scale(1.05); }
-}
-
-.custom-color {
+.mode-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.preset {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 99px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+
+  &.is-active { font-weight: 700; }
+
+  &__dot {
+    inline-size: 18px;
+    block-size: 18px;
+    border-radius: 99px;
+    flex-shrink: 0;
+  }
+}
+
+.fine {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+}
 
-  label { font-size: 13px; color: var(--text-muted); }
+.fine-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13.5px;
 
-  input { inline-size: 48px; block-size: 36px; border: none; background: none; }
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-  &__hex { font-size: 13px; font-weight: 600; }
+  input[type='color'] {
+    inline-size: 44px;
+    block-size: 32px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: none;
+    padding: 2px;
+    cursor: pointer;
+  }
+}
+
+.reset-dot {
+  inline-size: 26px;
+  block-size: 26px;
+  border: none;
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.preview {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+
+  &__card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 8px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+
+  &__link {
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 600;
+  }
+}
+
+.reset-all {
+  inline-size: 100%;
+
+  &:disabled { opacity: 0.5; }
+}
+
+// ── شروحات الأقسام ──
+.help-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.help-intro { padding: 20px 24px; }
+
+.help-card {
+  padding: 16px 18px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-block-end: 10px;
+  }
+
+  &__title {
+    flex: 1;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    border-block-end: 1px solid transparent;
+    font-family: inherit;
+    padding: 2px 0;
+
+    &:focus { outline: none; border-block-end-color: var(--border); }
+  }
+
+  &__toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+
+  &__body {
+    inline-size: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-family: inherit;
+    font-size: 12.5px;
+    line-height: 1.8;
+    background: var(--bg);
+    color: var(--text);
+    resize: vertical;
+
+    &:focus { outline: none; border-color: var(--primary); }
+  }
+
+  &__foot {
+    margin-block-start: 8px;
+    text-align: start;
+  }
+}
+
+.restore-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: inherit;
 }
 
 .integration {

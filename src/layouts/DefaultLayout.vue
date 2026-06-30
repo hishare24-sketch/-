@@ -30,7 +30,7 @@ const navItems = computed(() => [
   { title: t('nav.documents'), icon: '📄', to: { name: 'documents-page' }, show: true },
   { title: t('nav.surveys'), icon: '📋', to: { name: 'surveys-page' }, show: true },
   { title: t('nav.notifications'), icon: '🔔', to: { name: 'notifications-page' }, show: true, badge: unreadCount.value },
-  { title: 'سجل التدقيق', icon: '🗂️', to: { name: 'audit-page' }, show: true },
+  { title: 'سجل العمليات', icon: '🗂️', to: { name: 'audit-page' }, show: true },
   { title: t('nav.settings'), icon: '⚙️', to: { name: 'settings-page' }, show: true },
 ])
 </script>

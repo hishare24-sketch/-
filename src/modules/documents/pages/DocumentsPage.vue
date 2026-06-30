@@ -18,12 +18,15 @@ const helpEntry = computed(() => settingsStore.help.documents)
 
 const typeTab = ref('all')
 const search = ref('')
+const fProject = ref('all')
+const projects = computed(() => projectsStore.projects)
 
 const types = computed(() => ['all', ...new Set(documents.value.map((d) => d.type))])
 
 const filtered = computed(() =>
   documents.value
     .filter((d) => (typeTab.value === 'all' ? true : d.type === typeTab.value))
+    .filter((d) => (fProject.value === 'all' ? true : d.projectId === fProject.value))
     .filter((d) => (search.value.trim() === '' ? true : d.name.includes(search.value.trim())))
     .slice()
     .sort((a, b) => b.date.localeCompare(a.date)),
@@ -85,7 +88,13 @@ async function onDelete(d: DocItem) {
       </button>
     </div>
 
-    <input v-model="search" type="text" placeholder="🔍 بحث..." class="search" />
+    <div class="filters">
+      <input v-model="search" type="text" placeholder="🔍 بحث..." class="filters__search" />
+      <select v-model="fProject" class="filters__select">
+        <option value="all">كل المشاريع</option>
+        <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+      </select>
+    </div>
 
     <div class="grid">
       <div v-if="!filtered.length" class="empty app-card">لا توجد مستندات مطابقة.</div>
@@ -180,15 +189,33 @@ async function onDelete(d: DocItem) {
   }
 }
 
-.search {
-  inline-size: 100%;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-  font-size: 14px;
+.filters {
+  display: flex;
+  gap: 8px;
   margin-block-end: 16px;
-  &:focus { outline: none; border-color: var(--primary); }
+  flex-wrap: wrap;
+
+  &__search {
+    flex: 1;
+    min-inline-size: 160px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 14px;
+    &:focus { outline: none; border-color: var(--primary); }
+  }
+
+  &__select {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
 }
 
 .grid {

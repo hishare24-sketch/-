@@ -21,9 +21,15 @@ const { activeProjectId } = storeToRefs(projectsStore)
 const helpEntry = computed(() => settingsStore.help.commitments)
 
 const kindTab = ref<'all' | CommitmentKind>('all')
+const search = ref('')
+const fProject = ref('all')
+const projects = computed(() => projectsStore.projects)
+
 const filtered = computed(() =>
   commitments.value
     .filter((c) => (kindTab.value === 'all' ? true : c.kind === kindTab.value))
+    .filter((c) => (fProject.value === 'all' ? true : c.projectId === fProject.value))
+    .filter((c) => (search.value.trim() === '' ? true : (c.name + (c.party ?? '')).includes(search.value.trim())))
     .slice()
     .sort((a, b) => a.nextDue.localeCompare(b.nextDue)),
 )
@@ -94,6 +100,14 @@ function onPay(c: Commitment) {
       <button v-for="k in COMMITMENT_KINDS" :key="k.id" class="tabs__btn" :class="{ 'is-active': kindTab === k.id }" @click="kindTab = k.id">
         {{ k.icon }} {{ k.label }}
       </button>
+    </div>
+
+    <div class="filters">
+      <input v-model="search" type="text" placeholder="🔍 بحث..." class="filters__search" />
+      <select v-model="fProject" class="filters__select">
+        <option value="all">كل المشاريع</option>
+        <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+      </select>
     </div>
 
     <div class="list">
@@ -205,6 +219,35 @@ function onPay(c: Commitment) {
     font-weight: 500;
 
     &.is-active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  }
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  margin-block-end: 16px;
+  flex-wrap: wrap;
+
+  &__search {
+    flex: 1;
+    min-inline-size: 160px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 14px;
+    &:focus { outline: none; border-color: var(--primary); }
+  }
+
+  &__select {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
   }
 }
 
