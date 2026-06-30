@@ -6,7 +6,7 @@ import { useProjectsStore } from '@/stores/ProjectsStore'
 import { SURVEY_TEMPLATES } from '@/constants/surveyTemplates'
 import type { Survey } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
-import SurveyFormModal from '../modals/SurveyFormModal.vue'
+import SurveyBuilderModal from '../modals/SurveyBuilderModal.vue'
 import SurveyResultsModal from '../modals/SurveyResultsModal.vue'
 
 const surveysStore = useSurveysStore()
@@ -27,9 +27,19 @@ function statusInfo(s: Survey['status']) {
   return { l: 'مسودة', c: '#d97706', bg: '#fffbeb' }
 }
 
-const showForm = ref(false)
+const showBuilder = ref(false)
+const editing = ref<Survey | null>(null)
 const viewing = ref<Survey | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
+
+function openCreate() {
+  editing.value = null
+  showBuilder.value = true
+}
+function openEdit(s: Survey) {
+  editing.value = s
+  showBuilder.value = true
+}
 
 function toggleStatus(s: Survey) {
   surveysStore.setStatus(s.id, s.status === 'active' ? 'closed' : 'active')
@@ -47,7 +57,7 @@ async function onDelete(s: Survey) {
         <h1>الاستبيانات</h1>
         <p>إنشاء الاستبيانات وجمع الردود وتحليلها</p>
       </div>
-      <button class="app-btn" @click="showForm = true">＋ استبيان جديد</button>
+      <button class="app-btn" @click="openCreate">＋ استبيان جديد</button>
     </header>
 
     <div class="surveys__stats">
@@ -72,10 +82,12 @@ async function onDelete(s: Survey) {
         <span class="survey__title">{{ s.title }}</span>
         <span class="survey__meta">
           {{ s.questions.length }} سؤال · {{ s.responses.length }} رد
+          <template v-if="s.respondents?.length"> · {{ s.respondents.length }} مستبين</template>
           <template v-if="s.projectId"> · {{ projectsStore.projectById(s.projectId)?.name }}</template>
         </span>
         <div class="survey__actions">
           <button class="app-btn app-btn--outlined view-btn" @click="viewing = s">📊 النتائج</button>
+          <button class="icon-btn" title="تعديل" @click="openEdit(s)">✎</button>
           <button class="icon-btn" :title="s.status === 'active' ? 'إغلاق' : 'تفعيل'" @click="toggleStatus(s)">
             {{ s.status === 'active' ? '🔒' : '🔓' }}
           </button>
@@ -84,7 +96,7 @@ async function onDelete(s: Survey) {
       </div>
     </div>
 
-    <SurveyFormModal v-if="showForm" @close="showForm = false" />
+    <SurveyBuilderModal v-if="showBuilder" :survey="editing" @close="showBuilder = false" />
     <SurveyResultsModal v-if="viewing" :survey="viewing" @close="viewing = null" />
     <ConfirmModal ref="confirmRef" />
   </section>

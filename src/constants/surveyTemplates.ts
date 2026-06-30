@@ -1,4 +1,15 @@
-import type { SurveyQuestion } from '@/interfaces/models'
+import type { SurveyQuestion, SurveyQuestionKind } from '@/interfaces/models'
+
+// أنواع الأسئلة المدعومة
+export const QUESTION_KINDS: { id: SurveyQuestionKind; label: string; icon: string; hasOptions: boolean }[] = [
+  { id: 'single', label: 'اختيار واحد', icon: '🔘', hasOptions: true },
+  { id: 'multi', label: 'اختيار متعدد', icon: '☑️', hasOptions: true },
+  { id: 'rating', label: 'تقييم (1-5)', icon: '⭐', hasOptions: false },
+  { id: 'nps', label: 'مقياس الترشيح (0-10)', icon: '📊', hasOptions: false },
+  { id: 'yesno', label: 'نعم / لا', icon: '✅', hasOptions: false },
+  { id: 'number', label: 'رقم', icon: '🔢', hasOptions: false },
+  { id: 'text', label: 'نص حر', icon: '📝', hasOptions: false },
+]
 
 // قوالب الاستبيانات الجاهزة (منقولة من legacy/App.tsx)
 export interface SurveyTemplate {
@@ -48,10 +59,31 @@ export const SURVEY_TEMPLATES: SurveyTemplate[] = [
   {
     id: 'rfq', name: 'طلب عروض أسعار', icon: '💰', desc: 'جمع عروض الأسعار من المورّدين',
     questions: [
-      { text: 'اسم الشركة/المورّد', kind: 'text' },
-      { text: 'السعر المقترح (ر.س)', kind: 'text' },
+      { text: 'اسم الشركة/المورّد', kind: 'text', required: true },
+      { text: 'السعر المقترح (ر.س)', kind: 'number', required: true },
       { text: 'مدة التنفيذ المتوقّعة', kind: 'single', options: ['أسبوع', 'أسبوعان', 'شهر', 'أكثر من شهر'] },
       { text: 'ما الذي يشمله العرض؟', kind: 'text' },
     ],
+  },
+  {
+    id: 'nps', name: 'مؤشر صافي الترشيح (NPS)', icon: '📈', desc: 'قياس ولاء العملاء عبر مقياس الترشيح',
+    questions: [
+      { text: 'ما مدى احتمال أن تنصح بنا صديقاً أو زميلاً؟', kind: 'nps', required: true },
+      { text: 'ما السبب الرئيسي لتقييمك؟', kind: 'text' },
+      { text: 'ما الذي يمكننا تحسينه؟', kind: 'text' },
+    ],
+  },
+  {
+    id: 'event', name: 'تقييم فعالية/اجتماع', icon: '🎤', desc: 'جمع آراء الحضور بعد فعالية',
+    questions: [
+      { text: 'تقييمك العام للفعالية', kind: 'rating', required: true },
+      { text: 'هل حقّقت الفعالية أهدافها؟', kind: 'yesno' },
+      { text: 'أكثر الجلسات فائدة', kind: 'text' },
+      { text: 'مقترحات للفعاليات القادمة', kind: 'text' },
+    ],
+  },
+  {
+    id: 'blank', name: 'استبيان فارغ', icon: '➕', desc: 'ابدأ من الصفر وأضف أسئلتك بنفسك',
+    questions: [{ text: '', kind: 'single', options: ['خيار 1', 'خيار 2'] }],
   },
 ]

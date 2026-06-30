@@ -228,11 +228,31 @@ export interface DocItem {
 }
 
 // الاستبيانات
+export type SurveyQuestionKind =
+  | 'single' // اختيار واحد
+  | 'multi' // اختيار متعدد
+  | 'rating' // تقييم 1-5
+  | 'text' // نص حر
+  | 'yesno' // نعم / لا
+  | 'number' // رقم
+  | 'nps' // مقياس الترشيح 0-10
+
 export interface SurveyQuestion {
   id: string
   text: string
-  kind: 'single' | 'multi' | 'rating' | 'text'
+  kind: SurveyQuestionKind
   options?: string[]
+  required?: boolean
+}
+
+export type RespondentSource = 'member' | 'manual' | 'excel' | 'external'
+
+export interface SurveyRespondent {
+  id: string
+  name: string
+  email?: string
+  source: RespondentSource
+  responded: boolean
 }
 
 export interface SurveyResponse {
@@ -240,6 +260,7 @@ export interface SurveyResponse {
   answers: Record<string, string | string[] | number>
   submittedAt: string
   respondent?: string
+  respondentId?: string
 }
 
 export interface Survey {
@@ -250,10 +271,14 @@ export interface Survey {
   projectId?: string
   questions: SurveyQuestion[]
   responses: SurveyResponse[]
+  respondents?: SurveyRespondent[]
   status: 'draft' | 'active' | 'closed'
   createdAt: string
   maxResponses?: number
   closeDate?: string
+  anonymous?: boolean
+  shareId?: string
+  webhookUrl?: string
 }
 
 export type Page =
