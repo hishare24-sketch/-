@@ -294,10 +294,10 @@ const navItems = computed(() => [
   .sidebar {
     position: fixed;
     inset-block: 0;
-    inset-inline-end: 0;
+    inset-inline-start: 0; // في RTL = الحافة اليمنى
     z-index: 100;
     inline-size: 250px !important;
-    transform: translateX(100%);
+    transform: translateX(100%); // يدفعه خارج الشاشة لليمين
     box-shadow: var(--shadow-lg);
   }
 
