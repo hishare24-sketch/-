@@ -20,9 +20,9 @@ const navItems = computed(() => [
   { title: t('nav.commitments'), icon: '📌', to: { name: 'commitments-page' }, show: true },
   { title: t('nav.assets'), icon: '🚗', to: { name: 'assets-page' }, show: true },
   { title: t('nav.trackings'), icon: '🔔', to: { name: 'trackings-page' }, show: true },
-  { title: t('nav.requests'), icon: '📥', to: { name: 'section', params: { key: 'requests' } }, show: true },
-  { title: t('nav.documents'), icon: '📄', to: { name: 'section', params: { key: 'documents' } }, show: true },
-  { title: t('nav.surveys'), icon: '📋', to: { name: 'section', params: { key: 'surveys' } }, show: true },
+  { title: t('nav.requests'), icon: '📥', to: { name: 'requests-page' }, show: true },
+  { title: t('nav.documents'), icon: '📄', to: { name: 'documents-page' }, show: true },
+  { title: t('nav.surveys'), icon: '📋', to: { name: 'surveys-page' }, show: true },
   { title: t('nav.settings'), icon: '⚙️', to: { name: 'section', params: { key: 'settings' } }, show: true },
 ])
 </script>
