@@ -7,11 +7,12 @@ import { useDocumentsStore } from '@/stores/DocumentsStore'
 import { useTrackingsStore } from '@/stores/TrackingsStore'
 import { useRequestsStore } from '@/stores/RequestsStore'
 import { fmt, fmtNum } from '@/helpers/format'
-import { ROLES } from '@/constants'
-import type { Member, DocItem } from '@/interfaces/models'
+import { txErrors } from '@/helpers/txAnalysis'
+import { ROLES, CURRENT_USER } from '@/constants'
+import type { Member, Transaction } from '@/interfaces/models'
+import TxDetailsModal from '@/modules/finance/modals/TxDetailsModal.vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import ChartCard from '@/components/charts/ChartCard.vue'
-import BarChart from '@/components/charts/BarChart.vue'
 import LineChart from '@/components/charts/LineChart.vue'
 import MemberFormModal from '../modals/MemberFormModal.vue'
 import MemberTxnFormModal from '../modals/MemberTxnFormModal.vue'
@@ -40,6 +41,15 @@ const income = computed(() => txns.value.filter((t) => t.type === 'income').redu
 const expense = computed(() => txns.value.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0))
 const balance = computed(() => financeStore.balanceOf(projectId.value))
 const projMembers = computed(() => projectsStore.membersByProject(projectId.value))
+const transfersIn = computed(() => txns.value.filter((t) => t.type === 'transfer' && t.transferDir === 'in').reduce((s, t) => s + t.amount, 0))
+const transfersOut = computed(() => txns.value.filter((t) => t.type === 'transfer' && t.transferDir === 'out').reduce((s, t) => s + t.amount, 0))
+
+// عمليات التدفق مرتبة + كشف العمليات المعطوبة
+const sortedTxns = computed(() => [...txns.value].sort((a, b) => b.date.localeCompare(a.date)))
+const isFlagged = (t: Transaction) => txErrors(t, { project: project.value, transactions: financeStore.transactions }).length > 0
+const isIn = (t: Transaction) => t.type === 'income' || (t.type === 'transfer' && t.transferDir === 'in')
+const CURRENT = CURRENT_USER
+const viewingTx = ref<Transaction | null>(null)
 
 const roleOf = (m: Member) => ROLES.find((r) => r.id === m.role)!
 
@@ -81,7 +91,7 @@ const monthly = computed(() => {
 })
 
 // بيانات رسم التدفقات
-const flowView = ref<'line' | 'bar'>('line')
+const flowView = ref<'bars' | 'line'>('bars')
 const flowLabels = computed(() => monthly.value.rows.map((r) => r.month.slice(5)))
 const flowSeries = computed(() => [
   { name: 'وارد', color: '#3b82f6', values: monthly.value.rows.map((r) => r.income) },
@@ -305,20 +315,95 @@ const pendingTxns = computed(() =>
     </div>
 
     <!-- التدفقات النقدية -->
-    <ChartCard
-      v-else
-      v-model="flowView"
-      title="التدفقات النقدية الشهرية"
-      :collapsible="false"
-      :views="[
-        { id: 'line', icon: '📈', label: 'خطّي' },
-        { id: 'bar', icon: '📊', label: 'أعمدة' },
-      ]"
-    >
-      <div v-if="!monthly.rows.length" class="cashflow__empty">لا توجد عمليات.</div>
-      <LineChart v-else-if="flowView === 'line'" :labels="flowLabels" :series="flowSeries" />
-      <BarChart v-else :labels="flowLabels" :series="flowSeries" />
-    </ChartCard>
+    <div v-else class="ov">
+      <!-- بطاقات أنواع التدفق -->
+      <div class="ov-stats">
+        <div class="ov-card" style="background: #ecfdf5">
+          <strong style="color: #15803d">{{ fmt(income) }}</strong>
+          <span class="ov-card__label">تدفق داخل (إيرادات)</span>
+        </div>
+        <div class="ov-card" style="background: #fef2f2">
+          <strong style="color: #b91c1c">{{ fmt(expense) }}</strong>
+          <span class="ov-card__label">تدفق خارج (مصروفات)</span>
+        </div>
+        <div class="ov-card" style="background: #eff6ff">
+          <strong style="color: #1d4ed8">{{ fmt(transfersIn) }}</strong>
+          <span class="ov-card__label">تحويلات واردة</span>
+        </div>
+        <div class="ov-card" style="background: #fffbeb">
+          <strong style="color: #a16207">{{ fmt(transfersOut) }}</strong>
+          <span class="ov-card__label">تحويلات صادرة</span>
+        </div>
+      </div>
+
+      <!-- التدفق النقدي الشهري + مبدّل الرسم -->
+      <ChartCard
+        v-model="flowView"
+        title="التدفق النقدي الشهري"
+        :collapsible="false"
+        :views="[
+          { id: 'bars', icon: '📊', label: 'تفصيلي' },
+          { id: 'line', icon: '📈', label: 'خطّي' },
+        ]"
+      >
+        <div v-if="!monthly.rows.length" class="cashflow__empty">لا توجد بيانات تدفق بعد.</div>
+        <LineChart v-else-if="flowView === 'line'" :labels="flowLabels" :series="flowSeries" />
+        <div v-else class="months">
+          <div v-for="row in monthly.rows" :key="row.month" class="month">
+            <div class="month__head">
+              <span>{{ row.month }}</span>
+              <span class="month__net" :class="{ 'is-neg': row.income - row.expense < 0 }">
+                صافي: {{ fmtNum(row.income - row.expense) }}
+              </span>
+            </div>
+            <div class="month__bar">
+              <span class="month__tag is-in">داخل</span>
+              <div class="month__track"><div class="month__fill is-in" :style="{ width: `${(row.income / monthly.max) * 100}%` }" /></div>
+              <span class="month__val is-in">{{ fmtNum(row.income) }}</span>
+            </div>
+            <div class="month__bar">
+              <span class="month__tag is-out">خارج</span>
+              <div class="month__track"><div class="month__fill is-out" :style="{ width: `${(row.expense / monthly.max) * 100}%` }" /></div>
+              <span class="month__val is-out">{{ fmtNum(row.expense) }}</span>
+            </div>
+          </div>
+        </div>
+      </ChartCard>
+
+      <!-- تفاصيل عمليات التدفق -->
+      <div class="app-card panel">
+        <div class="panel__head">
+          <span class="panel__title">تفاصيل عمليات التدفق ({{ txns.length }})</span>
+          <button class="link-btn" @click="goSection('finance-page')">الإدارة المالية ‹</button>
+        </div>
+        <div v-if="!txns.length" class="panel__empty">لا توجد عمليات بعد.</div>
+        <div class="flows">
+          <button
+            v-for="t in sortedTxns"
+            :key="t.id"
+            class="flow"
+            :class="{ 'is-flagged': isFlagged(t), 'is-in': isIn(t) && !isFlagged(t), 'is-out': !isIn(t) && !isFlagged(t) }"
+            @click="viewingTx = t"
+          >
+            <span class="flow__badge" :class="isIn(t) ? 'is-in' : 'is-out'">
+              {{ t.type === 'income' ? '↓' : t.type === 'expense' ? '↑' : '↔' }}
+            </span>
+            <div class="flow__info">
+              <span class="flow__desc">
+                {{ t.description }}
+                <span v-if="isFlagged(t)" class="flow__warn" title="تحتاج مراجعة">⚠️</span>
+              </span>
+              <span class="flow__meta">
+                {{ t.category }} · {{ t.date }}{{ t.source ? ` · ${t.source}` : '' }} · بواسطة {{ t.createdBy ?? CURRENT }}
+              </span>
+            </div>
+            <span class="flow__amount" :class="isIn(t) ? 'is-in' : 'is-out'">
+              {{ isIn(t) ? '+' : '−' }}{{ fmtNum(t.amount) }}
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
 
     <MemberFormModal
       v-if="showMemberForm"
@@ -334,6 +419,8 @@ const pendingTxns = computed(() =>
     <DocFormModal v-if="quick === 'doc'" :project-id="projectId" @close="quick = null" />
     <TrackingFormModal v-if="quick === 'tracking'" :project-id="projectId" :tracking="null" @close="quick = null" />
     <RequestFormModal v-if="quick === 'request'" :project-id="projectId" @close="quick = null" />
+
+    <TxDetailsModal v-if="viewingTx" :tx="viewingTx" @edit="viewingTx = null" @close="viewingTx = null" />
 
     <ConfirmModal ref="confirmRef" />
   </section>
@@ -617,6 +704,135 @@ const pendingTxns = computed(() =>
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
+}
+
+// التدفق الشهري التفصيلي
+.months {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.month {
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-block-end: 5px;
+  }
+
+  &__net {
+    font-weight: 600;
+    color: #15803d;
+
+    &.is-neg { color: #b91c1c; }
+  }
+
+  &__bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-block-end: 4px;
+  }
+
+  &__tag {
+    inline-size: 40px;
+    font-size: 10px;
+
+    &.is-in { color: #15803d; }
+    &.is-out { color: #b91c1c; }
+  }
+
+  &__track {
+    flex: 1;
+    block-size: 14px;
+    background: var(--bg);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  &__fill {
+    block-size: 100%;
+    border-radius: 99px;
+
+    &.is-in { background: #22c55e; }
+    &.is-out { background: #f87171; }
+  }
+
+  &__val {
+    inline-size: 64px;
+    text-align: end;
+    font-size: 11px;
+
+    &.is-in { color: #15803d; }
+    &.is-out { color: #b91c1c; }
+  }
+}
+
+// خط زمني لعمليات التدفق
+.flows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.flow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  inline-size: 100%;
+  padding: 11px 12px;
+  border: none;
+  border-radius: 10px;
+  background: var(--bg);
+  border-inline-start: 3px solid var(--border);
+  font-family: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &.is-in { border-inline-start-color: #22c55e; }
+  &.is-out { border-inline-start-color: #f87171; }
+  &.is-flagged { background: #fef2f2; border-inline-start-color: var(--error); }
+
+  &:hover { filter: brightness(0.98); }
+
+  &__badge {
+    inline-size: 36px;
+    block-size: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+
+    &.is-in { background: #ecfdf5; color: #059669; }
+    &.is-out { background: #fef2f2; color: #dc2626; }
+  }
+
+  &__info { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; }
+
+  &__desc {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__warn { margin-inline-start: 4px; }
+
+  &__meta { font-size: 11px; color: var(--text-muted); }
+
+  &__amount {
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+
+    &.is-in { color: #15803d; }
+    &.is-out { color: #b91c1c; }
+  }
 }
 
 .bar {
