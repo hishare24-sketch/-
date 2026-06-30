@@ -11,6 +11,7 @@ import type { Commitment, CommitmentKind } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import ToggleActivationSwitch from '@/components/shared/ToggleActivationSwitch.vue'
 import CommitmentFormModal from '../modals/CommitmentFormModal.vue'
+import CommitmentDetailsModal from '../modals/CommitmentDetailsModal.vue'
 
 const commitmentsStore = useCommitmentsStore()
 const projectsStore = useProjectsStore()
@@ -57,7 +58,13 @@ const kindLabel = (k: CommitmentKind) => COMMITMENT_KINDS.find((x) => x.id === k
 
 // المودالات
 const showForm = ref(false)
+const viewing = ref<Commitment | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
+
+function payFromView(c: Commitment) {
+  viewing.value = null
+  commitmentsStore.payCommitment(c.id)
+}
 
 async function onDelete(c: Commitment) {
   const ok = await confirmRef.value?.open({ title: 'حذف الالتزام', message: `حذف "${c.name}"؟` })
@@ -113,8 +120,11 @@ function onPay(c: Commitment) {
     <div class="list">
       <div v-if="!filtered.length" class="empty app-card">لا توجد التزامات.</div>
       <div v-for="c in filtered" :key="c.id" class="cm app-card" :class="{ 'is-inactive': !c.active }">
-        <div class="cm__main">
-          <span class="cm__name">{{ c.name }}</span>
+        <div class="cm__main" @click="viewing = c">
+          <span class="cm__name">
+            {{ c.name }}
+            <span v-if="c.attachments?.length" class="cm__clip" title="مرفقات">📎{{ c.attachments.length }}</span>
+          </span>
           <span class="cm__meta">
             {{ kindLabel(c.kind) }} · {{ FREQ_LABEL[c.freq] }}
             <template v-if="c.party"> · {{ c.party }}</template>
@@ -149,6 +159,7 @@ function onPay(c: Commitment) {
     </div>
 
     <CommitmentFormModal v-if="showForm" :project-id="activeProjectId" @close="showForm = false" />
+    <CommitmentDetailsModal v-if="viewing" :commitment="viewing" @pay="payFromView" @close="viewing = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>
@@ -278,9 +289,12 @@ function onPay(c: Commitment) {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    cursor: pointer;
   }
 
   &__name { font-weight: 600; font-size: 14px; }
+
+  &__clip { font-size: 11px; color: var(--primary); margin-inline-start: 6px; }
   &__meta { font-size: 12px; color: var(--text-muted); }
   &__progress { font-size: 11px; color: var(--primary); }
 

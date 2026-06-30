@@ -6,6 +6,7 @@ import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
 import type { Tracking, TrackingStatus } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
+import EntityDetailsModal from '@/components/shared/EntityDetailsModal.vue'
 import TrackingFormModal from '../modals/TrackingFormModal.vue'
 
 const trackingsStore = useTrackingsStore()
@@ -45,7 +46,21 @@ function statusInfo(s: TrackingStatus) {
 
 const showForm = ref(false)
 const editing = ref<Tracking | null>(null)
+const viewing = ref<Tracking | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
+
+const viewRows = computed<[string, string][]>(() => {
+  const t = viewing.value
+  if (!t) return []
+  return [
+    ['النوع', t.type],
+    ['المشروع', projectsStore.projectById(t.projectId)?.name ?? '—'],
+    ['تاريخ الانتهاء', t.expiryDate],
+    ['الحالة', statusInfo(t.status).l],
+    ['المتبقّي', t.daysLeft < 0 ? `منتهٍ منذ ${Math.abs(t.daysLeft)} يوم` : `${t.daysLeft} يوم`],
+    ['المسؤول', t.memberId ? projectsStore.memberById(t.memberId)?.name ?? '—' : '—'],
+  ]
+})
 
 function openCreate() {
   editing.value = null
@@ -108,7 +123,10 @@ async function onDelete(t: Tracking) {
             {{ statusInfo(t.status).l }}
           </span>
         </div>
-        <span class="track__name">{{ t.name }}</span>
+        <span class="track__name track__clickable" @click="viewing = t">
+          {{ t.name }}
+          <span v-if="t.attachments?.length" class="track__clip" title="مرفقات">📎{{ t.attachments.length }}</span>
+        </span>
         <span class="track__meta">{{ t.type }} · {{ projectsStore.projectById(t.projectId)?.name }}</span>
         <div class="track__expiry">
           <span>تاريخ الانتهاء: {{ t.expiryDate }}</span>
@@ -124,6 +142,15 @@ async function onDelete(t: Tracking) {
     </div>
 
     <TrackingFormModal v-if="showForm" :project-id="activeProjectId" :tracking="editing" @close="showForm = false" />
+    <EntityDetailsModal
+      v-if="viewing"
+      :title="`${viewing.icon} ${viewing.name}`"
+      :badge="{ label: statusInfo(viewing.status).l, color: statusInfo(viewing.status).c, bg: statusInfo(viewing.status).bg }"
+      :rows="viewRows"
+      :note="viewing.note"
+      :attachments="viewing.attachments"
+      @close="viewing = null"
+    />
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>
@@ -262,6 +289,8 @@ async function onDelete(t: Tracking) {
   }
 
   &__name { font-weight: 700; font-size: 15px; }
+  &__clickable { cursor: pointer; }
+  &__clip { font-size: 11px; color: var(--primary); margin-inline-start: 4px; }
   &__meta { font-size: 12px; color: var(--text-muted); }
 
   &__expiry {

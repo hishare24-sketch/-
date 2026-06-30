@@ -10,6 +10,7 @@ import type { Asset, AssetCategory } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import AssetFormModal from '../modals/AssetFormModal.vue'
 import MaintenanceModal from '../modals/MaintenanceModal.vue'
+import AssetDetailsModal from '../modals/AssetDetailsModal.vue'
 
 const assetsStore = useAssetsStore()
 const projectsStore = useProjectsStore()
@@ -43,7 +44,13 @@ const catInfo = (c: AssetCategory) => ASSET_CATEGORIES.find((x) => x.id === c)!
 // المودالات
 const showForm = ref(false)
 const maintAsset = ref<Asset | null>(null)
+const viewing = ref<Asset | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
+
+function maintainFromView(a: Asset) {
+  viewing.value = null
+  maintAsset.value = a
+}
 
 async function onDelete(a: Asset) {
   const ok = await confirmRef.value?.open({ title: 'حذف الأصل', message: `حذف "${a.name}"؟` })
@@ -95,7 +102,10 @@ async function onDelete(a: Asset) {
             {{ ASSET_STATUS[a.status].label }}
           </span>
         </div>
-        <span class="asset__name">{{ a.name }}</span>
+        <span class="asset__name asset__clickable" @click="viewing = a">
+          {{ a.name }}
+          <span v-if="a.attachments?.length" class="asset__clip" title="مرفقات">📎{{ a.attachments.length }}</span>
+        </span>
         <span class="asset__meta">{{ catInfo(a.category).label }} · {{ projectsStore.projectById(a.projectId)?.name }}</span>
 
         <div class="asset__rows">
@@ -114,6 +124,7 @@ async function onDelete(a: Asset) {
 
     <AssetFormModal v-if="showForm" :project-id="activeProjectId" @close="showForm = false" />
     <MaintenanceModal v-if="maintAsset" :asset="maintAsset" @close="maintAsset = null" />
+    <AssetDetailsModal v-if="viewing" :asset="viewing" @maintain="maintainFromView" @close="viewing = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>
@@ -240,6 +251,8 @@ async function onDelete(a: Asset) {
   }
 
   &__name { font-weight: 700; font-size: 15px; margin-block-start: 4px; }
+  &__clickable { cursor: pointer; }
+  &__clip { font-size: 11px; color: var(--primary); margin-inline-start: 6px; }
   &__meta { font-size: 12px; color: var(--text-muted); }
 
   &__rows {

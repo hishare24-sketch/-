@@ -9,6 +9,7 @@ import type { Member } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import MemberFormModal from '../modals/MemberFormModal.vue'
 import MemberTxnFormModal from '../modals/MemberTxnFormModal.vue'
+import MemberDetailsModal from '../modals/MemberDetailsModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -46,6 +47,7 @@ const monthly = computed(() => {
 // المودالات
 const showMemberForm = ref(false)
 const editingMember = ref<Member | null>(null)
+const viewingMember = ref<Member | null>(null)
 const showTxnForm = ref(false)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 
@@ -92,6 +94,7 @@ const pendingTxns = computed(() =>
         class="avatars__item"
         :title="m.name"
         :style="{ background: roleOf(m).color + '20', color: roleOf(m).color }"
+        @click="viewingMember = m"
       >
         {{ m.name.charAt(0) }}
       </span>
@@ -152,10 +155,10 @@ const pendingTxns = computed(() =>
 
       <div class="members">
         <div v-for="m in projMembers" :key="m.id" class="member app-card">
-          <span class="member__avatar" :style="{ background: roleOf(m).color + '20', color: roleOf(m).color }">
+          <span class="member__avatar member__clickable" :style="{ background: roleOf(m).color + '20', color: roleOf(m).color }" @click="viewingMember = m">
             {{ m.name.charAt(0) }}
           </span>
-          <div class="member__info">
+          <div class="member__info member__clickable" @click="viewingMember = m">
             <span class="member__name">{{ m.name }}</span>
             <span class="member__email">{{ m.email }}</span>
           </div>
@@ -198,6 +201,7 @@ const pendingTxns = computed(() =>
       @close="showMemberForm = false"
     />
     <MemberTxnFormModal v-if="showTxnForm" :project-id="projectId" @close="showTxnForm = false" />
+    <MemberDetailsModal v-if="viewingMember" :member="viewingMember" @close="viewingMember = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
 
@@ -301,6 +305,7 @@ const pendingTxns = computed(() =>
     justify-content: center;
     font-weight: 700;
     font-size: 14px;
+    cursor: pointer;
   }
 
   &__more {
@@ -461,6 +466,8 @@ const pendingTxns = computed(() =>
     font-weight: 700;
     font-size: 16px;
   }
+
+  &__clickable { cursor: pointer; }
 
   &__info {
     flex: 1;

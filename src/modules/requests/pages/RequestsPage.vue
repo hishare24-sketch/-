@@ -7,6 +7,7 @@ import { useSettingsStore } from '@/stores/SettingsStore'
 import { fmt } from '@/helpers/format'
 import type { RequestItem, RequestStatus } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
+import EntityDetailsModal from '@/components/shared/EntityDetailsModal.vue'
 import RequestFormModal from '../modals/RequestFormModal.vue'
 
 const requestsStore = useRequestsStore()
@@ -48,7 +49,21 @@ function statusInfo(s: RequestStatus) {
 }
 
 const showForm = ref(false)
+const viewing = ref<RequestItem | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
+
+const viewRows = computed<[string, string][]>(() => {
+  const r = viewing.value
+  if (!r) return []
+  return [
+    ['النوع', r.type],
+    ['المشروع', projectsStore.projectById(r.projectId)?.name ?? '—'],
+    ['المبلغ', fmt(r.amount)],
+    ['مقدّم الطلب', r.requestedBy],
+    ['التاريخ', r.date],
+    ['الحالة', statusInfo(r.status).l],
+  ]
+})
 
 function decide(r: RequestItem, status: RequestStatus) {
   requestsStore.decide(r.id, status)
@@ -103,10 +118,11 @@ async function onDelete(r: RequestItem) {
     <div class="list">
       <div v-if="!filtered.length" class="empty app-card">لا توجد طلبات.</div>
       <div v-for="r in filtered" :key="r.id" class="req app-card">
-        <div class="req__main">
+        <div class="req__main" @click="viewing = r">
           <div class="req__title-row">
             <span class="req__title">{{ r.title }}</span>
             <span class="req__type">{{ r.type }}</span>
+            <span v-if="r.attachments?.length" class="req__clip" title="مرفقات">📎{{ r.attachments.length }}</span>
           </div>
           <span class="req__meta">
             {{ r.requestedBy }} · {{ projectsStore.projectById(r.projectId)?.name }} · {{ r.date }}
@@ -127,6 +143,15 @@ async function onDelete(r: RequestItem) {
     </div>
 
     <RequestFormModal v-if="showForm" :project-id="activeProjectId" @close="showForm = false" />
+    <EntityDetailsModal
+      v-if="viewing"
+      :title="viewing.title"
+      :badge="{ label: statusInfo(viewing.status).l, color: statusInfo(viewing.status).c, bg: statusInfo(viewing.status).bg }"
+      :rows="viewRows"
+      :note="viewing.note"
+      :attachments="viewing.attachments"
+      @close="viewing = null"
+    />
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>
@@ -251,6 +276,7 @@ async function onDelete(r: RequestItem) {
   &__main {
     flex: 1;
     min-inline-size: 180px;
+    cursor: pointer;
   }
 
   &__title-row {
@@ -258,6 +284,8 @@ async function onDelete(r: RequestItem) {
     align-items: center;
     gap: 10px;
   }
+
+  &__clip { font-size: 11px; color: var(--primary); }
 
   &__title { font-weight: 600; font-size: 14px; }
 

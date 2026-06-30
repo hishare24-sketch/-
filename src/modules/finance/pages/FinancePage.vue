@@ -11,6 +11,7 @@ import { CURRENT_USER } from '@/constants'
 import type { Transaction, TxType } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import TxFormModal from '../modals/TxFormModal.vue'
+import TxDetailsModal from '../modals/TxDetailsModal.vue'
 
 const projectsStore = useProjectsStore()
 const financeStore = useFinanceStore()
@@ -76,6 +77,7 @@ const typeLabel = (t: TxType) => (t === 'income' ? 'إيراد' : t === 'expense
 // المودالات
 const showForm = ref(false)
 const editing = ref<Transaction | null>(null)
+const viewing = ref<Transaction | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 
 function openCreate() {
@@ -85,6 +87,13 @@ function openCreate() {
 function openEdit(t: Transaction) {
   editing.value = t
   showForm.value = true
+}
+function openView(t: Transaction) {
+  viewing.value = t
+}
+function editFromView(t: Transaction) {
+  viewing.value = null
+  openEdit(t)
 }
 async function onDelete(t: Transaction) {
   const ok = await confirmRef.value?.open({ title: 'حذف العملية', message: `حذف "${t.description}"؟` })
@@ -206,7 +215,7 @@ function clearFilters() {
             <tr v-if="!filtered.length">
               <td colspan="5" class="empty">لا توجد عمليات مطابقة.</td>
             </tr>
-            <tr v-for="t in filtered" :key="t.id" :class="{ 'is-flagged': isFlagged(t) }">
+            <tr v-for="t in filtered" :key="t.id" :class="{ 'is-flagged': isFlagged(t) }" class="clickable" @click="openView(t)">
               <td>
                 <div class="desc">
                   <span class="desc__badge" :class="`is-${t.type}`">
@@ -228,8 +237,9 @@ function clearFilters() {
               </td>
               <td>
                 <div class="row-actions">
-                  <button class="icon-btn" title="تعديل" @click="openEdit(t)">✎</button>
-                  <button class="icon-btn icon-btn--danger" title="حذف" @click="onDelete(t)">🗑️</button>
+                  <button class="icon-btn" title="استعراض" @click.stop="openView(t)">👁</button>
+                  <button class="icon-btn" title="تعديل" @click.stop="openEdit(t)">✎</button>
+                  <button class="icon-btn icon-btn--danger" title="حذف" @click.stop="onDelete(t)">🗑️</button>
                 </div>
               </td>
             </tr>
@@ -239,6 +249,7 @@ function clearFilters() {
     </div>
 
     <TxFormModal v-if="showForm" :project-id="activeProjectId" :tx="editing" @close="showForm = false" />
+    <TxDetailsModal v-if="viewing" :tx="viewing" @edit="editFromView" @close="viewing = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>
@@ -453,6 +464,12 @@ td {
 
 tbody tr.is-flagged {
   background: #fef2f2;
+}
+
+tbody tr.clickable {
+  cursor: pointer;
+
+  &:hover td { background: var(--primary-soft); }
 }
 
 .empty {

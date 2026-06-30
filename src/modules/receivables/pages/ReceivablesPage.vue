@@ -11,6 +11,7 @@ import type { Receivable, ReceivableKind, ReceivableStatus } from '@/interfaces/
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import ReceivableFormModal from '../modals/ReceivableFormModal.vue'
 import PayReceivableModal from '../modals/PayReceivableModal.vue'
+import ReceivableDetailsModal from '../modals/ReceivableDetailsModal.vue'
 
 const receivablesStore = useReceivablesStore()
 const settingsStore = useSettingsStore()
@@ -71,7 +72,13 @@ function statusInfo(s: ReceivableStatus) {
 // المودالات
 const showForm = ref(false)
 const paying = ref<Receivable | null>(null)
+const viewing = ref<Receivable | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
+
+function payFromView(r: Receivable) {
+  viewing.value = null
+  paying.value = r
+}
 
 async function onDelete(r: Receivable) {
   const ok = await confirmRef.value?.open({ title: 'حذف الذمة', message: `حذف ذمة "${r.party}"؟` })
@@ -133,8 +140,11 @@ async function onDelete(r: Receivable) {
       <div v-if="!filtered.length" class="empty app-card">لا توجد ذمم مطابقة.</div>
       <div v-for="r in filtered" :key="r.id" class="rec app-card">
         <span class="rec__kind" :class="r.kind">{{ r.kind === 'receivable' ? '📥' : '📤' }}</span>
-        <div class="rec__main">
-          <span class="rec__party">{{ r.party }}</span>
+        <div class="rec__main" @click="viewing = r">
+          <span class="rec__party">
+            {{ r.party }}
+            <span v-if="r.attachments?.length" class="rec__clip" title="مرفقات">📎{{ r.attachments.length }}</span>
+          </span>
           <span class="rec__meta">
             {{ projectsStore.projectById(r.projectId)?.name }}
             <template v-if="r.dueDate"> · استحقاق {{ r.dueDate }}</template>
@@ -159,6 +169,7 @@ async function onDelete(r: Receivable) {
 
     <ReceivableFormModal v-if="showForm" :project-id="activeProjectId" @close="showForm = false" />
     <PayReceivableModal v-if="paying" :receivable="paying" @close="paying = null" />
+    <ReceivableDetailsModal v-if="viewing" :receivable="viewing" @pay="payFromView" @close="viewing = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>
@@ -299,9 +310,16 @@ async function onDelete(r: Receivable) {
     min-inline-size: 140px;
     display: flex;
     flex-direction: column;
+    cursor: pointer;
   }
 
   &__party { font-weight: 600; font-size: 14px; }
+
+  &__clip {
+    font-size: 11px;
+    color: var(--primary);
+    margin-inline-start: 6px;
+  }
   &__meta { font-size: 12px; color: var(--text-muted); }
 
   &__amounts {
