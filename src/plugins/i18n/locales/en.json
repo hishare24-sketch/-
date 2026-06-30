@@ -1,0 +1,40 @@
+{
+  "app": {
+    "name": "Mazeen",
+    "subtitle": "Smart Financial Platform"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "finance": "Finance",
+    "receivables": "Receivables",
+    "commitments": "Commitments",
+    "assets": "Assets",
+    "trackings": "Trackings",
+    "requests": "Requests",
+    "documents": "Documents",
+    "surveys": "Surveys",
+    "notifications": "Notifications",
+    "settings": "Settings"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "enter": "Sign in"
+  },
+  "errors": {
+    "you_are_not_authorized": "You are not authorized to access this page",
+    "not_found": "Page not found"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "back": "Back"
+  }
+}

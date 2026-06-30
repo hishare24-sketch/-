@@ -1,0 +1,40 @@
+{
+  "app": {
+    "name": "موازين",
+    "subtitle": "المنصة المالية الذكية"
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "projects": "المشاريع",
+    "finance": "المالية",
+    "receivables": "الذمم",
+    "commitments": "الالتزامات",
+    "assets": "الأصول",
+    "trackings": "المتابعات",
+    "requests": "الطلبات",
+    "documents": "المستندات",
+    "surveys": "الاستبيانات",
+    "notifications": "الإشعارات",
+    "settings": "الإعدادات"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "logout": "تسجيل الخروج",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "enter": "دخول"
+  },
+  "errors": {
+    "you_are_not_authorized": "غير مصرّح لك بالوصول لهذه الصفحة",
+    "not_found": "الصفحة غير موجودة"
+  },
+  "common": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "add": "إضافة",
+    "search": "بحث",
+    "back": "رجوع"
+  }
+}
