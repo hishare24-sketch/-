@@ -9,8 +9,11 @@ import FormsLayout from '@/layouts/FormsLayout.vue'
 const route = useRoute()
 const settingsStore = useSettingsStore()
 
-// تطبيق الثيم (الوضع + الألوان المخصّصة) عند بدء التطبيق
-onMounted(() => settingsStore.applyTheme())
+// تطبيق الثيم وهوية المستندات (المحفوظة) عند بدء التطبيق
+onMounted(() => {
+  settingsStore.applyTheme()
+  settingsStore.applyBranding()
+})
 
 const layout = computed(() => {
   switch (route.meta.layout) {

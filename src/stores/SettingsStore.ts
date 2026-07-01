@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { UserPrefs, CustomLists, HelpTexts, HelpKey, HelpEntry } from '@/interfaces/models'
 import { DEFAULT_PREFS, DEFAULT_LISTS, DEFAULT_HELP } from '@/constants'
+import { setDocBranding, getDefaultBranding, type DocBranding } from '@/helpers/export'
 
 export type ThemeMode = 'light' | 'dark'
 export interface CustomTheme {
@@ -23,6 +24,7 @@ export const useSettingsStore = defineStore('settings', {
     help: JSON.parse(JSON.stringify(DEFAULT_HELP)) as HelpTexts,
     themeMode: 'light' as ThemeMode,
     customTheme: {} as CustomTheme,
+    docBranding: getDefaultBranding() as DocBranding,
     currentPlan: 'free' as string,
     billing: 'monthly' as 'monthly' | 'yearly',
   }),
@@ -65,6 +67,19 @@ export const useSettingsStore = defineStore('settings', {
     },
     removeHelp(key: HelpKey) {
       delete this.help[key]
+    },
+
+    // ── هوية المستندات (محرّر القوالب) ──
+    applyBranding() {
+      setDocBranding(this.docBranding)
+    },
+    setBrandingField<K extends keyof DocBranding>(key: K, value: DocBranding[K]) {
+      this.docBranding[key] = value
+      this.applyBranding()
+    },
+    resetBranding() {
+      this.docBranding = getDefaultBranding()
+      this.applyBranding()
     },
 
     // ── الاشتراك ──

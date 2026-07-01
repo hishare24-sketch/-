@@ -83,14 +83,57 @@ export async function exportPDF(fileName: string, innerHTML: string): Promise<vo
   }
 }
 
-// قالب المستند المشترك: ترويسة بالشعار والعنوان + تذييل
-export function docHTML(opts: { title: string; subtitle?: string; body: string; brand?: string }): string {
-  const brand = opts.brand || 'موازين'
+// هوية المستندات القابلة للتخصيص (محرّر القوالب) — تُطبّق على كل مخرجات PDF
+export interface DocBranding {
+  brand: string
+  tagline: string
+  accent: string
+  footer: string
+  logo: string
+}
+
+const DEFAULT_BRANDING: DocBranding = {
+  brand: 'موازين',
+  tagline: 'نظام الإدارة المالية والتشغيلية',
+  accent: '#2563eb',
+  footer: '',
+  logo: '',
+}
+
+let _branding: DocBranding = { ...DEFAULT_BRANDING }
+
+// يحدّثها SettingsStore.applyBranding() لتصبح الهوية عامة لكل المستندات
+export function setDocBranding(patch: Partial<DocBranding>): void {
+  _branding = { ..._branding, ...patch }
+}
+export function getDefaultBranding(): DocBranding {
+  return { ...DEFAULT_BRANDING }
+}
+
+// قالب المستند المشترك: ترويسة بالشعار والعنوان + تذييل (يقبل تجاوزات لكل مستند)
+export function docHTML(opts: {
+  title: string
+  subtitle?: string
+  body: string
+  brand?: string
+  tagline?: string
+  accent?: string
+  footer?: string
+  logo?: string
+}): string {
+  const brand = opts.brand ?? _branding.brand
+  const tagline = opts.tagline ?? _branding.tagline
+  const accent = opts.accent ?? _branding.accent
+  const footer = opts.footer ?? _branding.footer
+  const logo = opts.logo ?? _branding.logo
   return `
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #2563eb;padding-bottom:16px;margin-bottom:24px">
-      <div>
-        <div style="font-size:26px;font-weight:800;color:#2563eb">${brand}</div>
-        <div style="font-size:12px;color:#666;margin-top:2px">نظام الإدارة المالية والتشغيلية</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid ${accent};padding-bottom:16px;margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:10px">
+        ${logo ? `<div style="font-size:30px">${logo}</div>` : ''}
+        <div>
+          <div style="font-size:26px;font-weight:800;color:${accent}">${brand}</div>
+          ${tagline ? `<div style="font-size:12px;color:#666;margin-top:2px">${tagline}</div>` : ''}
+        </div>
       </div>
       <div style="text-align:left">
         <div style="font-size:20px;font-weight:700">${opts.title}</div>
@@ -100,6 +143,6 @@ export function docHTML(opts: { title: string; subtitle?: string; body: string; 
     </div>
     ${opts.body}
     <div style="margin-top:40px;padding-top:14px;border-top:1px solid #ddd;font-size:10px;color:#999;text-align:center">
-      صُدّر هذا المستند من نظام موازين · ${new Date().toLocaleString('ar-SA')}
+      ${footer ? `${footer}<br>` : ''}صُدّر هذا المستند من نظام ${brand} · ${new Date().toLocaleString('ar-SA')}
     </div>`
 }

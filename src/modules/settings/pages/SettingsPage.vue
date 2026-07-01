@@ -6,6 +6,7 @@ import { THEME_PRESETS, SCREENS, PRICING_PLANS } from '@/constants'
 import type { CustomLists, UserPrefs } from '@/interfaces/models'
 import ToggleActivationSwitch from '@/components/shared/ToggleActivationSwitch.vue'
 import IntegrationsPanel from '../components/IntegrationsPanel.vue'
+import TemplateEditor from '../components/TemplateEditor.vue'
 import { resetPersistedData } from '@/plugins/persistence'
 
 // إدارة البيانات: استعادة البيانات التجريبية (تفريغ الحفظ المحلي)
@@ -28,12 +29,13 @@ const colorFields: { key: keyof CustomTheme; label: string; fallback: string }[]
   { key: 'border', label: 'لون الحدود', fallback: themeMode.value === 'dark' ? '#2a3346' : '#e5e7eb' },
 ]
 
-type Tab = 'prefs' | 'lists' | 'colors' | 'help' | 'integrations' | 'subscription'
+type Tab = 'prefs' | 'lists' | 'colors' | 'templates' | 'help' | 'integrations' | 'subscription'
 const tab = ref<Tab>('prefs')
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'prefs', label: 'التفضيلات', icon: '⚙️' },
   { id: 'lists', label: 'القوائم المخصّصة', icon: '🏷️' },
   { id: 'colors', label: 'الألوان والثيم', icon: '🎨' },
+  { id: 'templates', label: 'قوالب المستندات', icon: '📄' },
   { id: 'help', label: 'شروحات الأقسام', icon: '💡' },
   { id: 'integrations', label: 'التكاملات', icon: '🔌' },
   { id: 'subscription', label: 'الاشتراك', icon: '💳' },
@@ -242,6 +244,8 @@ const selectedHelp = computed(() => help.value[selectedScreen.value])
         </div>
 
         <!-- التكاملات -->
+        <TemplateEditor v-else-if="tab === 'templates'" />
+
         <IntegrationsPanel v-else-if="tab === 'integrations'" />
 
         <!-- الاشتراك والباقات -->
