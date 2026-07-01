@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════
 import { exportPDF, docHTML } from '@/helpers/export'
 import { fmtNum } from '@/helpers/format'
+import { escapeHTML, escapeHTMLBr } from '@/helpers/html'
 
 export type TemplateId = 'quote' | 'payment_order' | 'agreement'
 
@@ -79,7 +80,7 @@ export function quoteBody(d: QuoteData): string {
       (it, i) => `
       <tr>
         <td style="padding:9px 8px;border-bottom:1px solid #eee;text-align:center">${i + 1}</td>
-        <td style="padding:9px 8px;border-bottom:1px solid #eee">${it.desc || '—'}</td>
+        <td style="padding:9px 8px;border-bottom:1px solid #eee">${escapeHTML(it.desc) || '—'}</td>
         <td style="padding:9px 8px;border-bottom:1px solid #eee;text-align:center">${fmtNum(it.qty)}</td>
         <td style="padding:9px 8px;border-bottom:1px solid #eee;text-align:left">${money(it.price)}</td>
         <td style="padding:9px 8px;border-bottom:1px solid #eee;text-align:left;font-weight:600">${money(it.qty * it.price)}</td>
@@ -88,10 +89,10 @@ export function quoteBody(d: QuoteData): string {
     .join('')
   return `
     ${kvRows([
-      ['رقم العرض', d.ref],
-      ['التاريخ', d.date],
-      ['العميل / الجهة', d.client],
-      ['صلاحية العرض', d.validity],
+      ['رقم العرض', escapeHTML(d.ref)],
+      ['التاريخ', escapeHTML(d.date)],
+      ['العميل / الجهة', escapeHTML(d.client)],
+      ['صلاحية العرض', escapeHTML(d.validity)],
     ])}
     <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:18px">
       <thead>
@@ -110,19 +111,19 @@ export function quoteBody(d: QuoteData): string {
       <tr><td style="padding:6px 0;text-align:left;color:#666">الضريبة (${fmtNum(d.vatPercent)}%)</td><td style="padding:6px 0;text-align:left;font-weight:600">${money(vat)}</td></tr>
       <tr style="font-size:17px"><td style="padding:12px 0;text-align:left;font-weight:800;border-top:2px solid #2563eb">الإجمالي النهائي</td><td style="padding:12px 0;text-align:left;font-weight:800;border-top:2px solid #2563eb;color:#2563eb">${money(total)}</td></tr>
     </table>
-    ${d.notes ? `<div style="margin-top:18px;padding:12px 14px;background:#f8fafc;border-radius:8px;font-size:12px;color:#444;line-height:1.8"><b>ملاحظات وشروط:</b><br>${d.notes.replace(/\n/g, '<br>')}</div>` : ''}`
+    ${d.notes ? `<div style="margin-top:18px;padding:12px 14px;background:#f8fafc;border-radius:8px;font-size:12px;color:#444;line-height:1.8"><b>ملاحظات وشروط:</b><br>${escapeHTMLBr(d.notes)}</div>` : ''}`
 }
 
 // ── أمر دفع ──
 export function paymentOrderBody(d: PaymentOrderData): string {
   return `
     ${kvRows([
-      ['رقم الأمر', d.ref],
-      ['التاريخ', d.date],
-      ['المستفيد', d.payee],
-      ['المشروع', d.project],
-      ['بيان الدفع', d.purpose],
-      ['طريقة الدفع', d.method],
+      ['رقم الأمر', escapeHTML(d.ref)],
+      ['التاريخ', escapeHTML(d.date)],
+      ['المستفيد', escapeHTML(d.payee)],
+      ['المشروع', escapeHTML(d.project)],
+      ['بيان الدفع', escapeHTML(d.purpose)],
+      ['طريقة الدفع', escapeHTML(d.method)],
     ])}
     <table style="width:100%;border-collapse:collapse;font-size:18px;margin-top:16px">
       <tr><td style="padding:14px 0;font-weight:800;border-top:2px solid #2563eb;border-bottom:2px solid #2563eb">المبلغ المطلوب صرفه</td><td style="padding:14px 0;font-weight:800;border-top:2px solid #2563eb;border-bottom:2px solid #2563eb;text-align:left;color:#2563eb">${money(d.amount)}</td></tr>
@@ -133,7 +134,7 @@ export function paymentOrderBody(d: PaymentOrderData): string {
           المُعِدّ<br><br>........................
         </td>
         <td style="text-align:center;color:#666">
-          المُعتمِد: ${d.approver || '—'}<br><br>........................
+          المُعتمِد: ${escapeHTML(d.approver) || '—'}<br><br>........................
         </td>
         <td style="text-align:center;color:#666">
           المستلم<br><br>........................
@@ -149,24 +150,24 @@ export function agreementBody(d: AgreementData): string {
     .map((c) => c.trim())
     .filter(Boolean)
   const clausesHtml = clauseList.length
-    ? `<ol style="margin:0;padding-inline-start:20px;font-size:13px;line-height:2;color:#333">${clauseList.map((c) => `<li>${c}</li>`).join('')}</ol>`
+    ? `<ol style="margin:0;padding-inline-start:20px;font-size:13px;line-height:2;color:#333">${clauseList.map((c) => `<li>${escapeHTML(c)}</li>`).join('')}</ol>`
     : '<div style="color:#999;font-size:13px">— لا توجد بنود —</div>'
   return `
-    <div style="font-size:15px;font-weight:700;margin-bottom:14px">${d.subject || 'اتفاقية'}</div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:14px">${escapeHTML(d.subject) || 'اتفاقية'}</div>
     ${kvRows([
-      ['رقم الاتفاقية', d.ref],
-      ['التاريخ', d.date],
-      ['الطرف الأول', d.party1],
-      ['الطرف الثاني', d.party2],
+      ['رقم الاتفاقية', escapeHTML(d.ref)],
+      ['التاريخ', escapeHTML(d.date)],
+      ['الطرف الأول', escapeHTML(d.party1)],
+      ['الطرف الثاني', escapeHTML(d.party2)],
       ['القيمة / المقابل', d.value ? money(d.value) : '—'],
-      ['المدة', d.startDate || d.endDate ? `${d.startDate || '—'} ← ${d.endDate || '—'}` : '—'],
+      ['المدة', d.startDate || d.endDate ? `${escapeHTML(d.startDate) || '—'} ← ${escapeHTML(d.endDate) || '—'}` : '—'],
     ])}
     <div style="margin-top:18px;font-weight:700;font-size:14px;margin-bottom:8px">بنود الاتفاقية</div>
     ${clausesHtml}
     <table style="width:100%;margin-top:56px;font-size:13px">
       <tr>
-        <td style="text-align:center;color:#666">الطرف الأول<br>${d.party1 || ''}<br><br>........................</td>
-        <td style="text-align:center;color:#666">الطرف الثاني<br>${d.party2 || ''}<br><br>........................</td>
+        <td style="text-align:center;color:#666">الطرف الأول<br>${escapeHTML(d.party1)}<br><br>........................</td>
+        <td style="text-align:center;color:#666">الطرف الثاني<br>${escapeHTML(d.party2)}<br><br>........................</td>
       </tr>
     </table>`
 }

@@ -4,6 +4,8 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { escapeHTML } from '@/helpers/html'
+
 // ── Excel (ملفات .xlsx حقيقية عبر SheetJS) ──
 let _xlsxPromise: Promise<any> | null = null
 export function loadXLSX(): Promise<any> {
@@ -121,11 +123,14 @@ export function docHTML(opts: {
   footer?: string
   logo?: string
 }): string {
-  const brand = opts.brand ?? _branding.brand
-  const tagline = opts.tagline ?? _branding.tagline
-  const accent = opts.accent ?? _branding.accent
-  const footer = opts.footer ?? _branding.footer
-  const logo = opts.logo ?? _branding.logo
+  // تُهرَّب كل الحقول القابلة للتحكم من المستخدم؛ opts.body وحده HTML موثوق يبنيه المُنادي
+  const brand = escapeHTML(opts.brand ?? _branding.brand)
+  const tagline = escapeHTML(opts.tagline ?? _branding.tagline)
+  const accent = escapeHTML(opts.accent ?? _branding.accent)
+  const footer = escapeHTML(opts.footer ?? _branding.footer)
+  const logo = escapeHTML(opts.logo ?? _branding.logo)
+  const title = escapeHTML(opts.title)
+  const subtitle = escapeHTML(opts.subtitle)
   return `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid ${accent};padding-bottom:16px;margin-bottom:24px">
       <div style="display:flex;align-items:center;gap:10px">
@@ -136,8 +141,8 @@ export function docHTML(opts: {
         </div>
       </div>
       <div style="text-align:left">
-        <div style="font-size:20px;font-weight:700">${opts.title}</div>
-        ${opts.subtitle ? `<div style="font-size:12px;color:#666;margin-top:3px">${opts.subtitle}</div>` : ''}
+        <div style="font-size:20px;font-weight:700">${title}</div>
+        ${subtitle ? `<div style="font-size:12px;color:#666;margin-top:3px">${subtitle}</div>` : ''}
         <div style="font-size:11px;color:#999;margin-top:3px">تاريخ الإصدار: ${new Date().toLocaleDateString('ar-SA')}</div>
       </div>
     </div>

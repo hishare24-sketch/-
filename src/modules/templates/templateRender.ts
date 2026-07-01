@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════
 import type { DocTemplate, TemplateElement } from '@/interfaces/models'
 import { fmtNum } from '@/helpers/format'
+import { escapeHTML } from '@/helpers/html'
 
 // أنواع العناصر التي تتطلّب إدخالاً من المستخدم (تظهر في النموذج)
 export const INPUT_TYPES = new Set<TemplateElement['type']>([
@@ -13,15 +14,8 @@ export const TABLE_TYPES = new Set<TemplateElement['type']>(['table', 'items_tab
 export type FieldValues = Record<string, string>
 export type TableRows = Record<string, string[][]>
 
-// تهريب HTML لمنع XSS من إدخال المستخدم
-export function esc(s: string): string {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
+// تهريب HTML لمنع XSS من إدخال المستخدم (مصدر واحد في helpers/html)
+export const esc = escapeHTML
 
 // آخر عمود رقمي في صفوف الجدول → مجموعه (لجدول المنتجات)
 function tableTotal(rows: string[][]): number {
