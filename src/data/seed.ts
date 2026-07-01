@@ -5,8 +5,10 @@
 import type {
   Project, Transaction, Tracking, Asset, RequestItem, DocItem,
   Notif, AuditEntry, Member, MemberTxn, Receivable, Commitment, Survey,
+  DocTemplate,
 } from '@/interfaces/models'
 import { ROLE_PERMS } from '@/constants'
+import { buildTemplate } from '@/modules/templates/constants'
 
 export const INITIAL_PROJECTS: Project[] = [
   { id: 'p1', name: 'شركة النخيل', icon: '🏢', balance: 284500, color: '#0891b2', type: 'شركة', description: 'شركة تجارية متخصصة في التوريدات' },
@@ -310,4 +312,11 @@ export const INITIAL_SURVEYS: Survey[] = [
       { id: 'r3', respondentId: 'rsp4', answers: { q1: 3, q2: 'لا', q3: 6, q4: 2, q5: ['الراتب'], q6: 'نحتاج مرونة أكثر في الدوام' }, submittedAt: '2025-06-14', respondent: 'زائر خارجي' },
     ],
   },
+]
+
+// قوالب مبدئية (واحد لكل نوع مستند شائع) — يُبنى بهيكل أوليّ جاهز للتعديل
+export const INITIAL_TEMPLATES: DocTemplate[] = [
+  buildTemplate('عرض سعر افتراضي', 'quote', '2025-06-01'),
+  buildTemplate('فاتورة فورية افتراضية', 'invoice', '2025-06-01'),
+  buildTemplate('اتفاقية افتراضية', 'agreement', '2025-06-01'),
 ]

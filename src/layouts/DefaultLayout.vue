@@ -48,6 +48,7 @@ const navItems = computed(() => [
   { title: t('nav.trackings'), icon: '🔔', to: { name: 'trackings-page' }, show: true },
   { title: t('nav.requests'), icon: '📥', to: { name: 'requests-page' }, show: true },
   { title: t('nav.documents'), icon: '📄', to: { name: 'documents-page' }, show: true },
+  { title: 'مولّد القوالب', icon: '🧩', to: { name: 'templates-page' }, show: true },
   { title: t('nav.surveys'), icon: '📋', to: { name: 'surveys-page' }, show: true },
   { title: t('nav.notifications'), icon: '🔔', to: { name: 'notifications-page' }, show: true, badge: unreadCount.value },
   { title: 'سجل العمليات', icon: '🗂️', to: { name: 'audit-page' }, show: true },

@@ -9,6 +9,7 @@ import { assetsRoutes } from '@/modules/assets/assetsRoutes'
 import { trackingsRoutes } from '@/modules/trackings/trackingsRoutes'
 import { requestsRoutes } from '@/modules/requests/requestsRoutes'
 import { documentsRoutes } from '@/modules/documents/documentsRoutes'
+import { templatesRoutes } from '@/modules/templates/templatesRoutes'
 import { surveysRoutes } from '@/modules/surveys/surveysRoutes'
 import { notificationsRoutes } from '@/modules/notifications/notificationsRoutes'
 import { auditRoutes } from '@/modules/audit/auditRoutes'
@@ -69,6 +70,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/modules/documents/DocumentsModule.vue'),
     meta: { layout: 'default' },
     children: documentsRoutes,
+  },
+  {
+    path: '/templates',
+    component: () => import('@/modules/templates/TemplatesModule.vue'),
+    meta: { layout: 'default' },
+    children: templatesRoutes,
   },
   {
     path: '/surveys',

@@ -408,3 +408,90 @@ export interface HelpEntry {
   show: boolean
 }
 export type HelpTexts = Record<string, HelpEntry>
+
+// ═══════════════════════════════════════════
+//  مولّد القوالب الديناميكي (منشئ القوالب الذكي)
+// ═══════════════════════════════════════════
+
+// أنواع المستندات الخمسة المدعومة
+export type TemplateDocType = 'quote' | 'invoice' | 'agreement' | 'payment_order' | 'official'
+export type TemplateStatus = 'active' | 'archived'
+
+// أنواع الأقسام الستة داخل القالب
+export type TemplateSectionKind =
+  | 'header' // رأس الصفحة
+  | 'fixed' // قسم ثابت (مرة واحدة)
+  | 'repeatable' // قسم مكرر (صفوف/بنود قابلة للإضافة والحذف)
+  | 'group' // مجموعة عناصر مرتبطة
+  | 'conditional' // قسم شرطي (يظهر عند شرط)
+  | 'footer' // تذييل الصفحة
+
+// أنواع العناصر الـ15 القابلة للإضافة
+export type TemplateElementType =
+  | 'paragraph' // فقرة نصية
+  | 'heading' // عنوان
+  | 'table' // جدول بسيط
+  | 'items_table' // جدول منتجات/خدمات (بإجمالي تلقائي)
+  | 'number' // حقل رقمي
+  | 'date' // حقل تاريخ
+  | 'short_text' // نص قصير
+  | 'long_text' // نص طويل
+  | 'image' // صورة (شعار/توقيع/ختم/باركود)
+  | 'dropdown' // قائمة منسدلة
+  | 'checkbox' // خانة اختيار
+  | 'page_break' // فاصل صفحة
+  | 'signature' // توقيع إلكتروني
+  | 'computed' // حقل محسوب
+  | 'group' // مجموعة عناصر فرعية
+
+// عنصر داخل قسم — الخصائص كلها اختيارية وتُستخدم حسب نوع العنصر
+export interface TemplateElement {
+  id: string
+  type: TemplateElementType
+  label: string
+  hidden?: boolean // إخفاء مؤقت دون حذف
+  // إدخال عام
+  placeholder?: string
+  required?: boolean
+  defaultValue?: string
+  // نص/عنوان
+  fontSize?: number
+  color?: string
+  bold?: boolean
+  italic?: boolean
+  align?: 'start' | 'center' | 'end'
+  // رقمي
+  numberFormat?: 'integer' | 'decimal' | 'currency' | 'percent'
+  min?: number
+  max?: number
+  // تاريخ
+  dateFormat?: 'gregorian' | 'hijri'
+  // قائمة منسدلة
+  options?: string[]
+  // حقل محسوب
+  formula?: string
+  // صورة
+  imageKind?: 'logo' | 'signature' | 'stamp' | 'barcode'
+  // جدول
+  columns?: string[]
+}
+
+export interface TemplateSection {
+  id: string
+  kind: TemplateSectionKind
+  title: string
+  repeatable?: boolean
+  condition?: string // شرط ظهور القسم الشرطي
+  elements: TemplateElement[]
+}
+
+export interface DocTemplate {
+  id: string
+  name: string
+  docType: TemplateDocType
+  status: TemplateStatus
+  sections: TemplateSection[]
+  createdAt: string
+  updatedAt: string
+  createdBy?: string
+}
