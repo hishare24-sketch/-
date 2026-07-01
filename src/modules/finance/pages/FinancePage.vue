@@ -15,6 +15,7 @@ import ChartCard from '@/components/charts/ChartCard.vue'
 import DonutChart from '@/components/charts/DonutChart.vue'
 import TxFormModal from '../modals/TxFormModal.vue'
 import TxDetailsModal from '../modals/TxDetailsModal.vue'
+import ReconcileModal from '../modals/ReconcileModal.vue'
 
 const projectsStore = useProjectsStore()
 const financeStore = useFinanceStore()
@@ -81,6 +82,7 @@ const typeLabel = (t: TxType) => (t === 'income' ? 'إيراد' : t === 'expense
 
 // المودالات
 const showForm = ref(false)
+const showReconcile = ref(false)
 const editing = ref<Transaction | null>(null)
 const viewing = ref<Transaction | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
@@ -141,6 +143,7 @@ function clearFilters() {
           <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.icon }} {{ p.name }}</option>
         </select>
         <button class="app-btn app-btn--outlined" @click="exportExcel">⬇ Excel</button>
+        <button class="app-btn app-btn--outlined" @click="showReconcile = true">📥 مطابقة Excel</button>
         <button class="app-btn" @click="openCreate">＋ عملية جديدة</button>
       </div>
     </header>
@@ -262,6 +265,7 @@ function clearFilters() {
     </div>
 
     <TxFormModal v-if="showForm" :project-id="activeProjectId" :tx="editing" @close="showForm = false" />
+    <ReconcileModal v-if="showReconcile" :project-id="activeProjectId" @close="showReconcile = false" />
     <TxDetailsModal v-if="viewing" :tx="viewing" @edit="editFromView" @close="viewing = null" />
     <ConfirmModal ref="confirmRef" />
   </section>

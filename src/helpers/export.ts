@@ -23,7 +23,8 @@ export function loadXLSX(): Promise<any> {
 export async function importXLSX(file: File): Promise<Record<string, any>[]> {
   const XLSX = await loadXLSX()
   const data = await file.arrayBuffer()
-  const wb = XLSX.read(data, { type: 'array' })
+  // codepage 65001 = UTF-8 (يحافظ على العربية في ملفات CSV؛ يُتجاهل مع xlsx)
+  const wb = XLSX.read(data, { type: 'array', codepage: 65001 })
   const firstSheet = wb.SheetNames[0]
   if (!firstSheet) return []
   return XLSX.utils.sheet_to_json(wb.Sheets[firstSheet]) as Record<string, any>[]
