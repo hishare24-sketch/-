@@ -2,7 +2,7 @@
 import { reactive, computed } from 'vue'
 import { useAssetsStore } from '@/stores/AssetsStore'
 import { useToast } from '@/composables/useToast'
-import { CURRENT_USER } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import { today } from '@/helpers/date'
 import type { Asset, AssetWarranty, Attachment, WarrantyContext } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
@@ -59,7 +59,7 @@ function save() {
     linkedMaintenanceId: form.linkedMaintenanceId || undefined,
     note: form.note.trim() || undefined,
     attachments: form.attachments.length ? form.attachments : undefined,
-    createdBy: CURRENT_USER,
+    createdBy: currentUserName(),
   }
 
   if (props.warranty) {

@@ -5,7 +5,7 @@ import { recvPaid } from '@/helpers/calc'
 import { uid } from '@/helpers/id'
 import { today } from '@/helpers/date'
 import { fmt } from '@/helpers/format'
-import { CURRENT_USER } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import { useFinanceStore } from '@/stores/FinanceStore'
 import { useAuditStore } from '@/stores/AuditStore'
 
@@ -58,7 +58,7 @@ export const useReceivablesStore = defineStore('receivables', {
         note: note || undefined,
         source: source || undefined,
         attachments: atts.length ? atts : undefined,
-        createdBy: CURRENT_USER,
+        createdBy: currentUserName(),
       })
       const paid = recvPaid(r)
       const newStatus: ReceivableStatus = paid >= r.amount ? 'settled' : paid > 0 ? 'partial' : 'open'
@@ -77,7 +77,7 @@ export const useReceivablesStore = defineStore('receivables', {
         source: source || r.party,
         memberId: r.memberId,
         note: note || `${isRecv ? 'تحصيل' : 'سداد'} ذمة${source ? ` · ${source}` : ''}`,
-        createdBy: CURRENT_USER,
+        createdBy: currentUserName(),
       })
       useAuditStore().log(isRecv ? 'تحصيل' : 'سداد', 'ذمة', `${r.party} — ${fmt(amount)}`)
     },

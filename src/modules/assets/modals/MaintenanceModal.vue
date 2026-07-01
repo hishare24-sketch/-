@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { reactive, computed } from 'vue'
 import { useAssetsStore } from '@/stores/AssetsStore'
-import { CURRENT_USER, MAINT_TYPES } from '@/constants'
+import { MAINT_TYPES } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import { today } from '@/helpers/date'
 import type { Asset, MaintenanceEntry, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
@@ -43,7 +44,7 @@ function save() {
     meter: form.meter != null ? Number(form.meter) : undefined,
     note: form.note.trim(),
     attachments: form.attachments,
-    createdBy: CURRENT_USER,
+    createdBy: currentUserName(),
   })
   // إنشاء ضمان فرعي مرتبط بهذه العملية، يرث مرفقاتها ويُربط بالتذكيرات
   if (mnId && form.addWarranty) {
@@ -57,7 +58,7 @@ function save() {
       linkedMaintenanceId: mnId,
       note: form.note.trim() || undefined,
       attachments: form.attachments.length ? [...form.attachments] : undefined,
-      createdBy: CURRENT_USER,
+      createdBy: currentUserName(),
     })
     if (id) assetsStore.linkSubWarranty(props.asset.id, id)
   }

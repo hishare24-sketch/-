@@ -3,7 +3,8 @@ import { reactive, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useRequestsStore } from '@/stores/RequestsStore'
-import { REQUEST_TYPES, REQUEST_FIELD_SCHEMAS, REQUEST_TYPE_META, CURRENT_USER } from '@/constants'
+import { REQUEST_TYPES, REQUEST_FIELD_SCHEMAS, REQUEST_TYPE_META } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import { today } from '@/helpers/date'
 import type { Attachment, RequestItem } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
@@ -23,7 +24,7 @@ const form = reactive({
   type: rq?.type ?? REQUEST_TYPES[0],
   projectId: rq?.projectId ?? props.projectId,
   amount: (rq?.amount ?? null) as number | null,
-  requestedBy: rq?.requestedBy ?? CURRENT_USER,
+  requestedBy: rq?.requestedBy ?? currentUserName(),
   memberId: rq?.memberId ?? '',
   note: rq?.note ?? '',
   attachments: (rq?.attachments ?? []) as Attachment[],

@@ -3,7 +3,8 @@ import { reactive, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useCommitmentsStore } from '@/stores/CommitmentsStore'
-import { COMMITMENT_KINDS, COMMITMENT_FIELD_SCHEMAS, FREQ_LABEL, CURRENT_USER } from '@/constants'
+import { COMMITMENT_KINDS, COMMITMENT_FIELD_SCHEMAS, FREQ_LABEL } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import { today } from '@/helpers/date'
 import type { CommitmentKind, CommitmentFreq, CommitmentDir, Attachment, Commitment } from '@/interfaces/models'
 import type { FormPreset } from '@/interfaces/forms'
@@ -66,7 +67,7 @@ function save() {
   if (editing.value && props.commitment) {
     commitmentsStore.updateCommitment(props.commitment.id, base)
   } else {
-    commitmentsStore.addCommitment({ ...base, paidCount: 0, nextDue: form.startDate, active: true, payments: [], createdBy: CURRENT_USER })
+    commitmentsStore.addCommitment({ ...base, paidCount: 0, nextDue: form.startDate, active: true, payments: [], createdBy: currentUserName() })
   }
   emit('saved')
   emit('close')

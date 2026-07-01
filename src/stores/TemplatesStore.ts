@@ -3,7 +3,7 @@ import type { DocTemplate, TemplateDocType, TemplateStatus } from '@/interfaces/
 import { INITIAL_TEMPLATES } from '@/data/seed'
 import { uid } from '@/helpers/id'
 import { today } from '@/helpers/date'
-import { CURRENT_USER } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import { buildTemplate } from '@/modules/templates/constants'
 import { useAuditStore } from '@/stores/AuditStore'
 
@@ -32,7 +32,7 @@ export const useTemplatesStore = defineStore('templates', {
     // إنشاء قالب جديد بهيكل أوليّ حسب نوع المستند → يُرجع معرّفه
     createTemplate(name: string, docType: TemplateDocType): string {
       const tpl = buildTemplate(name.trim() || 'قالب بدون اسم', docType, today())
-      tpl.createdBy = CURRENT_USER
+      tpl.createdBy = currentUserName()
       this.templates.unshift(tpl)
       useAuditStore().log('إنشاء', 'قالب مستند', `${tpl.name} — ${docType}`)
       return tpl.id
@@ -64,7 +64,7 @@ export const useTemplatesStore = defineStore('templates', {
         sections: cloneSections(src.sections),
         createdAt: today(),
         updatedAt: today(),
-        createdBy: CURRENT_USER,
+        createdBy: currentUserName(),
       }
       this.templates.unshift(copy)
       useAuditStore().log('نسخ', 'قالب مستند', copy.name)

@@ -9,7 +9,7 @@ import { fmt, fmtNum } from '@/helpers/format'
 import { exportXLSX } from '@/helpers/export'
 import { useToast } from '@/composables/useToast'
 import { txErrors } from '@/helpers/txAnalysis'
-import { CURRENT_USER } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import type { Transaction, TxType } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import ChartCard from '@/components/charts/ChartCard.vue'
@@ -122,7 +122,7 @@ function exportExcel() {
         المبلغ: t.amount,
         التاريخ: t.date,
         'المصدر/الجهة': t.source ?? '—',
-        بواسطة: t.createdBy ?? CURRENT_USER,
+        بواسطة: t.createdBy ?? currentUserName(),
       })),
     },
   ])

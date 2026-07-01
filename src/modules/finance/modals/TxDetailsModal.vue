@@ -4,7 +4,8 @@ import { useProjectsStore } from '@/stores/ProjectsStore'
 import { fmt } from '@/helpers/format'
 import { exportPDF, docHTML } from '@/helpers/export'
 import { useToast } from '@/composables/useToast'
-import { TX_TYPES, CURRENT_USER } from '@/constants'
+import { TX_TYPES } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import type { Transaction } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
@@ -26,7 +27,7 @@ const rows = computed(() => {
     ['المبلغ', fmt(t.amount)],
     ['التاريخ', t.date],
     ['المصدر / الجهة', t.source ?? '—'],
-    ['بواسطة', t.createdBy ?? CURRENT_USER],
+    ['بواسطة', t.createdBy ?? currentUserName()],
     ['ملاحظات', t.note ?? '—'],
   ] as [string, string][]
 })

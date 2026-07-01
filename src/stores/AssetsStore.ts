@@ -4,7 +4,8 @@ import { INITIAL_ASSETS } from '@/data/seed'
 import { uid } from '@/helpers/id'
 import { fmt } from '@/helpers/format'
 import { today, daysBetween, statusFromDays } from '@/helpers/date'
-import { ASSET_STATUS, CURRENT_USER } from '@/constants'
+import { ASSET_STATUS } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import { useFinanceStore } from '@/stores/FinanceStore'
 import { useAuditStore } from '@/stores/AuditStore'
 import { useTrackingsStore } from '@/stores/TrackingsStore'
@@ -26,7 +27,7 @@ export const useAssetsStore = defineStore('assets', {
     // تسجيل حدث في سجل الأصل
     _event(a: Asset, kind: AssetEventKind, text: string) {
       if (!a.events) a.events = []
-      a.events.unshift({ id: uid('ev'), date: today(), kind, text, createdBy: CURRENT_USER })
+      a.events.unshift({ id: uid('ev'), date: today(), kind, text, createdBy: currentUserName() })
     },
 
     addAsset(payload: AssetPayload) {
@@ -65,7 +66,7 @@ export const useAssetsStore = defineStore('assets', {
           date: m.date,
           hasDoc: false,
           note: 'صيانة أصل',
-          createdBy: CURRENT_USER,
+          createdBy: currentUserName(),
         })
       }
       // جدولة الدورة التالية عند تسجيل صيانة دورية
@@ -118,7 +119,7 @@ export const useAssetsStore = defineStore('assets', {
           date,
           hasDoc: false,
           note: 'بيع أصل',
-          createdBy: CURRENT_USER,
+          createdBy: currentUserName(),
         })
       }
       this._event(a, 'sale', `بيع الأصل بمبلغ ${fmt(amount)}`)
@@ -189,7 +190,7 @@ export const useAssetsStore = defineStore('assets', {
         expiryDate: w.endDate,
         projectId: a.projectId,
         note: `ضمان فرعي للأصل: ${a.name}${w.provider ? ` · ${w.provider}` : ''}`,
-        createdBy: CURRENT_USER,
+        createdBy: currentUserName(),
       })
       w.trackingId = trackingId
       this._event(a, 'warranty', `ربط ضمان «${w.name}» بالمتابعات`)
@@ -212,7 +213,7 @@ export const useAssetsStore = defineStore('assets', {
         expiryDate: a.warrantyEnd,
         projectId: a.projectId,
         note: `ضمان أصل: ${a.name}`,
-        createdBy: CURRENT_USER,
+        createdBy: currentUserName(),
       })
       a.trackingId = trackingId
       this._event(a, 'warranty', 'ربط الضمان بالمتابعات')

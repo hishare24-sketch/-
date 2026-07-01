@@ -3,7 +3,8 @@ import { reactive, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useAssetsStore } from '@/stores/AssetsStore'
-import { ASSET_CATEGORIES, ASSET_FIELD_SCHEMAS, ASSET_METER_UNIT, CURRENT_USER } from '@/constants'
+import { ASSET_CATEGORIES, ASSET_FIELD_SCHEMAS, ASSET_METER_UNIT } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import { today } from '@/helpers/date'
 import type { AssetCategory, Attachment, Asset } from '@/interfaces/models'
 import type { FormPreset } from '@/interfaces/forms'
@@ -81,7 +82,7 @@ function save() {
   if (editing.value && props.asset) {
     assetsStore.updateAsset(props.asset.id, payload)
   } else {
-    assetsStore.addAsset({ ...payload, status: 'active', maintenance: [], createdBy: CURRENT_USER })
+    assetsStore.addAsset({ ...payload, status: 'active', maintenance: [], createdBy: currentUserName() })
   }
   emit('saved')
   emit('close')

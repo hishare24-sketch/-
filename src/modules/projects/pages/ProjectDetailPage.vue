@@ -8,7 +8,8 @@ import { useTrackingsStore } from '@/stores/TrackingsStore'
 import { useRequestsStore } from '@/stores/RequestsStore'
 import { fmt, fmtNum } from '@/helpers/format'
 import { txErrors } from '@/helpers/txAnalysis'
-import { ROLES, CURRENT_USER, PERMISSIONS } from '@/constants'
+import { ROLES, PERMISSIONS } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import { useFocusHighlight } from '@/composables/useFocusHighlight'
 import type { Member, Transaction } from '@/interfaces/models'
 import TxDetailsModal from '@/modules/finance/modals/TxDetailsModal.vue'
@@ -53,7 +54,7 @@ const transfersOut = computed(() => txns.value.filter((t) => t.type === 'transfe
 const sortedTxns = computed(() => [...txns.value].sort((a, b) => b.date.localeCompare(a.date)))
 const isFlagged = (t: Transaction) => txErrors(t, { project: project.value, transactions: financeStore.transactions }).length > 0
 const isIn = (t: Transaction) => t.type === 'income' || (t.type === 'transfer' && t.transferDir === 'in')
-const CURRENT = CURRENT_USER
+const CURRENT = currentUserName()
 const viewingTx = ref<Transaction | null>(null)
 
 const roleOf = (m: Member) => ROLES.find((r) => r.id === m.role)!

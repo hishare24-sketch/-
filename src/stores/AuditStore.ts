@@ -3,7 +3,7 @@ import type { AuditEntry } from '@/interfaces/models'
 import { INITIAL_AUDIT } from '@/data/seed'
 import { uid } from '@/helpers/id'
 import { nowStamp } from '@/helpers/date'
-import { CURRENT_USER } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 
 // سجل التدقيق — يسجّل الأحداث المهمة عبر التطبيق
 export const useAuditStore = defineStore('audit', {
@@ -12,7 +12,7 @@ export const useAuditStore = defineStore('audit', {
   }),
 
   actions: {
-    log(action: string, entity: string, detail: string, user: string = CURRENT_USER) {
+    log(action: string, entity: string, detail: string, user: string = currentUserName()) {
       this.entries.unshift({ id: uid('a'), action, entity, detail, user, ts: nowStamp() })
     },
   },

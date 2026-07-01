@@ -4,7 +4,8 @@ import { storeToRefs } from 'pinia'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useReceivablesStore } from '@/stores/ReceivablesStore'
 import { today } from '@/helpers/date'
-import { CURRENT_USER, RECEIVABLE_TERMS } from '@/constants'
+import { RECEIVABLE_TERMS } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import type { ReceivableKind, Attachment, Receivable } from '@/interfaces/models'
 import type { FormPreset } from '@/interfaces/forms'
 import ModalShell from '@/components/shared/ModalShell.vue'
@@ -50,7 +51,7 @@ function save() {
   if (editing.value && props.receivable) {
     receivablesStore.updateReceivable(props.receivable.id, payload)
   } else {
-    receivablesStore.addReceivable({ ...payload, date: today(), status: 'open', payments: [], createdBy: CURRENT_USER })
+    receivablesStore.addReceivable({ ...payload, date: today(), status: 'open', payments: [], createdBy: currentUserName() })
   }
   emit('saved')
   emit('close')

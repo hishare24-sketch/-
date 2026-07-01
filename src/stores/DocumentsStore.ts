@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import type { DocItem } from '@/interfaces/models'
 import { INITIAL_DOCUMENTS } from '@/data/seed'
 import { uid } from '@/helpers/id'
-import { CURRENT_USER } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 
 export type DocPayload = Omit<DocItem, 'id'> & { id?: string }
 
@@ -23,7 +23,7 @@ export const useDocumentsStore = defineStore('documents', {
       if (existing !== -1) {
         this.documents[existing] = { ...this.documents[existing], ...payload, id: payload.id! }
       } else {
-        this.documents.unshift({ ...payload, id: payload.id ?? uid('d'), createdBy: CURRENT_USER })
+        this.documents.unshift({ ...payload, id: payload.id ?? uid('d'), createdBy: currentUserName() })
       }
     },
     deleteDoc(id: string) {

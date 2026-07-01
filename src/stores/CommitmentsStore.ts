@@ -4,7 +4,8 @@ import { INITIAL_COMMITMENTS } from '@/data/seed'
 import { uid } from '@/helpers/id'
 import { today, advanceDate } from '@/helpers/date'
 import { fmt } from '@/helpers/format'
-import { CURRENT_USER, COMMITMENT_KINDS, FREQ_LABEL } from '@/constants'
+import { COMMITMENT_KINDS, FREQ_LABEL } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import { useFinanceStore } from '@/stores/FinanceStore'
 import { useAuditStore } from '@/stores/AuditStore'
 
@@ -56,7 +57,7 @@ export const useCommitmentsStore = defineStore('commitments', {
       const date = opts?.date ?? today()
       const atts = opts?.attachments ?? []
       const dueLabel = `دفعة ${c.paidCount + 1}${c.totalCount ? `/${c.totalCount}` : ''}`
-      c.payments.push({ id: uid('cp'), amount, date, dueLabel, createdBy: CURRENT_USER, attachments: atts.length ? atts : undefined })
+      c.payments.push({ id: uid('cp'), amount, date, dueLabel, createdBy: currentUserName(), attachments: atts.length ? atts : undefined })
       c.paidCount += 1
       const reachedEnd = c.totalCount != null && c.paidCount >= c.totalCount
       if (reachedEnd) c.active = false
@@ -75,7 +76,7 @@ export const useCommitmentsStore = defineStore('commitments', {
         source: c.party,
         memberId: c.memberId,
         note: opts?.note?.trim() || `دفعة ${FREQ_LABEL[c.freq]}`,
-        createdBy: CURRENT_USER,
+        createdBy: currentUserName(),
       })
       useAuditStore().log(isOut ? 'دفع' : 'استلام', 'التزام دوري', `${c.name} — ${fmt(amount)}`)
     },

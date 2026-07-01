@@ -5,7 +5,7 @@ import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useFinanceStore } from '@/stores/FinanceStore'
 import { importXLSX } from '@/helpers/export'
 import { fmtNum } from '@/helpers/format'
-import { CURRENT_USER } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import type { Transaction } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 
@@ -125,7 +125,7 @@ function createTx(row: MatchedRow) {
     date: row.date || new Date().toISOString().slice(0, 10),
     hasDoc: false,
     source: 'استيراد Excel',
-    createdBy: CURRENT_USER,
+    createdBy: currentUserName(),
   })
   createdRows[row.i] = true
 }

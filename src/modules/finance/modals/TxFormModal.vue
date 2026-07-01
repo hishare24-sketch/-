@@ -4,7 +4,8 @@ import { storeToRefs } from 'pinia'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useFinanceStore } from '@/stores/FinanceStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
-import { TX_TYPES, CURRENT_USER } from '@/constants'
+import { TX_TYPES } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import { today } from '@/helpers/date'
 import { analyzeTx } from '@/helpers/txAnalysis'
 import type { Transaction, TxType } from '@/interfaces/models'
@@ -78,7 +79,7 @@ function save() {
     source: form.source.trim() || undefined,
     attachments: form.attachments,
     toProject: form.type === 'transfer' ? form.toProject : undefined,
-    createdBy: props.tx?.createdBy ?? CURRENT_USER,
+    createdBy: props.tx?.createdBy ?? currentUserName(),
   })
   emit('saved')
   emit('close')

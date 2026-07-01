@@ -3,7 +3,8 @@ import type { RequestItem, RequestStatus, TxType } from '@/interfaces/models'
 import { INITIAL_REQUESTS } from '@/data/seed'
 import { uid } from '@/helpers/id'
 import { today } from '@/helpers/date'
-import { CURRENT_USER, REQUEST_TYPE_META } from '@/constants'
+import { REQUEST_TYPE_META } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import { useFinanceStore } from '@/stores/FinanceStore'
 import { useAuditStore } from '@/stores/AuditStore'
 
@@ -46,7 +47,7 @@ export const useRequestsStore = defineStore('requests', {
       const req = this.requests.find((r) => r.id === id)
       if (!req) return
       req.status = status
-      req.decidedBy = CURRENT_USER
+      req.decidedBy = currentUserName()
       if (note) req.decisionNote = note.trim()
       useAuditStore().log(status === 'approved' ? 'اعتماد' : 'رفض', 'طلب', req.title)
 
@@ -65,7 +66,7 @@ export const useRequestsStore = defineStore('requests', {
           attachments: req.attachments?.length ? req.attachments : undefined,
           memberId: req.memberId,
           note: `أُنشئت تلقائياً من اعتماد الطلب`,
-          createdBy: CURRENT_USER,
+          createdBy: currentUserName(),
         })
       }
     },

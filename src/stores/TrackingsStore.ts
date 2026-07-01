@@ -3,7 +3,7 @@ import type { Tracking } from '@/interfaces/models'
 import { INITIAL_TRACKINGS } from '@/data/seed'
 import { uid } from '@/helpers/id'
 import { daysBetween, statusFromDays, today } from '@/helpers/date'
-import { CURRENT_USER } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import { useAuditStore } from '@/stores/AuditStore'
 import { useFinanceStore } from '@/stores/FinanceStore'
 
@@ -64,7 +64,7 @@ export const useTrackingsStore = defineStore('trackings', {
           hasDoc: false,
           memberId: t.memberId,
           note: 'رسوم تجديد متابعة',
-          createdBy: CURRENT_USER,
+          createdBy: currentUserName(),
         })
       }
     },

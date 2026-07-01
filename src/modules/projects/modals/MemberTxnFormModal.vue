@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { reactive, computed } from 'vue'
 import { useProjectsStore } from '@/stores/ProjectsStore'
-import { MEMBER_TXN_TYPES, CURRENT_USER } from '@/constants'
+import { MEMBER_TXN_TYPES } from '@/constants'
+import { currentUserName } from '@/helpers/currentUser'
 import { uid } from '@/helpers/id'
 import { today } from '@/helpers/date'
 import { fmtNum } from '@/helpers/format'
@@ -43,7 +44,7 @@ function save() {
     status: 'accepted',
     direction: info.direction,
     attachments: form.attachments,
-    createdBy: CURRENT_USER,
+    createdBy: currentUserName(),
   })
   emit('close')
 }
