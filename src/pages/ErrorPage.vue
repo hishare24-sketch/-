@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
@@ -7,13 +8,15 @@ const route = useRoute()
 const router = useRouter()
 
 const messageKey = (route.query.message as string) || 'errors.not_found'
+// رمز مناسب: 403 لعدم التصريح، 404 لغير الموجود
+const code = computed(() => (messageKey.includes('not_authorized') ? '403' : '404'))
 </script>
 
 <template>
   <div class="error-page">
-    <div class="error-page__code">404</div>
+    <div class="error-page__code">{{ code }}</div>
     <p class="error-page__msg">{{ t(messageKey) }}</p>
-    <button class="app-btn" @click="router.push({ name: 'home' })">
+    <button class="app-btn" @click="router.push({ name: 'dashboard-page' })">
       {{ t('common.back') }}
     </button>
   </div>

@@ -108,18 +108,6 @@ const routes: RouteRecordRaw[] = [
     children: settingsRoutes,
   },
   {
-    path: '/launcher',
-    name: 'home',
-    component: () => import('@/pages/HomePage.vue'),
-    meta: { layout: 'default' },
-  },
-  {
-    path: '/section/:key',
-    name: 'section',
-    component: () => import('@/pages/ComingSoonPage.vue'),
-    meta: { layout: 'default' },
-  },
-  {
     path: '/login',
     name: 'login-page',
     component: () => import('@/pages/LoginPage.vue'),
