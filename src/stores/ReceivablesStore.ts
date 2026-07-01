@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Receivable, ReceivableStatus } from '@/interfaces/models'
+import type { Attachment, Receivable, ReceivableStatus } from '@/interfaces/models'
 import { INITIAL_RECEIVABLES } from '@/data/seed'
 import { recvPaid } from '@/helpers/calc'
 import { uid } from '@/helpers/id'
@@ -44,10 +44,22 @@ export const useReceivablesStore = defineStore('receivables', {
       this.receivables = this.receivables.filter((r) => r.id !== id)
     },
     // تسجيل دفعة (تحصيل/سداد) → ينشئ عملية مالية ويحدّث الحالة
-    payReceivable(id: string, amount: number, note = '') {
+    // opts: ملاحظة + مصدر السداد + مرفقات (إثبات الدفعة)
+    payReceivable(id: string, amount: number, opts?: { note?: string; source?: string; attachments?: Attachment[] }) {
       const r = this.receivables.find((x) => x.id === id)
       if (!r) return
-      r.payments.push({ id: uid('pm'), amount, date: today(), note: note || undefined, createdBy: CURRENT_USER })
+      const note = opts?.note?.trim() || ''
+      const source = opts?.source?.trim() || ''
+      const atts = opts?.attachments ?? []
+      r.payments.push({
+        id: uid('pm'),
+        amount,
+        date: today(),
+        note: note || undefined,
+        source: source || undefined,
+        attachments: atts.length ? atts : undefined,
+        createdBy: CURRENT_USER,
+      })
       const paid = recvPaid(r)
       const newStatus: ReceivableStatus = paid >= r.amount ? 'settled' : paid > 0 ? 'partial' : 'open'
       r.status = newStatus
@@ -60,10 +72,11 @@ export const useReceivablesStore = defineStore('receivables', {
         amount,
         category: 'ذمم',
         date: today(),
-        hasDoc: false,
-        source: r.party,
+        hasDoc: atts.length > 0,
+        attachments: atts.length ? atts : undefined,
+        source: source || r.party,
         memberId: r.memberId,
-        note: note || `${isRecv ? 'تحصيل' : 'سداد'} ذمة`,
+        note: note || `${isRecv ? 'تحصيل' : 'سداد'} ذمة${source ? ` · ${source}` : ''}`,
         createdBy: CURRENT_USER,
       })
       useAuditStore().log(isRecv ? 'تحصيل' : 'سداد', 'ذمة', `${r.party} — ${fmt(amount)}`)

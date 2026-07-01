@@ -3,8 +3,9 @@ import { reactive, computed } from 'vue'
 import { useReceivablesStore } from '@/stores/ReceivablesStore'
 import { recvRemaining } from '@/helpers/calc'
 import { fmt } from '@/helpers/format'
-import type { Receivable } from '@/interfaces/models'
+import type { Attachment, Receivable } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ receivable: Receivable }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -13,12 +14,28 @@ const receivablesStore = useReceivablesStore()
 const remaining = computed(() => recvRemaining(props.receivable))
 const isRecv = computed(() => props.receivable.kind === 'receivable')
 
-const form = reactive({ amount: remaining.value as number | null, note: '' })
+// مصادر السداد الجاهزة + «أخرى» تفتح حقلاً حرّاً
+const SOURCES = ['نقدي', 'تحويل بنكي', 'صندوق', 'شيك', 'عهدة عضو', 'أخرى']
+
+const form = reactive({
+  amount: remaining.value as number | null,
+  note: '',
+  source: 'نقدي',
+  sourceOther: '',
+  attachments: [] as Attachment[],
+})
+
+// المصدر الفعلي: قيمة القائمة، أو النص الحر عند اختيار «أخرى»
+const resolvedSource = computed(() => (form.source === 'أخرى' ? form.sourceOther.trim() : form.source))
 const valid = computed(() => form.amount != null && form.amount > 0 && form.amount <= remaining.value)
 
 function pay() {
   if (!valid.value) return
-  receivablesStore.payReceivable(props.receivable.id, Number(form.amount), form.note)
+  receivablesStore.payReceivable(props.receivable.id, Number(form.amount), {
+    note: form.note,
+    source: resolvedSource.value,
+    attachments: form.attachments,
+  })
   emit('close')
 }
 </script>
@@ -35,8 +52,24 @@ function pay() {
       <input v-model.number="form.amount" type="number" :max="remaining" placeholder="0" />
     </div>
     <div class="field">
+      <label>مصدر السداد</label>
+      <select v-model="form.source">
+        <option v-for="s in SOURCES" :key="s" :value="s">{{ s }}</option>
+      </select>
+    </div>
+    <div v-if="form.source === 'أخرى'" class="field">
+      <label>حدّد المصدر</label>
+      <input v-model="form.sourceOther" type="text" placeholder="مثال: محفظة إلكترونية" />
+    </div>
+
+    <div class="field">
       <label>ملاحظة (اختياري)</label>
       <input v-model="form.note" type="text" placeholder="مثال: دفعة أولى" />
+    </div>
+
+    <div class="field">
+      <label>مرفق (اختياري)</label>
+      <AttachmentsField v-model="form.attachments" />
     </div>
 
     <p class="hint">ℹ️ تسجيل الدفعة يُنشئ عملية {{ isRecv ? 'إيراد' : 'مصروف' }} فعلية في الإدارة المالية ويُحدّث الرصيد.</p>
@@ -77,12 +110,17 @@ function pay() {
     color: var(--text-muted);
   }
 
-  input {
+  input,
+  select {
     padding: 10px 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: 14px;
+    inline-size: 100%;
+    max-inline-size: 100%;
+    background: var(--surface);
+    color: var(--text);
 
     &:focus {
       outline: none;

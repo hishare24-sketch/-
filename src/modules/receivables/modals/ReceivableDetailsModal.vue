@@ -100,7 +100,10 @@ function exportStatement() {
         <span class="payment__dot" />
         <div class="payment__info">
           <span class="payment__amount">{{ fmt(p.amount) }}</span>
-          <span class="payment__meta">{{ p.date }}{{ p.note ? ` · ${p.note}` : '' }}</span>
+          <span class="payment__meta">
+            {{ p.date }}{{ p.source ? ` · ${p.source}` : '' }}{{ p.note ? ` · ${p.note}` : '' }}
+            <span v-if="p.attachments?.length" class="payment__att">📎 {{ p.attachments.length }}</span>
+          </span>
         </div>
       </div>
     </div>

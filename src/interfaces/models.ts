@@ -80,6 +80,8 @@ export interface ReceivablePayment {
   amount: number
   date: string
   note?: string
+  source?: string // مصدر السداد (نقدي/تحويل بنكي/صندوق/شيك/عهدة عضو/أخرى)
+  attachments?: Attachment[]
   createdBy?: string
 }
 
