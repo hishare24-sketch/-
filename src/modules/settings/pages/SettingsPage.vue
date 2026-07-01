@@ -5,6 +5,15 @@ import { useSettingsStore, type CustomTheme } from '@/stores/SettingsStore'
 import { THEME_PRESETS, SCREENS, PRICING_PLANS } from '@/constants'
 import type { CustomLists, UserPrefs } from '@/interfaces/models'
 import ToggleActivationSwitch from '@/components/shared/ToggleActivationSwitch.vue'
+import { resetPersistedData } from '@/plugins/persistence'
+
+// إدارة البيانات: استعادة البيانات التجريبية (تفريغ الحفظ المحلي)
+const confirmingReset = ref(false)
+const resetting = ref(false)
+async function doResetData() {
+  resetting.value = true
+  await resetPersistedData() // يفرّغ IndexedDB ثم يعيد التحميل لإعادة البذر
+}
 
 const settingsStore = useSettingsStore()
 const { prefs, lists, help, themeMode, customTheme, hasCustomTheme, currentPlan, billing } = storeToRefs(settingsStore)
@@ -99,6 +108,25 @@ const integrations = [
               <option value="6m">آخر 6 أشهر</option>
               <option value="12m">آخر سنة</option>
             </select>
+          </div>
+        </div>
+
+        <!-- إدارة البيانات -->
+        <div v-if="tab === 'prefs'" class="app-card panel">
+          <h2>إدارة البيانات</h2>
+          <p class="data-note">
+            💾 تُحفظ بياناتك تلقائياً في هذا المتصفح (IndexedDB) وتبقى بعد إغلاق التطبيق أو تحديث الصفحة — بما فيها المرفقات.
+            الاستعادة تُرجِع البيانات التجريبية الأصلية وتمسح تعديلاتك المحفوظة.
+          </p>
+          <div class="data-actions">
+            <template v-if="!confirmingReset">
+              <button class="app-btn app-btn--outlined" @click="confirmingReset = true">↺ استعادة البيانات التجريبية</button>
+            </template>
+            <template v-else>
+              <span class="data-confirm">هل أنت متأكد؟ ستُمسح تعديلاتك المحفوظة.</span>
+              <button class="app-btn app-btn--danger" :disabled="resetting" @click="doResetData">نعم، استعادة</button>
+              <button class="app-btn app-btn--ghost" :disabled="resetting" @click="confirmingReset = false">إلغاء</button>
+            </template>
           </div>
         </div>
 
@@ -364,6 +392,32 @@ const integrations = [
   font-size: 14px;
 
   &:last-child { border-block-end: none; }
+}
+
+// إدارة البيانات
+.data-note {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text-muted);
+  margin-block-end: 16px;
+}
+
+.data-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.data-confirm {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--danger-text);
+}
+
+.app-btn--danger {
+  background: var(--error);
+  color: #fff;
 }
 
 .select {

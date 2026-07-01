@@ -10,20 +10,38 @@ const props = withDefaults(
 )
 const emit = defineEmits<{ (e: 'update:modelValue', value: Attachment[]): void }>()
 
-function onFiles(e: Event) {
+// قراءة الملف كـ base64 ليُحفظ ويدوم (لا معاينة جلسة فقط)
+function readAsDataUrl(f: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(f)
+  })
+}
+
+async function onFiles(e: Event) {
   const input = e.target as HTMLInputElement
   if (!input.files) return
-  const added: Attachment[] = Array.from(input.files).map((f) => ({
-    id: uid('att'),
-    name: f.name,
-    kind: f.type.startsWith('image/') ? 'image' : 'file',
-    size: `${Math.round(f.size / 1024)} KB`,
-    fileType: f.type,
-    uploadDate: today(),
-    preview: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined,
-  }))
-  emit('update:modelValue', [...props.modelValue, ...added])
+  const files = Array.from(input.files)
   input.value = ''
+  const added: Attachment[] = await Promise.all(
+    files.map(async (f) => {
+      const isImage = f.type.startsWith('image/')
+      const dataUrl = await readAsDataUrl(f)
+      return {
+        id: uid('att'),
+        name: f.name,
+        kind: isImage ? 'image' : 'file',
+        size: `${Math.round(f.size / 1024)} KB`,
+        fileType: f.type,
+        uploadDate: today(),
+        dataUrl,
+        preview: isImage ? dataUrl : undefined,
+      } as Attachment
+    }),
+  )
+  emit('update:modelValue', [...props.modelValue, ...added])
 }
 
 function remove(id: string) {

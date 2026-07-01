@@ -16,6 +16,7 @@ export interface Attachment {
   preview?: string
   fileType?: string
   uploadDate?: string
+  dataUrl?: string // محتوى الملف base64 (يُحفظ ويدوم عبر IndexedDB)
 }
 
 export interface Project {
