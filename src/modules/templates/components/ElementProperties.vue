@@ -27,6 +27,16 @@ const columnsText = computed({
 function set<K extends keyof TemplateElement>(key: K, value: TemplateElement[K]) {
   emit('update', { [key]: value } as Partial<TemplateElement>)
 }
+
+// رفع صورة كـ base64 (تُحفظ مع القالب)
+function onImage(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) return
+  const reader = new FileReader()
+  reader.onload = () => emit('update', { src: reader.result as string })
+  reader.readAsDataURL(file)
+}
 </script>
 
 <template>
@@ -129,15 +139,28 @@ function set<K extends keyof TemplateElement>(key: K, value: TemplateElement[K])
     </div>
 
     <!-- صورة -->
-    <div v-if="element.type === 'image'" class="f">
-      <label>نوع الصورة</label>
-      <select :value="element.imageKind ?? 'logo'" @change="set('imageKind', ($event.target as HTMLSelectElement).value as TemplateElement['imageKind'])">
-        <option value="logo">شعار</option>
-        <option value="signature">توقيع</option>
-        <option value="stamp">ختم</option>
-        <option value="barcode">باركود</option>
-      </select>
-    </div>
+    <template v-if="element.type === 'image'">
+      <div class="f">
+        <label>نوع الصورة</label>
+        <select :value="element.imageKind ?? 'logo'" @change="set('imageKind', ($event.target as HTMLSelectElement).value as TemplateElement['imageKind'])">
+          <option value="logo">شعار</option>
+          <option value="signature">توقيع</option>
+          <option value="stamp">ختم</option>
+          <option value="barcode">باركود</option>
+        </select>
+      </div>
+      <div class="f">
+        <label>الصورة</label>
+        <div v-if="element.src" class="img-preview">
+          <img :src="element.src" alt="" />
+          <button class="img-remove" @click="set('src', undefined)">✕ إزالة</button>
+        </div>
+        <label class="upload">
+          <input type="file" accept="image/*" @change="onImage" />
+          <span>{{ element.src ? 'استبدال الصورة' : '⬆ رفع صورة (شعار/ختم…)' }}</span>
+        </label>
+      </div>
+    </template>
 
     <!-- جداول -->
     <div v-if="element.type === 'table' || element.type === 'items_table'" class="f">
@@ -204,5 +227,36 @@ function set<K extends keyof TemplateElement>(key: K, value: TemplateElement[K])
   margin-block-end: 12px;
   cursor: pointer;
   input { inline-size: 15px; block-size: 15px; }
+}
+
+.img-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-block-end: 8px;
+
+  img { max-block-size: 54px; max-inline-size: 120px; object-fit: contain; border: 1px solid var(--border); border-radius: 6px; padding: 4px; background: #fff; }
+}
+.img-remove {
+  border: none;
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.upload {
+  display: block;
+  padding: 9px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  font-size: 13px;
+  color: var(--primary);
+  cursor: pointer;
+  &:hover { background: var(--primary-soft); border-color: var(--primary); }
+  input { display: none; }
 }
 </style>

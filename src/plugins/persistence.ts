@@ -24,7 +24,8 @@ const PERSIST_IDS = [
 ] as const
 
 // رفع الإصدار يُبطل اللقطات القديمة تلقائياً (عند تغيّر بنية البيانات)
-const SCHEMA_VERSION = 1
+// v2: إضافة قوالب المستندات (TemplateElement.src + 5 نماذج احترافية بذور)
+const SCHEMA_VERSION = 2
 const keyOf = (id: string) => `mz:v${SCHEMA_VERSION}:${id}`
 
 const saveTimers: Record<string, ReturnType<typeof setTimeout>> = {}

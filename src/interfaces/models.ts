@@ -472,6 +472,7 @@ export interface TemplateElement {
   formula?: string
   // صورة
   imageKind?: 'logo' | 'signature' | 'stamp' | 'barcode'
+  src?: string // صورة مرفوعة (base64 dataUrl) — تُحفظ مع القالب وتدوم عبر IndexedDB
   // جدول
   columns?: string[]
 }

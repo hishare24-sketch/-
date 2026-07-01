@@ -61,8 +61,13 @@ function renderElement(el: TemplateElement, values: FieldValues, tables: TableRo
     case 'page_break':
       return '<div style="page-break-after:always;height:0"></div>'
     case 'image':
-    case 'signature':
+    case 'signature': {
+      // الأولوية لصورة المستند (values) ثم صورة القالب (el.src)؛ وإلا مربّع نائب
+      const img = values[el.id] || el.src || ''
+      if (img)
+        return `<div style="margin:8px 0;text-align:${el.align ?? 'center'}"><img src="${esc(img)}" alt="${esc(el.label)}" style="max-height:${el.type === 'image' ? 90 : 60}px;max-width:100%;object-fit:contain" /></div>`
       return `<div style="margin:8px 0;padding:18px;border:1px dashed #cbd5e1;border-radius:8px;text-align:center;color:#94a3b8;font-size:12px">${esc(el.label)}</div>`
+    }
     case 'checkbox':
       return `<div style="margin:5px 0;font-size:14px"><b>${esc(el.label)}:</b> ${val === 'true' || val === 'نعم' ? '☑ نعم' : '☐ لا'}</div>`
     case 'number':

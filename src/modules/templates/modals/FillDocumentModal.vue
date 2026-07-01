@@ -24,12 +24,14 @@ const projectId = ref(activeProjectId.value)
 const busy = ref(false)
 const msg = ref('')
 
+const isImage = (t: TemplateElement['type']) => t === 'image' || t === 'signature'
+
 // حقول الإدخال (عناصر تتطلّب قيمة) مجموعة حسب القسم
 const groups = computed(() =>
   props.template.sections
     .map((sec) => ({
       title: sec.title,
-      fields: sec.elements.filter((e) => !e.hidden && (INPUT_TYPES.has(e.type) || TABLE_TYPES.has(e.type))),
+      fields: sec.elements.filter((e) => !e.hidden && (INPUT_TYPES.has(e.type) || TABLE_TYPES.has(e.type) || isImage(e.type))),
     }))
     .filter((g) => g.fields.length),
 )
@@ -40,9 +42,19 @@ const tables = reactive<TableRows>({})
 props.template.sections.forEach((sec) =>
   sec.elements.forEach((el) => {
     if (TABLE_TYPES.has(el.type)) tables[el.id] = [Array((el.columns ?? []).length).fill('')]
+    else if (isImage(el.type)) values[el.id] = el.src ?? '' // يبدأ من صورة القالب (اللوجو) ويمكن استبدالها
     else if (INPUT_TYPES.has(el.type)) values[el.id] = el.defaultValue ?? (el.type === 'checkbox' ? 'false' : '')
   }),
 )
+
+// رفع صورة لهذا المستند (يستبدل صورة القالب)
+function onImage(el: TemplateElement, e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file || !file.type.startsWith('image/')) return
+  const reader = new FileReader()
+  reader.onload = () => { values[el.id] = reader.result as string }
+  reader.readAsDataURL(file)
+}
 
 // الحقول الإلزامية الفارغة
 const missing = computed(() =>
@@ -137,6 +149,22 @@ function saveToDocuments() {
               />
               <button class="tbl__x" :disabled="tables[el.id].length === 1" @click="removeRow(el, ri)">✕</button>
             </div>
+          </div>
+
+          <!-- صورة / توقيع (رفع) -->
+          <div v-else-if="el.type === 'image' || el.type === 'signature'" class="field">
+            <label>
+              <span class="field__ico">{{ elementTypeMeta(el.type)?.icon }}</span>
+              {{ el.label }}
+            </label>
+            <div v-if="values[el.id]" class="imgrow">
+              <img :src="values[el.id]" alt="" />
+              <button class="imgrow__x" @click="values[el.id] = ''">✕ إزالة</button>
+            </div>
+            <label class="uploader">
+              <input type="file" accept="image/*" @change="onImage(el, $event)" />
+              <span>{{ values[el.id] ? 'استبدال الصورة' : '⬆ رفع صورة' }}</span>
+            </label>
           </div>
 
           <!-- حقول قياسية -->
@@ -292,6 +320,28 @@ function saveToDocuments() {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.imgrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-block-end: 8px;
+
+  img { max-block-size: 60px; max-inline-size: 140px; object-fit: contain; border: 1px solid var(--border); border-radius: 6px; padding: 4px; background: #fff; }
+  &__x { border: none; background: var(--danger-bg); color: var(--danger-text); border-radius: 6px; padding: 6px 10px; font-family: inherit; font-size: 12px; cursor: pointer; }
+}
+.uploader {
+  display: block;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  font-size: 13px;
+  color: var(--primary);
+  cursor: pointer;
+  &:hover { background: var(--primary-soft); border-color: var(--primary); }
+  input { display: none; }
 }
 
 .preview {

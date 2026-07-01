@@ -204,3 +204,157 @@ export function buildTemplate(name: string, docType: TemplateDocType, createdAt:
     updatedAt: createdAt,
   }
 }
+
+// ═══ نماذج احترافية شبه جاهزة (لكل نوع) — رأس بشعار + عنوان مُنسّق + حقول غنية ═══
+const ACCENT = '#2563eb'
+
+// رأس احترافي موحّد: لوجو + اسم الجهة + وصف
+function proHeader(orgLabel: string): TemplateSection {
+  return makeSection('header', 'الترويسة', [
+    makeElement('image', 'شعار الجهة', { imageKind: 'logo', align: 'center' }),
+    makeElement('heading', orgLabel, { align: 'center', bold: true, fontSize: 22, color: ACCENT }),
+    makeElement('paragraph', 'العنوان · الهاتف · البريد الإلكتروني · الرقم الضريبي', { align: 'center', fontSize: 12, color: '#64748b' }),
+  ])
+}
+
+const proFooter = () =>
+  makeSection('footer', 'التذييل', [
+    makeElement('paragraph', 'شكراً لتعاملكم معنا', { align: 'center', fontSize: 12, color: '#64748b' }),
+    makeElement('signature', 'التوقيع والختم', { align: 'center' }),
+  ])
+
+export function professionalSections(docType: TemplateDocType): TemplateSection[] {
+  switch (docType) {
+    case 'quote':
+      return [
+        proHeader('اسم شركتك'),
+        makeSection('fixed', 'عرض سعر', [
+          makeElement('heading', 'عرض سعر', { bold: true, fontSize: 18, color: ACCENT }),
+          makeElement('short_text', 'رقم العرض', { required: true, placeholder: 'QT-10001' }),
+          makeElement('date', 'التاريخ', { dateFormat: 'gregorian' }),
+          makeElement('short_text', 'العميل / الجهة', { required: true }),
+          makeElement('short_text', 'المشروع'),
+        ]),
+        makeSection('repeatable', 'البنود', [
+          makeElement('items_table', 'جدول المنتجات/الخدمات', { columns: ['الوصف', 'الكمية', 'سعر الوحدة', 'الإجمالي'] }),
+        ], { repeatable: true }),
+        makeSection('fixed', 'الإجماليات والشروط', [
+          makeElement('number', 'نسبة الضريبة', { numberFormat: 'percent', defaultValue: '15' }),
+          makeElement('computed', 'الإجمالي شامل الضريبة', { formula: 'sum(items) + vat', numberFormat: 'currency' }),
+          makeElement('short_text', 'صلاحية العرض', { defaultValue: '30 يوم' }),
+          makeElement('long_text', 'الشروط والملاحظات', { placeholder: 'شروط الدفع، التسليم، الضمان…' }),
+        ]),
+        proFooter(),
+      ]
+    case 'invoice':
+      return [
+        proHeader('اسم شركتك'),
+        makeSection('fixed', 'فاتورة ضريبية', [
+          makeElement('heading', 'فاتورة ضريبية', { bold: true, fontSize: 18, color: ACCENT }),
+          makeElement('short_text', 'رقم الفاتورة', { required: true, placeholder: 'INV-10001' }),
+          makeElement('date', 'تاريخ الإصدار', { dateFormat: 'gregorian' }),
+        ]),
+        makeSection('group', 'بيانات العميل', [
+          makeElement('short_text', 'اسم العميل', { required: true }),
+          makeElement('short_text', 'الرقم الضريبي للعميل'),
+          makeElement('short_text', 'العنوان'),
+        ]),
+        makeSection('repeatable', 'الأصناف', [
+          makeElement('items_table', 'جدول المبيعات', { columns: ['الصنف', 'الكمية', 'السعر', 'الإجمالي'] }),
+        ], { repeatable: true }),
+        makeSection('fixed', 'الإجماليات', [
+          makeElement('computed', 'الإجمالي شامل الضريبة (15%)', { formula: 'sum(items) + vat', numberFormat: 'currency' }),
+          makeElement('dropdown', 'طريقة الدفع', { options: ['نقدي', 'تحويل بنكي', 'شبكة (مدى)', 'شيك'] }),
+        ]),
+        proFooter(),
+      ]
+    case 'agreement':
+      return [
+        proHeader('عنوان الاتفاقية'),
+        makeSection('fixed', 'المقدّمة', [
+          makeElement('heading', 'اتفاقية / عقد', { bold: true, fontSize: 18, color: ACCENT }),
+          makeElement('short_text', 'رقم الاتفاقية', { placeholder: 'AG-10001' }),
+          makeElement('date', 'التاريخ', { dateFormat: 'gregorian' }),
+          makeElement('paragraph', 'أُبرمت هذه الاتفاقية بين الطرفين المذكورين أدناه، وقد أقرّا بأهليتهما للتعاقد.', { fontSize: 13 }),
+        ]),
+        makeSection('group', 'أطراف الاتفاقية', [
+          makeElement('short_text', 'الطرف الأول', { required: true }),
+          makeElement('short_text', 'ممثّله / هويته'),
+          makeElement('short_text', 'الطرف الثاني', { required: true }),
+          makeElement('short_text', 'ممثّله / هويته'),
+        ]),
+        makeSection('fixed', 'الموضوع والقيمة', [
+          makeElement('short_text', 'موضوع الاتفاقية', { required: true }),
+          makeElement('number', 'قيمة العقد', { numberFormat: 'currency' }),
+          makeElement('date', 'تبدأ من', { dateFormat: 'gregorian' }),
+          makeElement('date', 'تنتهي في', { dateFormat: 'gregorian' }),
+        ]),
+        makeSection('repeatable', 'البنود', [makeElement('paragraph', 'بند من بنود الاتفاقية')], { repeatable: true }),
+        makeSection('fixed', 'أحكام عامة', [makeElement('long_text', 'الشروط والأحكام')]),
+        makeSection('footer', 'التواقيع', [
+          makeElement('signature', 'توقيع الطرف الأول'),
+          makeElement('signature', 'توقيع الطرف الثاني'),
+        ]),
+      ]
+    case 'payment_order':
+      return [
+        proHeader('اسم الجهة'),
+        makeSection('fixed', 'أمر دفع', [
+          makeElement('heading', 'أمر دفع', { bold: true, fontSize: 18, color: ACCENT }),
+          makeElement('short_text', 'رقم الأمر', { placeholder: 'PO-10001' }),
+          makeElement('date', 'التاريخ', { dateFormat: 'gregorian' }),
+          makeElement('short_text', 'المستفيد', { required: true }),
+          makeElement('number', 'المبلغ', { numberFormat: 'currency', required: true }),
+          makeElement('short_text', 'المبلغ كتابةً'),
+          makeElement('short_text', 'الغرض من الدفع'),
+          makeElement('dropdown', 'طريقة الصرف', { options: ['تحويل بنكي', 'شيك', 'نقد'] }),
+          makeElement('date', 'تاريخ الاستحقاق', { dateFormat: 'gregorian' }),
+        ]),
+        makeSection('group', 'بيانات الحساب البنكي', [
+          makeElement('short_text', 'اسم البنك'),
+          makeElement('short_text', 'رقم الآيبان (IBAN)'),
+          makeElement('short_text', 'اسم صاحب الحساب'),
+        ]),
+        makeSection('footer', 'الاعتماد', [
+          makeElement('short_text', 'المُعِدّ'),
+          makeElement('short_text', 'المُعتمِد'),
+          makeElement('signature', 'توقيع الآمر بالصرف'),
+        ]),
+      ]
+    case 'official':
+      return [
+        proHeader('اسم الجهة المُصدِرة'),
+        makeSection('fixed', 'الترويسة الرسمية', [
+          makeElement('dropdown', 'نوع الورقة', { options: ['خطاب', 'قرار', 'تعميم', 'طلب', 'محضر', 'شهادة'] }),
+          makeElement('short_text', 'رقم الورقة'),
+          makeElement('date', 'التاريخ', { dateFormat: 'hijri' }),
+          makeElement('short_text', 'الجهة الموجّه إليها', { required: true }),
+          makeElement('short_text', 'الموضوع', { required: true }),
+        ]),
+        makeSection('fixed', 'المتن', [
+          makeElement('paragraph', 'السلام عليكم ورحمة الله وبركاته،،، وبعد:', { fontSize: 14, bold: true }),
+          makeElement('long_text', 'نص الخطاب', { required: true }),
+        ]),
+        makeSection('repeatable', 'المرفقات', [makeElement('short_text', 'مرفق')], { repeatable: true }),
+        makeSection('repeatable', 'نسخة إلى', [makeElement('short_text', 'جهة')], { repeatable: true }),
+        makeSection('footer', 'التوقيع', [
+          makeElement('short_text', 'الاسم'),
+          makeElement('short_text', 'الصفة'),
+          makeElement('signature', 'التوقيع والختم'),
+        ]),
+      ]
+  }
+}
+
+export function buildProfessionalTemplate(docType: TemplateDocType, createdAt: string): DocTemplate {
+  const label = docTypeMeta(docType)?.label ?? docType
+  return {
+    id: uid('tpl'),
+    name: `نموذج احترافي — ${label}`,
+    docType,
+    status: 'active',
+    sections: professionalSections(docType),
+    createdAt,
+    updatedAt: createdAt,
+  }
+}

@@ -8,7 +8,7 @@ import type {
   DocTemplate,
 } from '@/interfaces/models'
 import { ROLE_PERMS } from '@/constants'
-import { buildTemplate } from '@/modules/templates/constants'
+import { buildTemplate, buildProfessionalTemplate } from '@/modules/templates/constants'
 
 export const INITIAL_PROJECTS: Project[] = [
   { id: 'p1', name: 'شركة النخيل', icon: '🏢', balance: 284500, color: '#0891b2', type: 'شركة', description: 'شركة تجارية متخصصة في التوريدات' },
@@ -314,8 +314,13 @@ export const INITIAL_SURVEYS: Survey[] = [
   },
 ]
 
-// قوالب مبدئية (واحد لكل نوع مستند شائع) — يُبنى بهيكل أوليّ جاهز للتعديل
+// قوالب جاهزة: 5 نماذج احترافية (نوع لكل) + 3 قوالب مبدئية بسيطة — كلها قابلة للتعديل/الحذف
 export const INITIAL_TEMPLATES: DocTemplate[] = [
+  buildProfessionalTemplate('quote', '2025-06-01'),
+  buildProfessionalTemplate('invoice', '2025-06-01'),
+  buildProfessionalTemplate('agreement', '2025-06-01'),
+  buildProfessionalTemplate('payment_order', '2025-06-01'),
+  buildProfessionalTemplate('official', '2025-06-01'),
   buildTemplate('عرض سعر افتراضي', 'quote', '2025-06-01'),
   buildTemplate('فاتورة فورية افتراضية', 'invoice', '2025-06-01'),
   buildTemplate('اتفاقية افتراضية', 'agreement', '2025-06-01'),
