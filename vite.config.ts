@@ -14,6 +14,16 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html'],
       include: ['src/helpers/**', 'src/stores/**', 'src/**/composables/**', 'src/**/*AI.ts'],
+      // مستبعَد: منطق إدخال/إخراج جانبيّ (تصدير PDF/Excel عبر CDN، تخزين IndexedDB،
+      // برميل التصدير) — يُغطّى عبر التحقّق الحيّ/E2E لا اختبار الوحدة
+      exclude: [
+        'src/helpers/export.ts',
+        'src/helpers/documents.ts',
+        'src/helpers/persist.ts',
+        'src/helpers/id.ts',
+        'src/**/index.ts',
+        'src/**/*.test.ts',
+      ],
     },
   },
   resolve: {
