@@ -101,6 +101,35 @@ export const TRACKING_TYPES = [
   { id: 'وثيقة', icon: '🪪' },
 ]
 
+// حقول إضافية حسب نوع المتابعة (تُخزَّن في tracking.specs)
+export const TRACKING_FIELD_SCHEMAS: Record<string, { key: string; label: string; placeholder?: string }[]> = {
+  ضمان: [
+    { key: 'seller', label: 'البائع / الجهة' },
+    { key: 'serial', label: 'الرقم التسلسلي' },
+  ],
+  عقد: [
+    { key: 'party', label: 'الطرف الآخر' },
+    { key: 'contractNo', label: 'رقم العقد' },
+  ],
+  ترخيص: [
+    { key: 'authority', label: 'الجهة المُصدِرة' },
+    { key: 'licenseNo', label: 'رقم الترخيص' },
+  ],
+  اشتراك: [
+    { key: 'provider', label: 'مزوّد الخدمة' },
+    { key: 'plan', label: 'الباقة' },
+  ],
+  تأمين: [
+    { key: 'policyNo', label: 'رقم البوليصة' },
+    { key: 'insurer', label: 'شركة التأمين' },
+    { key: 'coverage', label: 'مبلغ التغطية' },
+  ],
+  وثيقة: [
+    { key: 'docNo', label: 'رقم الوثيقة' },
+    { key: 'authority', label: 'الجهة المُصدِرة' },
+  ],
+}
+
 export const REQUEST_TYPES = ['مصروف', 'تحويل', 'عهدة', 'صيانة', 'شراء']
 
 // حالات الطلب (دورة الاعتماد: معلّق → مراجعة → اعتماد/رفض، + إلغاء)

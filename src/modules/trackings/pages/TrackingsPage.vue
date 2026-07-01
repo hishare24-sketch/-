@@ -7,7 +7,7 @@ import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
 import type { Tracking, TrackingStatus } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
-import EntityDetailsModal from '@/components/shared/EntityDetailsModal.vue'
+import TrackingDetailsModal from '../modals/TrackingDetailsModal.vue'
 import TrackingFormModal from '../modals/TrackingFormModal.vue'
 
 const trackingsStore = useTrackingsStore()
@@ -47,32 +47,29 @@ function statusInfo(s: TrackingStatus) {
   if (s === 'expiring') return { l: 'يوشك على الانتهاء', c: 'var(--warn-text)', bg: 'var(--warn-bg)' }
   return { l: 'منتهي', c: 'var(--danger-text)', bg: 'var(--danger-bg)' }
 }
+// شارة الكرت مع مراعاة الإلغاء
+function badgeOf(t: Tracking) {
+  if (t.cancelled) return { l: 'ملغى', c: 'var(--text-muted)', bg: 'var(--surface-2)' }
+  return statusInfo(t.status)
+}
 
 const showForm = ref(false)
 const editing = ref<Tracking | null>(null)
 const viewing = ref<Tracking | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 
-const viewRows = computed<[string, string][]>(() => {
-  const t = viewing.value
-  if (!t) return []
-  return [
-    ['النوع', t.type],
-    ['المشروع', projectsStore.projectById(t.projectId)?.name ?? '—'],
-    ['تاريخ الانتهاء', t.expiryDate],
-    ['الحالة', statusInfo(t.status).l],
-    ['المتبقّي', t.daysLeft < 0 ? `منتهٍ منذ ${Math.abs(t.daysLeft)} يوم` : `${t.daysLeft} يوم`],
-    ['المسؤول', t.memberId ? projectsStore.memberById(t.memberId)?.name ?? '—' : '—'],
-  ]
-})
-
 function openCreate() {
   editing.value = null
   showForm.value = true
 }
 function openEdit(t: Tracking) {
+  viewing.value = null
   editing.value = t
   showForm.value = true
+}
+function closeForm() {
+  showForm.value = false
+  editing.value = null
 }
 async function onDelete(t: Tracking) {
   const ok = await confirmRef.value?.open({ title: 'حذف المتابعة', message: `حذف "${t.name}"؟` })
@@ -127,8 +124,8 @@ async function onDelete(t: Tracking) {
       <div v-for="t in filtered" :key="t.id" class="track app-card">
         <div class="track__top">
           <span class="track__icon">{{ t.icon }}</span>
-          <span class="track__status" :style="{ background: statusInfo(t.status).bg, color: statusInfo(t.status).c }">
-            {{ statusInfo(t.status).l }}
+          <span class="track__status" :style="{ background: badgeOf(t).bg, color: badgeOf(t).c }">
+            {{ badgeOf(t).l }}
           </span>
         </div>
         <span class="track__name track__clickable" @click="viewing = t">
@@ -149,16 +146,8 @@ async function onDelete(t: Tracking) {
       </div>
     </div>
 
-    <TrackingFormModal v-if="showForm" :project-id="activeProjectId" :tracking="editing" @close="showForm = false" />
-    <EntityDetailsModal
-      v-if="viewing"
-      :title="`${viewing.icon} ${viewing.name}`"
-      :badge="{ label: statusInfo(viewing.status).l, color: statusInfo(viewing.status).c, bg: statusInfo(viewing.status).bg }"
-      :rows="viewRows"
-      :note="viewing.note"
-      :attachments="viewing.attachments"
-      @close="viewing = null"
-    />
+    <TrackingFormModal v-if="showForm" :project-id="activeProjectId" :tracking="editing" @close="closeForm" />
+    <TrackingDetailsModal v-if="viewing" :tracking="viewing" @edit="openEdit" @close="viewing = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>

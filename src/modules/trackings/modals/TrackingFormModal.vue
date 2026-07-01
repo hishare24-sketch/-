@@ -3,7 +3,7 @@ import { reactive, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useTrackingsStore } from '@/stores/TrackingsStore'
-import { TRACKING_TYPES } from '@/constants'
+import { TRACKING_TYPES, TRACKING_FIELD_SCHEMAS } from '@/constants'
 import { daysBetween, statusFromDays } from '@/helpers/date'
 import type { Tracking, Attachment } from '@/interfaces/models'
 import type { FormPreset } from '@/interfaces/forms'
@@ -23,13 +23,25 @@ const form = reactive({
   type: props.tracking?.type ?? ps?.trackingType ?? TRACKING_TYPES[0].id,
   projectId: props.tracking?.projectId ?? ps?.projectId ?? props.projectId,
   expiryDate: props.tracking?.expiryDate ?? ps?.expiryDate ?? '',
+  cost: (props.tracking?.cost ?? null) as number | null,
   memberId: props.tracking?.memberId ?? '',
   note: props.tracking?.note ?? ps?.note ?? '',
   attachments: (props.tracking?.attachments ? [...props.tracking.attachments] : []) as Attachment[],
+  specs: { ...(props.tracking?.specs ?? {}) } as Record<string, string>,
 })
 
+const typeFields = computed(() => TRACKING_FIELD_SCHEMAS[form.type] ?? [])
 const projMembers = computed(() => projectsStore.membersByProject(form.projectId))
 const valid = computed(() => form.name.trim() && form.expiryDate)
+
+function cleanSpecs(): Record<string, string> | undefined {
+  const out: Record<string, string> = {}
+  typeFields.value.forEach((f) => {
+    const v = (form.specs[f.key] ?? '').trim()
+    if (v) out[f.key] = v
+  })
+  return Object.keys(out).length ? out : undefined
+}
 
 function save() {
   if (!valid.value) return
@@ -44,8 +56,10 @@ function save() {
     daysLeft: d,
     expiryDate: form.expiryDate,
     projectId: form.projectId,
+    cost: form.cost != null ? Number(form.cost) : undefined,
     note: form.note.trim() || undefined,
     memberId: form.memberId || undefined,
+    specs: cleanSpecs(),
     attachments: form.attachments,
   })
   emit('close')
@@ -83,6 +97,20 @@ function save() {
       <label>تاريخ الانتهاء</label>
       <input v-model="form.expiryDate" type="date" />
     </div>
+
+    <!-- حقول خاصة بنوع المتابعة -->
+    <div v-if="typeFields.length" class="specs">
+      <span class="specs__label">بيانات {{ form.type }}</span>
+      <div v-for="f in typeFields" :key="f.key" class="field">
+        <label>{{ f.label }}</label>
+        <input v-model="form.specs[f.key]" type="text" :placeholder="f.placeholder ?? ''" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>تكلفة التجديد (اختياري)</label>
+      <input v-model.number="form.cost" type="number" placeholder="0" />
+    </div>
     <div class="field">
       <label>إسناد لعضو (اختياري)</label>
       <select v-model="form.memberId">
@@ -117,13 +145,27 @@ function save() {
   label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
 
   input, select, textarea {
+    inline-size: 100%;
+    max-inline-size: 100%;
     padding: 10px 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: 14px;
+    background: var(--surface);
+    color: var(--text);
     &:focus { outline: none; border-color: var(--primary); }
   }
+}
+
+.specs {
+  margin-block-end: 16px;
+  padding: 14px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+
+  &__label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-block-end: 10px; }
+  .field { margin-block-end: 12px; &:last-child { margin-block-end: 0; } }
 }
 
 .types {
@@ -133,9 +175,11 @@ function save() {
 
   .type {
     padding: 8px 12px;
+    min-inline-size: 84px;
     border-radius: var(--radius-sm);
     border: 1.5px solid var(--border);
     background: var(--surface);
+    color: var(--text);
     font-family: inherit;
     font-size: 13px;
 

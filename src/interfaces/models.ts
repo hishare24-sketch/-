@@ -229,6 +229,10 @@ export interface Tracking {
   projectId: string
   note?: string
   memberId?: string
+  specs?: Record<string, string>
+  cancelled?: boolean
+  renewedCount?: number
+  cost?: number
   attachments?: Attachment[]
   createdBy?: string
 }

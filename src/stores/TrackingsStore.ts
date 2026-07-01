@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type { Tracking } from '@/interfaces/models'
 import { INITIAL_TRACKINGS } from '@/data/seed'
 import { uid } from '@/helpers/id'
+import { daysBetween, statusFromDays } from '@/helpers/date'
 import { useAuditStore } from '@/stores/AuditStore'
 
 export type TrackingPayload = Omit<Tracking, 'id'> & { id?: string }
@@ -35,6 +36,25 @@ export const useTrackingsStore = defineStore('trackings', {
     addTracking(t: Tracking) {
       this.trackings.unshift(t)
       useAuditStore().log('إنشاء', 'متابعة', t.name)
+    },
+    // تجديد المتابعة: تاريخ انتهاء جديد → إعادة حساب الحالة + عدّاد التجديد
+    renewTracking(id: string, newExpiry: string) {
+      const t = this.trackings.find((x) => x.id === id)
+      if (!t || !newExpiry) return
+      const d = daysBetween(newExpiry)
+      t.expiryDate = newExpiry
+      t.daysLeft = d
+      t.status = statusFromDays(d)
+      t.cancelled = false
+      t.renewedCount = (t.renewedCount ?? 0) + 1
+      useAuditStore().log('تجديد', 'متابعة', `${t.name} → ${newExpiry}`)
+    },
+    // إلغاء المتابعة (لم تعد سارية)
+    cancelTracking(id: string) {
+      const t = this.trackings.find((x) => x.id === id)
+      if (!t) return
+      t.cancelled = true
+      useAuditStore().log('إلغاء', 'متابعة', t.name)
     },
     deleteTracking(id: string) {
       this.trackings = this.trackings.filter((t) => t.id !== id)
