@@ -208,16 +208,17 @@ const memberSummary = computed(() => {
       </button>
     </div>
 
+    <!-- إجراء سريع (ظاهر في كل التبويبات) -->
+    <div class="quick app-card">
+      <span class="quick__label">إجراء سريع:</span>
+      <button class="quick__btn quick__btn--ok" @click="quick = 'tx'">💰 عملية مالية</button>
+      <button class="quick__btn quick__btn--info" @click="quick = 'doc'">📄 مستند</button>
+      <button class="quick__btn quick__btn--warn" @click="quick = 'tracking'">🛡️ متابعة</button>
+      <button class="quick__btn quick__btn--purple" @click="quick = 'request'">📝 طلب</button>
+    </div>
+
     <!-- نظرة عامة -->
     <div v-if="tab === 'overview'" class="ov">
-      <!-- إجراء سريع -->
-      <div class="quick app-card">
-        <span class="quick__label">إجراء سريع:</span>
-        <button class="quick__btn quick__btn--ok" @click="quick = 'tx'">💰 عملية مالية</button>
-        <button class="quick__btn quick__btn--info" @click="quick = 'doc'">📄 مستند</button>
-        <button class="quick__btn quick__btn--warn" @click="quick = 'tracking'">🛡️ متابعة</button>
-        <button class="quick__btn quick__btn--purple" @click="quick = 'request'">📝 طلب</button>
-      </div>
 
       <!-- بطاقات الإحصائيات -->
       <div class="ov-stats">
