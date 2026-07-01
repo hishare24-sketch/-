@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { TemplateElement } from '@/interfaces/models'
 import { elementTypeMeta } from '../constants'
+import { improveText, TEXT_TONES, type TextTone } from '../templatesAI'
 
 const props = defineProps<{ element: TemplateElement }>()
 const emit = defineEmits<{ (e: 'update', patch: Partial<TemplateElement>): void }>()
@@ -26,6 +27,12 @@ const columnsText = computed({
 
 function set<K extends keyof TemplateElement>(key: K, value: TemplateElement[K]) {
   emit('update', { [key]: value } as Partial<TemplateElement>)
+}
+
+// كاتب النصوص الذكي (محاكاة) — يعيد صياغة نص الفقرة حسب النبرة
+const tone = ref<TextTone>('رسمية')
+function enhance() {
+  emit('update', { label: improveText(props.element.label, tone.value) })
 }
 
 // رفع صورة كـ base64 (تُحفظ مع القالب)
@@ -67,6 +74,17 @@ function onImage(e: Event) {
         <input :value="element.defaultValue ?? ''" type="text" @input="set('defaultValue', ($event.target as HTMLInputElement).value)" />
       </div>
     </template>
+
+    <!-- كاتب النصوص الذكي (للفقرات) -->
+    <div v-if="element.type === 'paragraph'" class="ai-text">
+      <label>✨ تحسين النص <span class="ai-text__tag">🧪 محاكاة</span></label>
+      <div class="ai-text__row">
+        <select v-model="tone">
+          <option v-for="t in TEXT_TONES" :key="t" :value="t">{{ t }}</option>
+        </select>
+        <button class="app-btn ai-text__btn" @click="enhance">✨ تحسين</button>
+      </div>
+    </div>
 
     <!-- تنسيق النص -->
     <template v-if="isText">
@@ -258,5 +276,18 @@ function onImage(e: Event) {
   cursor: pointer;
   &:hover { background: var(--primary-soft); border-color: var(--primary); }
   input { display: none; }
+}
+
+.ai-text {
+  margin-block-end: 12px;
+  padding: 10px;
+  background: var(--purple-bg);
+  border-radius: var(--radius-sm);
+
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--purple-text); margin-block-end: 8px; }
+  &__tag { font-weight: 400; color: var(--text-muted); }
+  &__row { display: flex; gap: 6px; }
+  select { flex: 1; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; background: var(--surface); color: var(--text); }
+  &__btn { padding: 7px 12px; font-size: 13px; }
 }
 </style>

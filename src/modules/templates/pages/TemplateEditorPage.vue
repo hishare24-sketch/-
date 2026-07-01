@@ -17,6 +17,7 @@ import {
 } from '../constants'
 import ElementPickerModal from '../modals/ElementPickerModal.vue'
 import ElementProperties from '../components/ElementProperties.vue'
+import { suggestPalettes, validateTemplate, type Palette, type TemplateIssue } from '../templatesAI'
 
 const route = useRoute()
 const router = useRouter()
@@ -122,6 +123,24 @@ function updateSelected(patch: Record<string, unknown>) {
   touch()
 }
 
+// ── مصمّم الألوان الذكي (محاكاة) ──
+const paletteDesc = ref('')
+const palettes = ref<Palette[]>([])
+function runPalettes() {
+  palettes.value = suggestPalettes(paletteDesc.value)
+}
+function applyPalette(p: Palette) {
+  if (!draft) return
+  draft.accent = p.accent
+  touch()
+}
+
+// ── المدقّق الذكي (محاكاة) ──
+const issues = ref<TemplateIssue[] | null>(null)
+function runValidate() {
+  if (draft) issues.value = validateTemplate(draft)
+}
+
 // ── الهوية البصرية للقالب ──
 function applyAccentToHeadings() {
   if (!draft?.accent) return
@@ -160,8 +179,24 @@ function save() {
           <button :class="{ 'is-on': view === 'preview' }" @click="view = 'preview'">👁️ معاينة</button>
         </div>
         <button class="app-btn app-btn--outlined" :class="{ 'is-on': showIdentity }" @click="showIdentity = !showIdentity">🎨 الهوية</button>
+        <button class="app-btn app-btn--outlined" @click="runValidate">🔍 تدقيق</button>
         <button class="app-btn" :disabled="!dirty" @click="save">💾 حفظ</button>
       </header>
+
+      <!-- نتائج المدقّق الذكي -->
+      <div v-if="issues" class="validate app-card">
+        <div class="validate__head">
+          <span>🔍 نتيجة التدقيق <span class="validate__tag">🧪 محاكاة</span></span>
+          <button class="validate__close" @click="issues = null">✕</button>
+        </div>
+        <div v-for="(iss, i) in issues" :key="i" class="issue" :class="`is-${iss.level}`">
+          <span class="issue__icon">{{ iss.level === 'ok' ? '✅' : iss.level === 'warning' ? '⚠️' : 'ℹ️' }}</span>
+          <div>
+            <span class="issue__title">{{ iss.title }}</span>
+            <span v-if="iss.detail" class="issue__detail">{{ iss.detail }}</span>
+          </div>
+        </div>
+      </div>
 
       <!-- لوحة الهوية البصرية -->
       <div v-if="showIdentity" class="identity app-card">
@@ -171,6 +206,19 @@ function save() {
         <button class="app-btn app-btn--outlined identity__btn" @click="useSystemAccent">استخدام لون النظام</button>
         <button class="app-btn identity__btn" :disabled="!draft.accent" @click="applyAccentToHeadings">تطبيق على كل العناوين</button>
         <span class="identity__hint">يُطبَّق اللون على العناوين وترويسة المستند عند التوليد.</span>
+
+        <!-- مصمّم الألوان الذكي -->
+        <div class="palette">
+          <input v-model="paletteDesc" type="text" class="palette__desc" placeholder="صف الطابع: هادئ مؤسسي / فاخر / حيوي…" />
+          <button class="app-btn app-btn--outlined identity__btn" @click="runPalettes">✨ اقتراح ألوان</button>
+          <span class="palette__tag">🧪 محاكاة</span>
+          <div v-if="palettes.length" class="palette__list">
+            <button v-for="p in palettes" :key="p.name" class="pal" :title="p.name" @click="applyPalette(p)">
+              <span v-for="c in p.colors" :key="c" class="pal__sw" :style="{ background: c }" />
+              <span class="pal__name">{{ p.name }}</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- وضع البناء -->
@@ -336,6 +384,60 @@ function save() {
   &__hint { font-size: 12px; color: var(--text-muted); flex-basis: 100%; }
 }
 .is-on { border-color: var(--primary); color: var(--primary); }
+
+.palette {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-block-start: 6px;
+  padding-block-start: 10px;
+  border-block-start: 1px solid var(--border);
+
+  &__desc { flex: 1; min-inline-size: 160px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; background: var(--surface); color: var(--text); }
+  &__tag { font-size: 11px; color: var(--text-muted); }
+  &__list { flex-basis: 100%; display: flex; gap: 8px; flex-wrap: wrap; margin-block-start: 4px; }
+}
+.pal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+  font-family: inherit;
+  &:hover { border-color: var(--primary); }
+  &__sw { inline-size: 14px; block-size: 14px; border-radius: 3px; }
+  &__name { font-size: 12px; margin-inline-start: 4px; }
+}
+
+.validate {
+  padding: 14px 16px;
+  margin-block-end: 14px;
+
+  &__head { display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 14px; margin-block-end: 10px; }
+  &__tag { font-size: 11px; color: var(--text-muted); font-weight: 400; }
+  &__close { border: none; background: none; color: var(--text-muted); font-size: 15px; cursor: pointer; }
+}
+.issue {
+  display: flex;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  margin-block-end: 6px;
+  background: var(--surface-2);
+
+  &.is-warning { background: var(--warn-bg); }
+  &.is-ok { background: var(--ok-bg); }
+  &.is-info { background: var(--info-bg); }
+
+  &__icon { font-size: 15px; }
+  &__title { display: block; font-size: 13px; font-weight: 700; }
+  &__detail { display: block; font-size: 12px; color: var(--text-muted); margin-block-start: 2px; }
+}
 
 .build {
   display: grid;

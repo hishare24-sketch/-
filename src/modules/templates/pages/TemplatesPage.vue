@@ -6,6 +6,7 @@ import { useTemplatesStore } from '@/stores/TemplatesStore'
 import { useToast } from '@/composables/useToast'
 import type { DocTemplate, TemplateDocType } from '@/interfaces/models'
 import { TEMPLATE_DOC_TYPES, docTypeMeta } from '../constants'
+import { generateTemplateFromDescription } from '../templatesAI'
 import HelpIcon from '@/components/shared/HelpIcon.vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import NewTemplateModal from '../modals/NewTemplateModal.vue'
@@ -44,6 +45,16 @@ const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 function onCreate(payload: { name: string; docType: TemplateDocType }) {
   const id = templatesStore.createTemplate(payload.name, payload.docType)
   showNew.value = false
+  router.push({ name: 'template-editor', params: { id } })
+}
+
+// توليد قالب بالذكاء (محاكاة) من وصف نصّي
+function onGenerate(payload: { description: string }) {
+  const g = generateTemplateFromDescription(payload.description)
+  const id = templatesStore.createTemplate(g.name, g.docType)
+  templatesStore.updateTemplate(id, { sections: g.sections })
+  showNew.value = false
+  toast.success('أُنشئ القالب بالذكاء ✨')
   router.push({ name: 'template-editor', params: { id } })
 }
 
@@ -138,7 +149,7 @@ async function remove(t: DocTemplate) {
       </div>
     </div>
 
-    <NewTemplateModal v-if="showNew" @create="onCreate" @close="showNew = false" />
+    <NewTemplateModal v-if="showNew" @create="onCreate" @generate="onGenerate" @close="showNew = false" />
     <TemplatePreviewModal v-if="preview" :template="preview" @close="preview = null" />
     <FillDocumentModal v-if="using" :template="using" @close="using = null" />
     <ConfirmModal ref="confirmRef" />

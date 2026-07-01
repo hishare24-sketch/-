@@ -2,12 +2,26 @@
 import { ref, computed } from 'vue'
 import type { TemplateDocType } from '@/interfaces/models'
 import { TEMPLATE_DOC_TYPES } from '../constants'
+import { generateTemplateFromDescription } from '../templatesAI'
 import ModalShell from '@/components/shared/ModalShell.vue'
 
-const emit = defineEmits<{ (e: 'create', payload: { name: string; docType: TemplateDocType }): void; (e: 'close'): void }>()
+const emit = defineEmits<{
+  (e: 'create', payload: { name: string; docType: TemplateDocType }): void
+  (e: 'generate', payload: { description: string }): void
+  (e: 'close'): void
+}>()
 
+const mode = ref<'manual' | 'ai'>('manual')
 const docType = ref<TemplateDocType | null>(null)
 const name = ref('')
+
+// مولّد بالذكاء (محاكاة)
+const aiDesc = ref('')
+const aiPreview = computed(() => (aiDesc.value.trim() ? generateTemplateFromDescription(aiDesc.value) : null))
+function generate() {
+  if (!aiDesc.value.trim()) return
+  emit('generate', { description: aiDesc.value.trim() })
+}
 
 // اقتراح اسم افتراضي حسب النوع المختار
 const suggested = computed(() => TEMPLATE_DOC_TYPES.find((t) => t.id === docType.value)?.label ?? '')
@@ -26,6 +40,25 @@ function create() {
 
 <template>
   <ModalShell title="قالب جديد" wide @close="emit('close')">
+    <div class="switch">
+      <button :class="{ 'is-on': mode === 'manual' }" @click="mode = 'manual'">✍️ يدويّاً</button>
+      <button :class="{ 'is-on': mode === 'ai' }" @click="mode = 'ai'">✨ بالذكاء</button>
+    </div>
+
+    <!-- التوليد بالذكاء (محاكاة) -->
+    <div v-if="mode === 'ai'" class="ai">
+      <div class="field">
+        <label>صف القالب الذي تريده</label>
+        <textarea v-model="aiDesc" rows="3" placeholder="مثال: قالب عرض سعر لمشروع تقني يشمل جدول منتجات وإجمالي وضريبة" />
+      </div>
+      <div v-if="aiPreview" class="ai__preview">
+        🤖 سيُنشأ: <b>{{ aiPreview.name }}</b> · {{ aiPreview.sections.length }} قسم
+      </div>
+      <span class="ai__tag">🧪 محاكاة — يُستبدل بخادم لاحقاً</span>
+    </div>
+
+    <!-- يدويّاً -->
+    <template v-else>
     <span class="lbl">اختر نوع المستند</span>
     <div class="types">
       <button
@@ -45,15 +78,37 @@ function create() {
       <label>اسم القالب</label>
       <input v-model="name" type="text" placeholder="مثال: عرض سعر لمشاريع التقنية" />
     </div>
+    </template>
 
     <template #footer>
       <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button class="app-btn" :disabled="!valid" @click="create">إنشاء والانتقال للمحرّر</button>
+      <button v-if="mode === 'ai'" class="app-btn" :disabled="!aiDesc.trim()" @click="generate">✨ توليد بالذكاء</button>
+      <button v-else class="app-btn" :disabled="!valid" @click="create">إنشاء والانتقال للمحرّر</button>
     </template>
   </ModalShell>
 </template>
 
 <style lang="scss" scoped>
+.switch {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--bg);
+  padding: 3px;
+  border-radius: 10px;
+  margin-block-end: 16px;
+
+  button {
+    padding: 7px 16px; border: none; background: transparent; color: var(--text-muted);
+    font-family: inherit; font-size: 13px; border-radius: 8px; cursor: pointer;
+    &.is-on { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  }
+}
+
+.ai {
+  &__preview { margin-block: 10px; padding: 10px 14px; background: var(--purple-bg); color: var(--purple-text); border-radius: var(--radius-sm); font-size: 13px; }
+  &__tag { display: inline-block; margin-block-start: 8px; font-size: 11px; color: var(--text-muted); }
+}
+
 .lbl {
   display: block;
   font-size: 13px;
@@ -97,16 +152,19 @@ function create() {
 
   label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
 
-  input {
+  input,
+  textarea {
     padding: 10px 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: 14px;
     inline-size: 100%;
+    max-inline-size: 100%;
     background: var(--surface);
     color: var(--text);
     &:focus { outline: none; border-color: var(--primary); }
   }
+  textarea { resize: vertical; }
 }
 </style>
