@@ -10,6 +10,7 @@ import HelpIcon from '@/components/shared/HelpIcon.vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import NewTemplateModal from '../modals/NewTemplateModal.vue'
 import TemplatePreviewModal from '../modals/TemplatePreviewModal.vue'
+import FillDocumentModal from '../modals/FillDocumentModal.vue'
 
 const templatesStore = useTemplatesStore()
 const { templates } = storeToRefs(templatesStore)
@@ -37,6 +38,7 @@ const stats = computed(() => [
 
 const showNew = ref(false)
 const preview = ref<DocTemplate | null>(null)
+const using = ref<DocTemplate | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 
 function onCreate(payload: { name: string; docType: TemplateDocType }) {
@@ -125,6 +127,7 @@ async function remove(t: DocTemplate) {
         <span class="tpl__date">آخر تعديل: {{ t.updatedAt }}</span>
 
         <div class="tpl__actions">
+          <button class="app-btn act" @click="using = t">🧾 توليد</button>
           <button class="app-btn app-btn--outlined act" @click="edit(t)">✎ تعديل</button>
           <button class="icon-btn" title="نسخ" @click="duplicate(t)">📋</button>
           <button class="icon-btn" :title="t.status === 'active' ? 'أرشفة' : 'استعادة'" @click="toggleArchive(t)">
@@ -137,6 +140,7 @@ async function remove(t: DocTemplate) {
 
     <NewTemplateModal v-if="showNew" @create="onCreate" @close="showNew = false" />
     <TemplatePreviewModal v-if="preview" :template="preview" @close="preview = null" />
+    <FillDocumentModal v-if="using" :template="using" @close="using = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>
