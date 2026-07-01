@@ -7,6 +7,7 @@ import type {
   AssetCategory,
   Asset,
   MaintenanceType,
+  ReceivableStatus,
   MemberTxnType,
   CommitmentFreq,
   CommitmentKind,
@@ -163,6 +164,19 @@ export const MAINT_TYPES: { v: MaintenanceType; icon: string }[] = [
   { v: 'فحص', icon: '🔍' },
   { v: 'دورية', icon: '🔁' },
 ]
+
+// حالات الذمم (تغطي دورة الحساب: مفتوحة → جزئية → مسددة، + نزاع/إعدام/إلغاء)
+export const RECEIVABLE_STATUS: Record<ReceivableStatus, { label: string; color: string; bg: string }> = {
+  open: { label: 'مفتوحة', color: 'var(--info-text)', bg: 'var(--info-bg)' },
+  partial: { label: 'جزئية', color: 'var(--warn-text)', bg: 'var(--warn-bg)' },
+  settled: { label: 'مسددة', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+  disputed: { label: 'متنازع عليها', color: 'var(--warn-text)', bg: 'var(--warn-bg)' },
+  written_off: { label: 'معدومة', color: 'var(--danger-text)', bg: 'var(--danger-bg)' },
+  cancelled: { label: 'ملغاة', color: 'var(--text-muted)', bg: 'var(--surface-2)' },
+}
+
+// شروط السداد المعتادة
+export const RECEIVABLE_TERMS = ['فوري', 'خلال 15 يوم', 'خلال 30 يوم', 'خلال 45 يوم', 'خلال 60 يوم']
 
 export const DEFAULT_DOC_TYPES = ['فاتورة', 'عقد', 'كشف حساب', 'وثيقة رسمية', 'ملف عام']
 export const DEFAULT_PARTY_TYPES = ['عميل', 'مورد', 'بنك', 'جهة حكومية', 'شريك', 'أخرى']

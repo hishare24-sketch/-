@@ -55,12 +55,12 @@ export function useDashboard(projectId: Ref<string>, defaultPeriod = '1m') {
   const pendingReqs = computed(() => requestsStore.pendingByProject(projectId.value))
 
   const stats = computed(() => [
-    { label: 'الرصيد الكلي', value: fmt(financeStore.balanceOf(projectId.value)), icon: '💰', color: '#0891b2', bg: '#ecfeff' },
-    { label: `إيرادات ${periodLabel.value}`, value: fmt(income.value), icon: '📈', color: '#059669', bg: '#ecfdf5' },
-    { label: `مصروفات ${periodLabel.value}`, value: fmt(expense.value), icon: '📉', color: '#dc2626', bg: '#fef2f2' },
-    { label: `صافي ${periodLabel.value}`, value: fmt(income.value - expense.value), icon: '📊', color: '#7e22ce', bg: '#faf5ff' },
-    { label: 'طلبات معلقة', value: String(pendingReqs.value.length), icon: '⏳', color: '#a16207', bg: '#fffbeb' },
-    { label: 'تنبيهات متابعات', value: String(urgentTrackings.value.length), icon: '⚠️', color: '#d97706', bg: '#fffbeb' },
+    { label: 'الرصيد الكلي', value: fmt(financeStore.balanceOf(projectId.value)), icon: '💰', color: 'var(--info-text)', bg: 'var(--info-bg)' },
+    { label: `إيرادات ${periodLabel.value}`, value: fmt(income.value), icon: '📈', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+    { label: `مصروفات ${periodLabel.value}`, value: fmt(expense.value), icon: '📉', color: 'var(--danger-text)', bg: 'var(--danger-bg)' },
+    { label: `صافي ${periodLabel.value}`, value: fmt(income.value - expense.value), icon: '📊', color: 'var(--purple-text)', bg: 'var(--purple-bg)' },
+    { label: 'طلبات معلقة', value: String(pendingReqs.value.length), icon: '⏳', color: 'var(--warn-text)', bg: 'var(--warn-bg)' },
+    { label: 'تنبيهات متابعات', value: String(urgentTrackings.value.length), icon: '⚠️', color: 'var(--warn-text)', bg: 'var(--warn-bg)' },
   ])
 
   const monthlyData = computed(() => {

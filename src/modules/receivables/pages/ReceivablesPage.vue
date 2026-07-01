@@ -8,7 +8,8 @@ import { recvPaid, recvRemaining } from '@/helpers/calc'
 import { fmt, fmtNum } from '@/helpers/format'
 import { today } from '@/helpers/date'
 import { useProjectsStore } from '@/stores/ProjectsStore'
-import type { Receivable, ReceivableKind, ReceivableStatus } from '@/interfaces/models'
+import { RECEIVABLE_STATUS } from '@/constants'
+import type { Receivable, ReceivableKind } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import ReceivableFormModal from '../modals/ReceivableFormModal.vue'
 import PayReceivableModal from '../modals/PayReceivableModal.vue'
@@ -63,18 +64,29 @@ const stats = computed(() => [
   { label: 'متأخرة السداد', value: String(overdue.value), icon: '⏰', color: 'var(--warn-text)', bg: 'var(--warn-bg)' },
 ])
 
-function statusInfo(s: ReceivableStatus) {
-  if (s === 'settled') return { l: 'مسددة', c: 'var(--ok-text)', bg: 'var(--ok-bg)' }
-  if (s === 'partial') return { l: 'جزئية', c: 'var(--warn-text)', bg: 'var(--warn-bg)' }
-  return { l: 'مفتوحة', c: 'var(--info-text)', bg: 'var(--info-bg)' }
-}
+const RSTATUS = RECEIVABLE_STATUS
+const canPay = (r: Receivable) => !['settled', 'written_off', 'cancelled'].includes(r.status)
 
 // المودالات
 const showForm = ref(false)
+const editing = ref<Receivable | null>(null)
 const paying = ref<Receivable | null>(null)
 const viewing = ref<Receivable | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 
+function openCreate() {
+  editing.value = null
+  showForm.value = true
+}
+function onEdit(r: Receivable) {
+  viewing.value = null
+  editing.value = r
+  showForm.value = true
+}
+function closeForm() {
+  showForm.value = false
+  editing.value = null
+}
 function payFromView(r: Receivable) {
   viewing.value = null
   paying.value = r
@@ -93,7 +105,7 @@ async function onDelete(r: Receivable) {
         <h1>الذمم <HelpIcon section="receivables" /></h1>
         <p>المبالغ المستحقة لك أو عليك</p>
       </div>
-      <button class="app-btn" @click="showForm = true">＋ ذمة جديدة</button>
+      <button class="app-btn" @click="openCreate">＋ ذمة جديدة</button>
     </header>
 
 
@@ -121,9 +133,7 @@ async function onDelete(r: Receivable) {
       </select>
       <select v-model="fStatus" class="filters__select">
         <option value="all">كل الحالات</option>
-        <option value="open">مفتوحة</option>
-        <option value="partial">جزئية</option>
-        <option value="settled">مسددة</option>
+        <option v-for="(s, key) in RSTATUS" :key="key" :value="key">{{ s.label }}</option>
       </select>
       <select v-model="sort" class="filters__select">
         <option value="due">الأقرب استحقاقاً</option>
@@ -152,21 +162,22 @@ async function onDelete(r: Receivable) {
           <span class="rec__remaining">المتبقّي: {{ fmtNum(recvRemaining(r)) }}</span>
           <span v-if="recvPaid(r)" class="rec__paid">مدفوع: {{ fmtNum(recvPaid(r)) }}</span>
         </div>
-        <span class="rec__status" :style="{ background: statusInfo(r.status).bg, color: statusInfo(r.status).c }">
-          {{ statusInfo(r.status).l }}
+        <span class="rec__status" :style="{ background: RSTATUS[r.status].bg, color: RSTATUS[r.status].color }">
+          {{ RSTATUS[r.status].label }}
         </span>
         <div class="rec__actions">
-          <button v-if="r.status !== 'settled'" class="app-btn app-btn--outlined pay-btn" @click="paying = r">
+          <button v-if="canPay(r)" class="app-btn app-btn--outlined pay-btn" @click="paying = r">
             {{ r.kind === 'receivable' ? 'تحصيل' : 'سداد' }}
           </button>
+          <button class="icon-btn" title="تعديل" @click="onEdit(r)">✎</button>
           <button class="icon-btn icon-btn--danger" title="حذف" @click="onDelete(r)">🗑️</button>
         </div>
       </div>
     </div>
 
-    <ReceivableFormModal v-if="showForm" :project-id="activeProjectId" @close="showForm = false" />
+    <ReceivableFormModal v-if="showForm" :project-id="activeProjectId" :receivable="editing" @close="closeForm" />
     <PayReceivableModal v-if="paying" :receivable="paying" @close="paying = null" />
-    <ReceivableDetailsModal v-if="viewing" :receivable="viewing" @pay="payFromView" @close="viewing = null" />
+    <ReceivableDetailsModal v-if="viewing" :receivable="viewing" @pay="payFromView" @edit="onEdit" @close="viewing = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>
@@ -354,6 +365,7 @@ async function onDelete(r: Receivable) {
   color: var(--text-muted);
   font-size: 13px;
 
+  &:hover { border-color: var(--primary); color: var(--primary); }
   &--danger:hover { border-color: var(--error); color: var(--error); }
 }
 </style>

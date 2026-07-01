@@ -73,7 +73,7 @@ export interface MemberTxn {
 
 // الذمم (مدينة/دائنة)
 export type ReceivableKind = 'receivable' | 'payable'
-export type ReceivableStatus = 'open' | 'partial' | 'settled'
+export type ReceivableStatus = 'open' | 'partial' | 'settled' | 'disputed' | 'written_off' | 'cancelled'
 
 export interface ReceivablePayment {
   id: string
@@ -93,6 +93,8 @@ export interface Receivable {
   dueDate?: string
   date: string
   status: ReceivableStatus
+  invoiceNo?: string
+  terms?: string
   payments: ReceivablePayment[]
   note?: string
   attachments?: Attachment[]

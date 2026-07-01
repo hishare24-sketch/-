@@ -26,6 +26,20 @@ export const useReceivablesStore = defineStore('receivables', {
       this.receivables.unshift({ ...payload, id: uid('rc') })
       useAuditStore().log('إنشاء', 'ذمة', `${payload.party} — ${fmt(payload.amount)}`)
     },
+    // تعديل بيانات الذمة (يحافظ على الدفعات)
+    updateReceivable(id: string, patch: Partial<Receivable>) {
+      const i = this.receivables.findIndex((r) => r.id === id)
+      if (i === -1) return
+      this.receivables[i] = { ...this.receivables[i], ...patch, id }
+      useAuditStore().log('تعديل', 'ذمة', this.receivables[i].party)
+    },
+    // تغيير الحالة يدوياً (نزاع/إعدام/إلغاء/إعادة فتح)
+    setReceivableStatus(id: string, status: ReceivableStatus) {
+      const r = this.receivables.find((x) => x.id === id)
+      if (!r) return
+      r.status = status
+      useAuditStore().log('تغيير حالة', 'ذمة', `${r.party} → ${status}`)
+    },
     deleteReceivable(id: string) {
       this.receivables = this.receivables.filter((r) => r.id !== id)
     },

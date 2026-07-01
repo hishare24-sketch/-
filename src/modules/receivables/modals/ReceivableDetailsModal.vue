@@ -1,18 +1,37 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useProjectsStore } from '@/stores/ProjectsStore'
+import { useReceivablesStore } from '@/stores/ReceivablesStore'
 import { recvPaid, recvRemaining } from '@/helpers/calc'
 import { fmt, fmtNum } from '@/helpers/format'
 import { exportPDF, docHTML } from '@/helpers/export'
-import type { Receivable } from '@/interfaces/models'
+import { RECEIVABLE_STATUS } from '@/constants'
+import type { Receivable, ReceivableStatus } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ receivable: Receivable }>()
-const emit = defineEmits<{ (e: 'pay', r: Receivable): void; (e: 'close'): void }>()
+const emit = defineEmits<{ (e: 'pay', r: Receivable): void; (e: 'edit', r: Receivable): void; (e: 'close'): void }>()
 
 const projectsStore = useProjectsStore()
+const receivablesStore = useReceivablesStore()
 const isRecv = computed(() => props.receivable.kind === 'receivable')
+const statusMeta = computed(() => RECEIVABLE_STATUS[props.receivable.status])
+const canPay = computed(() => !['settled', 'written_off', 'cancelled'].includes(props.receivable.status))
+
+// إجراءات تغيير الحالة المتاحة حسب الحالة الراهنة
+const statusActions = computed(() => {
+  const s = props.receivable.status
+  const acts: { to: ReceivableStatus; label: string }[] = []
+  if (s !== 'disputed' && s !== 'settled') acts.push({ to: 'disputed', label: '⚖️ نزاع' })
+  if (s !== 'written_off') acts.push({ to: 'written_off', label: '✖️ إعدام' })
+  if (s !== 'cancelled') acts.push({ to: 'cancelled', label: '🚫 إلغاء' })
+  if (s !== 'open' && s !== 'partial' && s !== 'settled') acts.push({ to: 'open', label: '↺ إعادة فتح' })
+  return acts
+})
+function setStatus(to: ReceivableStatus) {
+  receivablesStore.setReceivableStatus(props.receivable.id, to)
+}
 const paid = computed(() => recvPaid(props.receivable))
 const remaining = computed(() => recvRemaining(props.receivable))
 const project = computed(() => projectsStore.projectById(props.receivable.projectId))
@@ -41,6 +60,14 @@ function exportStatement() {
 
 <template>
   <ModalShell :title="receivable.party" @close="emit('close')">
+    <div class="topbar">
+      <span class="status-badge" :style="{ background: statusMeta.bg, color: statusMeta.color }">{{ statusMeta.label }}</span>
+      <div class="hub">
+        <button class="hub__btn" @click="emit('edit', receivable)">✎ تعديل</button>
+        <button v-for="a in statusActions" :key="a.to" class="hub__btn" @click="setStatus(a.to)">{{ a.label }}</button>
+      </div>
+    </div>
+
     <div class="summary">
       <div class="summary__item">
         <span>الأصلي</span><strong>{{ fmt(receivable.amount) }}</strong>
@@ -57,6 +84,8 @@ function exportStatement() {
       <tr><td class="rows__key">النوع</td><td>{{ isRecv ? '📥 مدينة (لنا)' : '📤 دائنة (علينا)' }}</td></tr>
       <tr><td class="rows__key">المشروع</td><td>{{ project?.name }}</td></tr>
       <tr v-if="receivable.dueDate"><td class="rows__key">الاستحقاق</td><td>{{ receivable.dueDate }}</td></tr>
+      <tr v-if="receivable.invoiceNo"><td class="rows__key">رقم الفاتورة</td><td>{{ receivable.invoiceNo }}</td></tr>
+      <tr v-if="receivable.terms"><td class="rows__key">شروط السداد</td><td>{{ receivable.terms }}</td></tr>
       <tr v-if="receivable.note"><td class="rows__key">ملاحظات</td><td>{{ receivable.note }}</td></tr>
     </table>
 
@@ -80,7 +109,7 @@ function exportStatement() {
     <template #footer>
       <button class="app-btn app-btn--ghost" @click="emit('close')">إغلاق</button>
       <button class="app-btn app-btn--outlined" @click="exportStatement">⬇ كشف حساب PDF</button>
-      <button v-if="receivable.status !== 'settled'" class="app-btn" @click="emit('pay', receivable)">
+      <button v-if="canPay" class="app-btn" @click="emit('pay', receivable)">
         {{ isRecv ? 'تحصيل' : 'سداد' }}
       </button>
     </template>
@@ -88,6 +117,42 @@ function exportStatement() {
 </template>
 
 <style lang="scss" scoped>
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-block-end: 16px;
+  flex-wrap: wrap;
+}
+
+.status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.hub {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hub__btn {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover { border-color: var(--primary); color: var(--primary); }
+}
+
 .summary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
