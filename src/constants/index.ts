@@ -6,6 +6,7 @@ import type {
   TxType,
   AssetCategory,
   Asset,
+  MaintenanceType,
   MemberTxnType,
   CommitmentFreq,
   CommitmentKind,
@@ -110,10 +111,58 @@ export const ASSET_CATEGORIES: { id: AssetCategory; label: string; icon: string 
 ]
 
 export const ASSET_STATUS: Record<Asset['status'], { label: string; color: string; bg: string }> = {
-  active: { label: 'نشط', color: '#059669', bg: '#ecfdf5' },
-  maintenance: { label: 'تحت الصيانة', color: '#d97706', bg: '#fffbeb' },
-  retired: { label: 'مستبعَد', color: '#64748b', bg: '#f1f5f9' },
+  active: { label: 'نشط', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+  idle: { label: 'متوقّف', color: 'var(--info-text)', bg: 'var(--info-bg)' },
+  maintenance: { label: 'تحت الصيانة', color: 'var(--warn-text)', bg: 'var(--warn-bg)' },
+  damaged: { label: 'تالف/فاقد', color: 'var(--danger-text)', bg: 'var(--danger-bg)' },
+  retired: { label: 'مستبعَد', color: 'var(--text-muted)', bg: 'var(--surface-2)' },
+  sold: { label: 'مُباع', color: 'var(--purple-text)', bg: 'var(--purple-bg)' },
 }
+
+// حقول إضافية حسب طبيعة الأصل (تُخزَّن في asset.specs)
+export const ASSET_FIELD_SCHEMAS: Record<AssetCategory, { key: string; label: string; placeholder?: string }[]> = {
+  vehicle: [
+    { key: 'plate', label: 'رقم اللوحة', placeholder: 'أ ب ج 1234' },
+    { key: 'model', label: 'الطراز / سنة الصنع', placeholder: 'تويوتا هايلكس 2024' },
+    { key: 'vin', label: 'رقم الهيكل (VIN)' },
+    { key: 'fuel', label: 'نوع الوقود', placeholder: 'بنزين / ديزل' },
+  ],
+  device: [
+    { key: 'model', label: 'الموديل', placeholder: 'Dell PowerEdge' },
+    { key: 'specs', label: 'المواصفات', placeholder: 'المعالج / الذاكرة...' },
+  ],
+  equipment: [
+    { key: 'model', label: 'الطراز' },
+    { key: 'location', label: 'الموقع', placeholder: 'المستودع / الورشة' },
+  ],
+  furniture: [
+    { key: 'quantity', label: 'الكمية' },
+    { key: 'location', label: 'الموقع / الغرفة' },
+    { key: 'material', label: 'الخامة', placeholder: 'خشب / معدن' },
+  ],
+  property: [
+    { key: 'area', label: 'المساحة (م²)' },
+    { key: 'deed', label: 'رقم الصك' },
+    { key: 'address', label: 'الموقع / العنوان' },
+    { key: 'meterNo', label: 'رقم عداد الخدمات' },
+  ],
+  other: [],
+}
+
+// وحدة العداد الافتراضية حسب الطبيعة
+export const ASSET_METER_UNIT: Partial<Record<AssetCategory, string>> = {
+  vehicle: 'كم',
+  equipment: 'ساعة',
+}
+
+// أنواع سجلّات الصيانة
+export const MAINT_TYPES: { v: MaintenanceType; icon: string }[] = [
+  { v: 'صيانة', icon: '🔧' },
+  { v: 'إصلاح', icon: '🛠️' },
+  { v: 'عطل', icon: '⚠️' },
+  { v: 'فحص', icon: '🔍' },
+  { v: 'دورية', icon: '🔁' },
+]
 
 export const DEFAULT_DOC_TYPES = ['فاتورة', 'عقد', 'كشف حساب', 'وثيقة رسمية', 'ملف عام']
 export const DEFAULT_PARTY_TYPES = ['عميل', 'مورد', 'بنك', 'جهة حكومية', 'شريك', 'أخرى']

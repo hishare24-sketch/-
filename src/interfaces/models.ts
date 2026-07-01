@@ -136,14 +136,36 @@ export interface Commitment {
 // الأصول الملموسة
 export type AssetCategory = 'vehicle' | 'device' | 'equipment' | 'furniture' | 'property' | 'other'
 
+// دورة حياة الأصل الملموس
+export type AssetStatus = 'active' | 'idle' | 'maintenance' | 'damaged' | 'retired' | 'sold'
+
+export type MaintenanceType = 'صيانة' | 'إصلاح' | 'عطل' | 'فحص' | 'دورية'
+
 export interface MaintenanceEntry {
   id: string
   date: string
-  type: 'صيانة' | 'عطل' | 'فحص'
+  type: MaintenanceType
   cost: number
   note: string
+  meter?: number // قراءة العداد وقت العملية
   createdBy?: string
   attachments?: Attachment[]
+}
+
+// حدث غير مالي في سجل الأصل (تغيير حالة/نقل/عداد/بيع/ربط ضمان)
+export type AssetEventKind = 'status' | 'transfer' | 'meter' | 'sale' | 'warranty' | 'periodic' | 'note'
+export interface AssetEvent {
+  id: string
+  date: string
+  kind: AssetEventKind
+  text: string
+  createdBy?: string
+}
+
+export interface AssetPeriodic {
+  every: number
+  unit: 'يوم' | 'أسبوع' | 'شهر' | 'سنة'
+  nextDue: string
 }
 
 export interface Asset {
@@ -158,12 +180,19 @@ export interface Asset {
   serial?: string
   usageMeter?: number
   usageUnit?: string
-  status: 'active' | 'maintenance' | 'retired'
+  status: AssetStatus
   memberId?: string
   maintenance: MaintenanceEntry[]
   note?: string
   attachments?: Attachment[]
   createdBy?: string
+  // إضافات: حقول حسب الطبيعة + ربط ضمان + دورية + سجل أحداث + بيانات البيع
+  specs?: Record<string, string>
+  trackingId?: string
+  periodic?: AssetPeriodic
+  events?: AssetEvent[]
+  saleValue?: number
+  saleDate?: string
 }
 
 export interface Transaction {

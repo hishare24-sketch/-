@@ -1,31 +1,27 @@
 <script setup lang="ts">
 import { reactive, computed } from 'vue'
 import { useAssetsStore } from '@/stores/AssetsStore'
-import { CURRENT_USER } from '@/constants'
+import { CURRENT_USER, MAINT_TYPES } from '@/constants'
 import { today } from '@/helpers/date'
 import type { Asset, MaintenanceEntry, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
-const props = defineProps<{ asset: Asset }>()
+const props = defineProps<{ asset: Asset; initialType?: MaintenanceEntry['type'] }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const assetsStore = useAssetsStore()
 
-const TYPES: { v: MaintenanceEntry['type']; icon: string }[] = [
-  { v: 'صيانة', icon: '🔧' },
-  { v: 'عطل', icon: '⚠️' },
-  { v: 'فحص', icon: '🔍' },
-]
-
 const form = reactive({
-  type: 'صيانة' as MaintenanceEntry['type'],
+  type: (props.initialType ?? 'صيانة') as MaintenanceEntry['type'],
   date: today(),
   cost: null as number | null,
+  meter: (props.asset.usageMeter ?? null) as number | null,
   note: '',
   attachments: [] as Attachment[],
 })
 
+const showMeter = computed(() => props.asset.usageUnit != null && props.asset.usageUnit !== '')
 const valid = computed(() => form.cost != null && form.cost >= 0)
 
 function save() {
@@ -34,6 +30,7 @@ function save() {
     type: form.type,
     date: form.date,
     cost: Number(form.cost),
+    meter: form.meter != null ? Number(form.meter) : undefined,
     note: form.note.trim(),
     attachments: form.attachments,
     createdBy: CURRENT_USER,
@@ -47,18 +44,24 @@ function save() {
     <div class="field">
       <label>النوع</label>
       <div class="types">
-        <button v-for="t in TYPES" :key="t.v" type="button" class="type" :class="{ 'is-active': form.type === t.v }" @click="form.type = t.v">
+        <button v-for="t in MAINT_TYPES" :key="t.v" type="button" class="type" :class="{ 'is-active': form.type === t.v }" @click="form.type = t.v">
           {{ t.icon }} {{ t.v }}
         </button>
       </div>
     </div>
-    <div class="field">
-      <label>التاريخ</label>
-      <input v-model="form.date" type="date" />
+    <div class="row">
+      <div class="field">
+        <label>التاريخ</label>
+        <input v-model="form.date" type="date" />
+      </div>
+      <div class="field">
+        <label>التكلفة (ر.س)</label>
+        <input v-model.number="form.cost" type="number" placeholder="0" />
+      </div>
     </div>
-    <div class="field">
-      <label>التكلفة (ر.س)</label>
-      <input v-model.number="form.cost" type="number" placeholder="0" />
+    <div v-if="showMeter" class="field">
+      <label>قراءة العداد ({{ asset.usageUnit }}) — اختياري</label>
+      <input v-model.number="form.meter" type="number" placeholder="0" />
     </div>
     <div class="field">
       <label>الوصف</label>
@@ -94,9 +97,13 @@ function save() {
     border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: 14px;
+    background: var(--surface);
+    color: var(--text);
     &:focus { outline: none; border-color: var(--primary); }
   }
 }
+
+.row { display: flex; gap: 10px; }
 
 .types {
   display: flex;

@@ -66,13 +66,23 @@ const holderName = (a: Asset) => (a.memberId ? projectsStore.memberById(a.member
 
 // المودالات
 const showForm = ref(false)
+const editing = ref<Asset | null>(null)
 const maintAsset = ref<Asset | null>(null)
 const viewing = ref<Asset | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 
-function maintainFromView(a: Asset) {
+function openCreate() {
+  editing.value = null
+  showForm.value = true
+}
+function onEdit(a: Asset) {
   viewing.value = null
-  maintAsset.value = a
+  editing.value = a
+  showForm.value = true
+}
+function closeForm() {
+  showForm.value = false
+  editing.value = null
 }
 
 async function onDelete(a: Asset) {
@@ -88,7 +98,7 @@ async function onDelete(a: Asset) {
         <h1>الأصول <HelpIcon section="assets" /></h1>
         <p>الأصول الملموسة وسجل الصيانة والضمانات</p>
       </div>
-      <button class="app-btn" @click="showForm = true">＋ أصل جديد</button>
+      <button class="app-btn" @click="openCreate">＋ أصل جديد</button>
     </header>
 
     <div class="assets__stats">
@@ -116,9 +126,7 @@ async function onDelete(a: Asset) {
       </select>
       <select v-model="fStatus" class="filters__select">
         <option value="all">كل الحالات</option>
-        <option value="active">نشط</option>
-        <option value="maintenance">تحت الصيانة</option>
-        <option value="retired">مستبعَد</option>
+        <option v-for="(s, key) in ASSET_STATUS" :key="key" :value="key">{{ s.label }}</option>
       </select>
       <select v-model="sort" class="filters__select">
         <option value="newest">الأحدث شراءً</option>
@@ -166,9 +174,9 @@ async function onDelete(a: Asset) {
       </div>
     </div>
 
-    <AssetFormModal v-if="showForm" :project-id="activeProjectId" @close="showForm = false" />
+    <AssetFormModal v-if="showForm" :project-id="activeProjectId" :asset="editing" @close="closeForm" />
     <MaintenanceModal v-if="maintAsset" :asset="maintAsset" @close="maintAsset = null" />
-    <AssetDetailsModal v-if="viewing" :asset="viewing" @maintain="maintainFromView" @close="viewing = null" />
+    <AssetDetailsModal v-if="viewing" :asset="viewing" @edit="onEdit" @close="viewing = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>

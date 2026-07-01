@@ -1,45 +1,68 @@
 <script setup lang="ts">
-import { reactive, computed } from 'vue'
+import { reactive, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useAssetsStore } from '@/stores/AssetsStore'
-import { ASSET_CATEGORIES, CURRENT_USER } from '@/constants'
+import { ASSET_CATEGORIES, ASSET_FIELD_SCHEMAS, ASSET_METER_UNIT, CURRENT_USER } from '@/constants'
 import { today } from '@/helpers/date'
-import type { AssetCategory, Attachment } from '@/interfaces/models'
+import type { AssetCategory, Attachment, Asset } from '@/interfaces/models'
 import type { FormPreset } from '@/interfaces/forms'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
-const props = defineProps<{ projectId: string; preset?: FormPreset }>()
+const props = defineProps<{ projectId: string; preset?: FormPreset; asset?: Asset | null }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const projectsStore = useProjectsStore()
 const assetsStore = useAssetsStore()
 const { projects } = storeToRefs(projectsStore)
 const ps = props.preset
+const editing = computed(() => !!props.asset)
 
+const a = props.asset
 const form = reactive({
-  name: ps?.name ?? '',
-  category: 'vehicle' as AssetCategory,
-  projectId: ps?.projectId ?? props.projectId,
-  purchaseDate: today(),
-  purchaseValue: (ps?.amount ?? null) as number | null,
-  supplier: ps?.supplier ?? '',
-  warrantyEnd: ps?.warrantyEnd ?? '',
-  serial: '',
-  usageMeter: null as number | null,
-  usageUnit: '',
-  memberId: '',
-  note: ps?.note ?? '',
-  attachments: [] as Attachment[],
+  name: a?.name ?? ps?.name ?? '',
+  category: a?.category ?? ('vehicle' as AssetCategory),
+  projectId: a?.projectId ?? ps?.projectId ?? props.projectId,
+  purchaseDate: a?.purchaseDate ?? today(),
+  purchaseValue: (a?.purchaseValue ?? ps?.amount ?? null) as number | null,
+  supplier: a?.supplier ?? ps?.supplier ?? '',
+  warrantyEnd: a?.warrantyEnd ?? ps?.warrantyEnd ?? '',
+  serial: a?.serial ?? '',
+  usageMeter: (a?.usageMeter ?? null) as number | null,
+  usageUnit: a?.usageUnit ?? ASSET_METER_UNIT[a?.category ?? 'vehicle'] ?? '',
+  memberId: a?.memberId ?? '',
+  note: a?.note ?? ps?.note ?? '',
+  attachments: (a?.attachments ?? []) as Attachment[],
+  specs: { ...(a?.specs ?? {}) } as Record<string, string>,
 })
+
+// الحقول الخاصة بالطبيعة الحالية
+const categoryFields = computed(() => ASSET_FIELD_SCHEMAS[form.category])
+
+// عند تغيير الطبيعة: ضبط وحدة العداد الافتراضية إن كانت فارغة
+watch(
+  () => form.category,
+  (cat) => {
+    if (!form.usageUnit) form.usageUnit = ASSET_METER_UNIT[cat] ?? ''
+  },
+)
 
 const projMembers = computed(() => projectsStore.membersByProject(form.projectId))
 const valid = computed(() => form.name.trim() && form.purchaseValue != null && form.purchaseValue >= 0)
 
+function cleanSpecs(): Record<string, string> | undefined {
+  const out: Record<string, string> = {}
+  categoryFields.value.forEach((f) => {
+    const v = (form.specs[f.key] ?? '').trim()
+    if (v) out[f.key] = v
+  })
+  return Object.keys(out).length ? out : undefined
+}
+
 function save() {
   if (!valid.value) return
-  assetsStore.addAsset({
+  const payload = {
     projectId: form.projectId,
     name: form.name.trim(),
     category: form.category,
@@ -50,19 +73,22 @@ function save() {
     serial: form.serial.trim() || undefined,
     usageMeter: form.usageMeter != null ? Number(form.usageMeter) : undefined,
     usageUnit: form.usageUnit.trim() || undefined,
-    status: 'active',
     memberId: form.memberId || undefined,
-    maintenance: [],
     note: form.note.trim() || undefined,
     attachments: form.attachments,
-    createdBy: CURRENT_USER,
-  })
+    specs: cleanSpecs(),
+  }
+  if (editing.value && props.asset) {
+    assetsStore.updateAsset(props.asset.id, payload)
+  } else {
+    assetsStore.addAsset({ ...payload, status: 'active', maintenance: [], createdBy: CURRENT_USER })
+  }
   emit('close')
 }
 </script>
 
 <template>
-  <ModalShell title="أصل جديد" @close="emit('close')">
+  <ModalShell :title="editing ? `تعديل: ${form.name}` : 'أصل جديد'" @close="emit('close')">
     <div class="field">
       <label>نوع الأصل</label>
       <div class="types">
@@ -98,6 +124,18 @@ function save() {
         <input v-model.number="form.purchaseValue" type="number" placeholder="0" />
       </div>
     </div>
+
+    <!-- حقول خاصة بطبيعة الأصل -->
+    <div v-if="categoryFields.length" class="specs">
+      <span class="specs__label">بيانات {{ ASSET_CATEGORIES.find((c) => c.id === form.category)?.label }}</span>
+      <div class="specs__grid">
+        <div v-for="f in categoryFields" :key="f.key" class="field">
+          <label>{{ f.label }}</label>
+          <input v-model="form.specs[f.key]" type="text" :placeholder="f.placeholder ?? ''" />
+        </div>
+      </div>
+    </div>
+
     <div class="field">
       <label>المورّد (اختياري)</label>
       <input v-model="form.supplier" type="text" placeholder="مثال: الوكالة" />
@@ -107,8 +145,8 @@ function save() {
       <input v-model="form.warrantyEnd" type="date" />
     </div>
     <div class="field">
-      <label>الرقم التسلسلي / اللوحة (اختياري)</label>
-      <input v-model="form.serial" type="text" placeholder="مثال: أ ب ج 1234" />
+      <label>الرقم التسلسلي (اختياري)</label>
+      <input v-model="form.serial" type="text" placeholder="مثال: SN-12345" />
     </div>
     <div class="row">
       <div class="field">
@@ -133,13 +171,13 @@ function save() {
     </div>
 
     <div class="field">
-      <label>المرفقات (فاتورة، صور)</label>
+      <label>المرفقات (فاتورة الشراء، صور، وثائق)</label>
       <AttachmentsField v-model="form.attachments" />
     </div>
 
     <template #footer>
       <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button class="app-btn" :disabled="!valid" @click="save">إضافة الأصل</button>
+      <button class="app-btn" :disabled="!valid" @click="save">{{ editing ? 'حفظ التعديلات' : 'إضافة الأصل' }}</button>
     </template>
   </ModalShell>
 </template>
@@ -160,11 +198,24 @@ function save() {
     border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: 14px;
+    background: var(--surface);
+    color: var(--text);
     &:focus { outline: none; border-color: var(--primary); }
   }
 }
 
 .row { display: flex; gap: 10px; }
+
+.specs {
+  margin-block-end: 16px;
+  padding: 14px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+
+  &__label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-block-end: 10px; }
+  &__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; @media (max-width: 520px) { grid-template-columns: 1fr; } }
+  .field { margin-block-end: 0; }
+}
 
 .types {
   display: flex;
@@ -176,6 +227,7 @@ function save() {
     border-radius: var(--radius-sm);
     border: 1.5px solid var(--border);
     background: var(--surface);
+    color: var(--text);
     font-family: inherit;
     font-size: 13px;
 

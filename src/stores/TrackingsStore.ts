@@ -31,6 +31,11 @@ export const useTrackingsStore = defineStore('trackings', {
         useAuditStore().log('إنشاء', 'متابعة', payload.name)
       }
     },
+    // إدراج متابعة كاملة (بمعرّف معروف) — يُستخدم لربط ضمان أصل ثم الإشارة إليه
+    addTracking(t: Tracking) {
+      this.trackings.unshift(t)
+      useAuditStore().log('إنشاء', 'متابعة', t.name)
+    },
     deleteTracking(id: string) {
       this.trackings = this.trackings.filter((t) => t.id !== id)
     },
