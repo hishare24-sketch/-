@@ -1,18 +1,25 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
 import HelpIcon from '@/components/shared/HelpIcon.vue'
+import ModalShell from '@/components/shared/ModalShell.vue'
+import DonutChart from '@/components/charts/DonutChart.vue'
 import { useProjectsStore } from '@/stores/ProjectsStore'
-import { useSettingsStore } from '@/stores/SettingsStore'
+import { useFinanceStore } from '@/stores/FinanceStore'
 import { fmt, fmtNum } from '@/helpers/format'
 import { exportXLSX } from '@/helpers/export'
-import { useLedgerRows } from '../composables/useLedger'
+import { txErrors } from '@/helpers/txAnalysis'
+import { useLedgerRows, type LedgerRow } from '../composables/useLedger'
 
+const router = useRouter()
 const projectsStore = useProjectsStore()
-const settingsStore = useSettingsStore()
+const financeStore = useFinanceStore()
 const { projects, members } = storeToRefs(projectsStore)
 const { rows, projName, memName } = useLedgerRows()
 
+// التبويب: العمليات / تحليل التدفقات
+const view = ref<'log' | 'flows'>('log')
 
 // الفلاتر
 const fType = ref('all')
@@ -40,8 +47,37 @@ const filtered = computed(() =>
     .filter((r) => (search.value.trim() === '' ? true : (r.kind + r.nature + r.parties.join(' ') + r.num).includes(search.value.trim()))),
 )
 
+// الرصيد الجارٍ لكل صف (مُحتسب لكل مشروع زمنياً على المجموعة المفلترة)
+const balBefore = computed(() => {
+  const chrono = [...filtered.value].sort((a, b) => a.date.localeCompare(b.date))
+  const before: Record<string, number> = {}
+  const running: Record<string, number> = {}
+  chrono.forEach((r) => {
+    const cur = running[r.projectId] ?? 0
+    before[r.id] = cur
+    running[r.projectId] = cur + (r.dir === 'in' ? r.amount : -r.amount)
+  })
+  return before
+})
+const beforeOf = (r: LedgerRow) => balBefore.value[r.id] ?? 0
+const afterOf = (r: LedgerRow) => beforeOf(r) + (r.dir === 'in' ? r.amount : -r.amount)
+
+// كشف العمليات المعطوبة (للعمليات المالية فقط)
+function rowIssues(r: LedgerRow) {
+  const srcTx = financeStore.transactions.find((t) => t.id === r.id)
+  if (!srcTx) return 0
+  return txErrors(srcTx, { project: projectsStore.projectById(srcTx.projectId), transactions: financeStore.transactions }).length
+}
+
 const totalIn = computed(() => filtered.value.filter((r) => r.dir === 'in').reduce((s, r) => s + r.amount, 0))
 const totalOut = computed(() => filtered.value.filter((r) => r.dir === 'out').reduce((s, r) => s + r.amount, 0))
+
+const summary = computed(() => [
+  { l: 'إجمالي الوارد', v: fmt(totalIn.value), c: '#15803d', bg: '#ecfdf5', i: '↓' },
+  { l: 'إجمالي الصادر', v: fmt(totalOut.value), c: '#b91c1c', bg: '#fef2f2', i: '↑' },
+  { l: 'صافي التدفق', v: fmt(totalIn.value - totalOut.value), c: '#1d4ed8', bg: '#eff6ff', i: '⇄' },
+  { l: 'عدد العمليات', v: fmtNum(filtered.value.length), c: '#7c3aed', bg: '#faf5ff', i: '#' },
+])
 
 const hasFilter = computed(() => fType.value !== 'all' || fProject.value !== 'all' || fMember.value !== 'all' || fPeriod.value !== 'all' || search.value !== '')
 function clearFilters() {
@@ -50,6 +86,73 @@ function clearFilters() {
   fMember.value = 'all'
   fPeriod.value = 'all'
   search.value = ''
+}
+
+// ── تجميعات تحليل التدفقات ──
+const inOutSegments = computed(() => [
+  { label: 'وارد', value: Math.round(totalIn.value), color: '#22c55e' },
+  { label: 'صادر', value: Math.round(totalOut.value), color: '#ef4444' },
+])
+
+const KIND_PALETTE = ['#2563eb', '#dc2626', '#d97706', '#7c3aed', '#0891b2', '#059669']
+const byKindSegments = computed(() => {
+  const byKind: Record<string, number> = {}
+  filtered.value.forEach((r) => { byKind[r.kind] = (byKind[r.kind] ?? 0) + 1 })
+  return Object.entries(byKind).map(([label, value], i) => ({ label, value, color: KIND_PALETTE[i % KIND_PALETTE.length] }))
+})
+
+const byProject = computed(() =>
+  projects.value
+    .map((p) => {
+      const rs = filtered.value.filter((r) => r.projectId === p.id)
+      return {
+        name: p.name,
+        icon: p.icon,
+        in: rs.filter((r) => r.dir === 'in').reduce((s, r) => s + r.amount, 0),
+        out: rs.filter((r) => r.dir === 'out').reduce((s, r) => s + r.amount, 0),
+      }
+    })
+    .filter((x) => x.in > 0 || x.out > 0),
+)
+
+const byMember = computed(() =>
+  members.value
+    .map((m) => {
+      const rs = filtered.value.filter((r) => r.memberId === m.id)
+      return {
+        name: m.name,
+        in: rs.filter((r) => r.dir === 'in').reduce((s, r) => s + r.amount, 0),
+        out: rs.filter((r) => r.dir === 'out').reduce((s, r) => s + r.amount, 0),
+      }
+    })
+    .filter((x) => x.in > 0 || x.out > 0),
+)
+
+// ── تفاصيل العملية ──
+const detail = ref<LedgerRow | null>(null)
+const detailRows = computed(() => {
+  const r = detail.value
+  if (!r) return []
+  return [
+    ['رقم العملية', r.num],
+    ['النوع', r.kind],
+    ['الطبيعة', r.nature],
+    ['المشروع', projName(r.projectId)],
+    ['العضو', r.memberId ? memName(r.memberId) : '—'],
+    ['المصدر/الجهة', r.source ?? '—'],
+    ['المبلغ', `${r.dir === 'in' ? '+' : '−'}${fmt(r.amount)}`],
+    ['الرصيد قبل', fmt(beforeOf(r))],
+    ['الرصيد بعد', fmt(afterOf(r))],
+    ['التاريخ', r.date],
+    ['الحالة', r.status],
+    ['الأطراف', r.parties.join('، ')],
+  ] as [string, string][]
+})
+const detailIsTx = computed(() => !!detail.value && financeStore.transactions.some((t) => t.id === detail.value!.id))
+function viewInFinance() {
+  if (detail.value) projectsStore.setActiveProject(detail.value.projectId)
+  detail.value = null
+  router.push({ name: 'finance-page' })
 }
 
 function exportExcel() {
@@ -64,6 +167,8 @@ function exportExcel() {
         الطرف: r.memberId ? memName(r.memberId) : r.source ?? '—',
         الاتجاه: r.dir === 'in' ? 'وارد' : 'صادر',
         المبلغ: r.amount,
+        'الرصيد قبل': beforeOf(r),
+        'الرصيد بعد': afterOf(r),
         التاريخ: r.date,
         الحالة: r.status,
       })),
@@ -82,80 +187,158 @@ function exportExcel() {
       <button class="app-btn app-btn--outlined" @click="exportExcel">⬇ تصدير Excel</button>
     </header>
 
+    <!-- مبدّل العرض -->
+    <div class="switch">
+      <button class="switch__btn" :class="{ 'is-active': view === 'log' }" @click="view = 'log'">📋 العمليات</button>
+      <button class="switch__btn" :class="{ 'is-active': view === 'flows' }" @click="view = 'flows'">📊 تحليل التدفقات</button>
+    </div>
 
-    <div class="ledger__totals">
-      <div class="total total--in">
-        <span>إجمالي الوارد</span><strong>{{ fmt(totalIn) }}</strong>
-      </div>
-      <div class="total total--out">
-        <span>إجمالي الصادر</span><strong>{{ fmt(totalOut) }}</strong>
-      </div>
-      <div class="total total--net">
-        <span>الصافي</span><strong>{{ fmt(totalIn - totalOut) }}</strong>
+    <!-- بطاقات الملخّص -->
+    <div class="cards">
+      <div v-for="s in summary" :key="s.l" class="card" :style="{ background: s.bg }">
+        <span class="card__icon">{{ s.i }}</span>
+        <strong :style="{ color: s.c }">{{ s.v }}</strong>
+        <span class="card__label">{{ s.l }}</span>
       </div>
     </div>
 
-    <div class="app-card">
-      <div class="filters">
-        <input v-model="search" type="text" placeholder="🔍 بحث..." class="filters__search" />
-        <select v-model="fType" class="select">
-          <option value="all">كل الأنواع</option>
-          <option value="in">وارد</option>
-          <option value="out">صادر</option>
-        </select>
-        <select v-model="fProject" class="select">
-          <option value="all">كل المشاريع</option>
-          <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
-        </select>
-        <select v-model="fMember" class="select">
-          <option value="all">كل الأعضاء</option>
-          <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
-        </select>
-        <select v-model="fPeriod" class="select">
-          <option value="all">كل الفترات</option>
-          <option value="month">آخر شهر</option>
-          <option value="quarter">آخر ربع</option>
-          <option value="half">آخر 6 أشهر</option>
-          <option value="year">آخر سنة</option>
-        </select>
-        <button v-if="hasFilter" class="app-btn app-btn--ghost" @click="clearFilters">مسح</button>
-      </div>
+    <!-- الفلاتر -->
+    <div class="app-card filters">
+      <input v-model="search" type="text" placeholder="🔍 بحث (رقم، نوع، طرف...)" class="filters__search" />
+      <select v-model="fType" class="select">
+        <option value="all">كل الأنواع</option>
+        <option value="in">وارد</option>
+        <option value="out">صادر</option>
+        <option value="إيراد">إيراد</option>
+        <option value="مصروف">مصروف</option>
+        <option value="تحويل">تحويل</option>
+      </select>
+      <select v-model="fProject" class="select">
+        <option value="all">كل المشاريع</option>
+        <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+      </select>
+      <select v-model="fMember" class="select">
+        <option value="all">كل الأعضاء</option>
+        <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
+      </select>
+      <select v-model="fPeriod" class="select">
+        <option value="all">كل الفترات</option>
+        <option value="month">آخر شهر</option>
+        <option value="quarter">آخر ربع</option>
+        <option value="half">آخر نصف سنة</option>
+        <option value="year">آخر سنة</option>
+      </select>
+      <button v-if="hasFilter" class="app-btn app-btn--ghost" @click="clearFilters">مسح الفلترة</button>
+    </div>
 
+    <!-- عرض العمليات -->
+    <div v-if="view === 'log'" class="app-card table-card">
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>المرجع</th>
+              <th>رقم</th>
               <th>النوع</th>
-              <th>المشروع / الطرف</th>
+              <th>الطبيعة</th>
+              <th>المشروع</th>
+              <th>العضو/المصدر</th>
+              <th>المبلغ</th>
+              <th>قبل</th>
+              <th>بعد</th>
               <th>التاريخ</th>
               <th>الحالة</th>
-              <th>المبلغ</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="!filtered.length">
-              <td colspan="6" class="empty">لا توجد سجلات مطابقة.</td>
+              <td colspan="10" class="empty">لا توجد عمليات مطابقة للفلترة.</td>
             </tr>
-            <tr v-for="r in filtered" :key="r.id">
-              <td class="muted mono">{{ r.num }}</td>
-              <td><span class="chip">{{ r.kind }}</span></td>
+            <tr v-for="r in filtered" :key="r.id" class="row" :class="{ 'is-flagged': rowIssues(r) }" @click="detail = r">
+              <td class="mono muted">{{ r.num }}</td>
               <td>
-                <span class="parties">{{ r.parties.join(' · ') }}</span>
-                <span class="nature">{{ r.nature }}</span>
+                <span class="kind" :class="r.dir === 'in' ? 'is-in' : 'is-out'">
+                  {{ r.dir === 'in' ? '↓' : '↑' }} {{ r.kind }}
+                </span>
+                <span v-if="rowIssues(r)" class="warn" title="تحتاج مراجعة">⚠️</span>
               </td>
-              <td class="muted">{{ r.date }}</td>
-              <td><span class="status" :class="`is-${r.status}`">{{ r.status }}</span></td>
+              <td class="muted">{{ r.nature }}</td>
+              <td>{{ projName(r.projectId) }}</td>
+              <td class="muted">{{ r.memberId ? memName(r.memberId) : r.source ?? '—' }}</td>
               <td>
                 <span class="amount" :class="r.dir === 'in' ? 'is-in' : 'is-out'">
-                  {{ r.dir === 'in' ? '+' : '-' }}{{ fmtNum(r.amount) }}
+                  {{ r.dir === 'in' ? '+' : '−' }}{{ fmtNum(r.amount) }}
                 </span>
               </td>
+              <td class="muted nowrap">{{ fmtNum(beforeOf(r)) }}</td>
+              <td class="nowrap semi">{{ fmtNum(afterOf(r)) }}</td>
+              <td class="muted nowrap">{{ r.date }}</td>
+              <td><span class="status" :class="`is-${r.status}`">{{ r.status }}</span></td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
+
+    <!-- عرض تحليل التدفقات -->
+    <div v-else class="flows">
+      <div class="app-card panel">
+        <span class="panel__title">نسبة الوارد إلى الصادر</span>
+        <DonutChart :data="inOutSegments" center-label="ر.س" :center-value="fmtNum(totalIn + totalOut)" />
+      </div>
+
+      <div class="app-card panel">
+        <span class="panel__title">العمليات حسب النوع</span>
+        <DonutChart v-if="byKindSegments.length" :data="byKindSegments" center-label="عملية" :center-value="fmtNum(filtered.length)" />
+        <div v-else class="panel__empty">لا توجد بيانات</div>
+      </div>
+
+      <div class="app-card panel">
+        <span class="panel__title">التدفقات حسب المشروع</span>
+        <div v-if="!byProject.length" class="panel__empty">لا توجد بيانات</div>
+        <div v-for="p in byProject" :key="p.name" class="pflow">
+          <div class="pflow__head">
+            <span>{{ p.icon }} {{ p.name }}</span>
+            <span class="pflow__net" :class="{ 'is-neg': p.in - p.out < 0 }">صافي {{ fmtNum(p.in - p.out) }}</span>
+          </div>
+          <div class="pflow__bar">
+            <span class="pflow__tag is-in">وارد</span>
+            <div class="pflow__track"><div class="pflow__fill is-in" :style="{ width: `${Math.min(100, (p.in / Math.max(p.in, p.out, 1)) * 100)}%` }" /></div>
+            <span class="pflow__val is-in">{{ fmtNum(p.in) }}</span>
+          </div>
+          <div class="pflow__bar">
+            <span class="pflow__tag is-out">صادر</span>
+            <div class="pflow__track"><div class="pflow__fill is-out" :style="{ width: `${Math.min(100, (p.out / Math.max(p.in, p.out, 1)) * 100)}%` }" /></div>
+            <span class="pflow__val is-out">{{ fmtNum(p.out) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-card panel">
+        <span class="panel__title">التدفقات حسب العضو</span>
+        <div v-if="!byMember.length" class="panel__empty">لا توجد بيانات</div>
+        <div v-for="m in byMember" :key="m.name" class="mflow">
+          <span class="mflow__name">{{ m.name }}</span>
+          <div class="mflow__vals">
+            <span class="is-in">وارد {{ fmtNum(m.in) }}</span>
+            <span class="is-out">صادر {{ fmtNum(m.out) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- تفاصيل العملية -->
+    <ModalShell v-if="detail" :title="`تفاصيل العملية ${detail.num}`" @close="detail = null">
+      <div class="dl">
+        <div v-for="[k, v] in detailRows" :key="k" class="dl__row">
+          <span class="dl__k">{{ k }}</span>
+          <span class="dl__v">{{ v }}</span>
+        </div>
+      </div>
+      <template #footer>
+        <button v-if="detailIsTx" class="app-btn app-btn--outlined" @click="viewInFinance">↗ عرض العملية في الإدارة المالية</button>
+        <button class="app-btn" @click="detail = null">إغلاق</button>
+      </template>
+    </ModalShell>
   </section>
 </template>
 
@@ -168,59 +351,57 @@ function exportExcel() {
     align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
-    margin-block-end: 20px;
+    margin-block-end: 18px;
     flex-wrap: wrap;
 
-    h1 {
-      font-size: 22px;
-      font-weight: 700;
-    }
-
-    p {
-      color: var(--text-muted);
-      font-size: 14px;
-      margin-block-start: 4px;
-    }
-  }
-
-  &__totals {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
-    margin-block-end: 20px;
+    h1 { font-size: 22px; font-weight: 700; }
+    p { color: var(--text-muted); font-size: 14px; margin-block-start: 4px; }
   }
 }
 
-.total {
-  padding: 18px;
-  border-radius: 16px;
+// مبدّل العرض
+.switch {
+  display: inline-flex;
+  gap: 4px;
+  margin-block-end: 18px;
+  background: var(--bg);
+  padding: 4px;
+  border-radius: 12px;
+
+  &__btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+
+    &.is-active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  }
+}
+
+// بطاقات الملخّص
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-block-end: 20px;
+}
+
+.card {
+  border-radius: 14px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 
-  span {
-    font-size: 12px;
-    color: var(--text-muted);
-  }
+  &__icon { font-size: 18px; }
+  &__label { font-size: 12px; color: var(--text-muted); }
 
-  strong {
-    font-size: 18px;
-  }
-
-  &--in {
-    background: #ecfdf5;
-    strong { color: #15803d; }
-  }
-
-  &--out {
-    background: #fef2f2;
-    strong { color: #b91c1c; }
-  }
-
-  &--net {
-    background: #ecfeff;
-    strong { color: #0891b2; }
-  }
+  strong { font-size: 18px; font-weight: 700; }
 }
 
 .select {
@@ -234,127 +415,206 @@ function exportExcel() {
   cursor: pointer;
 }
 
-.help-note {
-  padding: 14px 18px;
-  margin-block-end: 20px;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--text-muted);
-  background: var(--primary-soft);
-  border-color: transparent;
-
-  strong {
-    color: var(--primary);
-    margin-inline-end: 8px;
-  }
-}
-
 .filters {
   display: flex;
   gap: 8px;
+  align-items: center;
   padding: 16px;
-  border-block-end: 1px solid var(--border);
+  margin-block-end: 16px;
   flex-wrap: wrap;
 
   &__search {
     flex: 1;
-    min-inline-size: 140px;
+    min-inline-size: 150px;
     padding: 8px 12px;
     border-radius: 8px;
     border: 1px solid var(--border);
     font-family: inherit;
     font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
   }
 }
 
-.table-wrap {
-  overflow-x: auto;
-}
+.table-card { padding: 0; overflow: hidden; }
+.table-wrap { overflow-x: auto; }
 
 table {
   inline-size: 100%;
   border-collapse: collapse;
-  font-size: 13px;
-  min-inline-size: 680px;
+  font-size: 12.5px;
+  min-inline-size: 860px;
 }
 
 th {
   text-align: start;
-  padding: 12px 16px;
+  padding: 10px 12px;
   background: var(--bg);
   color: var(--text-muted);
   font-weight: 600;
   font-size: 12px;
+  white-space: nowrap;
+  border-block-end: 1px solid var(--border);
 }
 
 td {
-  padding: 12px 16px;
+  padding: 10px 12px;
   border-block-start: 1px solid var(--border);
+}
+
+.row {
+  cursor: pointer;
+
+  &:hover { background: var(--primary-soft); }
+  &.is-flagged { background: #fef2f2; &:hover { background: #fee2e2; } }
 }
 
 .empty {
   text-align: center;
   color: var(--text-muted);
-  padding: 30px !important;
+  padding: 32px !important;
 }
 
-.muted {
-  color: var(--text-muted);
+.muted { color: var(--text-muted); }
+.semi { font-weight: 500; }
+.nowrap { white-space: nowrap; }
+.mono { font-family: monospace; font-size: 11px; }
+
+.kind {
+  font-weight: 600;
+  white-space: nowrap;
+
+  &.is-in { color: #15803d; }
+  &.is-out { color: #b91c1c; }
 }
 
-.mono {
-  font-size: 12px;
-}
-
-.chip {
-  background: var(--bg);
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-}
-
-.parties {
-  display: block;
-  font-weight: 500;
-}
-
-.nature {
-  display: block;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.status {
-  font-size: 12px;
-  padding: 3px 10px;
-  border-radius: 20px;
-
-  &.is-منفّذة,
-  &.is-مقبولة {
-    background: #ecfdf5;
-    color: #059669;
-  }
-
-  &.is-معلّقة {
-    background: #fffbeb;
-    color: #d97706;
-  }
-
-  &.is-مرفوضة {
-    background: #fef2f2;
-    color: #dc2626;
-  }
-}
+.warn { margin-inline-start: 5px; }
 
 .amount {
   font-weight: 600;
+  white-space: nowrap;
 
-  &.is-in {
-    color: #15803d;
+  &.is-in { color: #15803d; }
+  &.is-out { color: #b91c1c; }
+}
+
+.status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+
+  &.is-منفّذة,
+  &.is-مقبولة { background: #ecfdf5; color: #15803d; }
+  &.is-معلّقة { background: #fffbeb; color: #a16207; }
+  &.is-مرفوضة { background: #fef2f2; color: #b91c1c; }
+}
+
+// تحليل التدفقات
+.flows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.panel {
+  padding: 18px;
+
+  &__title { display: block; font-weight: 600; font-size: 15px; margin-block-end: 14px; }
+  &__empty { color: var(--text-muted); font-size: 13px; padding: 12px; text-align: center; }
+}
+
+.pflow {
+  margin-block-end: 12px;
+
+  &:last-child { margin-block-end: 0; }
+
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-block-end: 5px;
   }
 
-  &.is-out {
-    color: #b91c1c;
+  &__net { font-weight: 600; color: #15803d; &.is-neg { color: #b91c1c; } }
+
+  &__bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-block-end: 3px;
   }
+
+  &__tag {
+    inline-size: 36px;
+    font-size: 10px;
+    &.is-in { color: #15803d; }
+    &.is-out { color: #b91c1c; }
+  }
+
+  &__track {
+    flex: 1;
+    block-size: 12px;
+    background: var(--bg);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  &__fill {
+    block-size: 100%;
+    &.is-in { background: #22c55e; }
+    &.is-out { background: #f87171; }
+  }
+
+  &__val {
+    inline-size: 66px;
+    text-align: end;
+    font-size: 11px;
+    &.is-in { color: #15803d; }
+    &.is-out { color: #b91c1c; }
+  }
+}
+
+.mflow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-radius: 10px;
+  margin-block-end: 8px;
+
+  &:last-child { margin-block-end: 0; }
+
+  &__name { font-size: 13px; font-weight: 500; }
+
+  &__vals {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+
+    .is-in { color: #15803d; }
+    .is-out { color: #b91c1c; }
+  }
+}
+
+// قائمة تفاصيل العملية
+.dl {
+  display: flex;
+  flex-direction: column;
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 0;
+    border-block-end: 1px solid var(--border);
+    font-size: 13px;
+
+    &:last-child { border-block-end: none; }
+  }
+
+  &__k { color: var(--text-muted); }
+  &__v { font-weight: 600; text-align: end; }
 }
 </style>
