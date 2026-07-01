@@ -149,10 +149,13 @@ function submit() {
   gap: 6px;
   margin-block-end: 16px;
   flex: 1;
+  min-inline-size: 0;
 
   label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
 
   input, select {
+    inline-size: 100%;
+    max-inline-size: 100%;
     padding: 10px 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -164,7 +167,7 @@ function submit() {
   }
 }
 
-.row { display: flex; gap: 10px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {

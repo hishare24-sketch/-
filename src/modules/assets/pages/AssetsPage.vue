@@ -11,7 +11,6 @@ import { ASSET_CATEGORIES, ASSET_STATUS } from '@/constants'
 import type { Asset, AssetCategory } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import AssetFormModal from '../modals/AssetFormModal.vue'
-import MaintenanceModal from '../modals/MaintenanceModal.vue'
 import AssetDetailsModal from '../modals/AssetDetailsModal.vue'
 
 const assetsStore = useAssetsStore()
@@ -67,7 +66,6 @@ const holderName = (a: Asset) => (a.memberId ? projectsStore.memberById(a.member
 // المودالات
 const showForm = ref(false)
 const editing = ref<Asset | null>(null)
-const maintAsset = ref<Asset | null>(null)
 const viewing = ref<Asset | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 
@@ -165,17 +163,16 @@ async function onDelete(a: Asset) {
           <div><span>الصيانة ({{ a.maintenance.length }})</span><strong>{{ fmt(assetMaintCost(a)) }}</strong></div>
         </div>
 
-        <!-- أكشن: استعراض · صيانة · حذف -->
+        <!-- مدخل واحد واضح لإدارة الأصل (صيانة وكل الإجراءات بالداخل) + اختصارات -->
         <div class="asset__actions">
-          <button class="app-btn app-btn--outlined act-btn" @click="viewing = a">👁 استعراض</button>
-          <button class="app-btn act-btn act-btn--maint" @click="maintAsset = a">🔧 صيانة</button>
+          <button class="app-btn act-btn" @click="viewing = a">⚙️ استعراض وإدارة</button>
+          <button class="icon-btn" title="تعديل" @click="onEdit(a)">✎</button>
           <button class="icon-btn icon-btn--danger" title="حذف" @click="onDelete(a)">🗑️</button>
         </div>
       </div>
     </div>
 
     <AssetFormModal v-if="showForm" :project-id="activeProjectId" :asset="editing" @close="closeForm" />
-    <MaintenanceModal v-if="maintAsset" :asset="maintAsset" @close="maintAsset = null" />
     <AssetDetailsModal v-if="viewing" :asset="viewing" @edit="onEdit" @close="viewing = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
@@ -350,8 +347,6 @@ async function onDelete(a: Asset) {
   flex: 1;
   padding: 8px;
   font-size: 12.5px;
-
-  &--maint { background: var(--primary); }
 }
 
 .icon-btn {
