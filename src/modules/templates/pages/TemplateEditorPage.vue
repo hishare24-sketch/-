@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTemplatesStore } from '@/stores/TemplatesStore'
+import { useSettingsStore } from '@/stores/SettingsStore'
 import { useToast } from '@/composables/useToast'
 import { uid } from '@/helpers/id'
 import type { DocTemplate, TemplateElementType, TemplateSectionKind } from '@/interfaces/models'
@@ -20,6 +21,7 @@ import ElementProperties from '../components/ElementProperties.vue'
 const route = useRoute()
 const router = useRouter()
 const templatesStore = useTemplatesStore()
+const settingsStore = useSettingsStore()
 const toast = useToast()
 
 const original = templatesStore.templateById(route.params.id as string)
@@ -31,6 +33,7 @@ const view = ref<'build' | 'preview'>('build')
 const sel = ref<{ sectionId: string; elementId: string } | null>(null)
 const pickerFor = ref<string | null>(null) // sectionId الذي نضيف له عنصراً
 const showSectionKinds = ref(false)
+const showIdentity = ref(false)
 
 function touch() {
   dirty.value = true
@@ -119,6 +122,19 @@ function updateSelected(patch: Record<string, unknown>) {
   touch()
 }
 
+// ── الهوية البصرية للقالب ──
+function applyAccentToHeadings() {
+  if (!draft?.accent) return
+  draft.sections.forEach((s) => s.elements.forEach((e) => { if (e.type === 'heading') e.color = draft.accent }))
+  touch()
+  toast.success('طُبّق اللون على كل العناوين')
+}
+function useSystemAccent() {
+  if (!draft) return
+  draft.accent = settingsStore.docBranding.accent
+  touch()
+}
+
 function save() {
   if (!draft) return
   templatesStore.saveTemplate(JSON.parse(JSON.stringify(draft)))
@@ -143,8 +159,19 @@ function save() {
           <button :class="{ 'is-on': view === 'build' }" @click="view = 'build'">🛠️ بناء</button>
           <button :class="{ 'is-on': view === 'preview' }" @click="view = 'preview'">👁️ معاينة</button>
         </div>
+        <button class="app-btn app-btn--outlined" :class="{ 'is-on': showIdentity }" @click="showIdentity = !showIdentity">🎨 الهوية</button>
         <button class="app-btn" :disabled="!dirty" @click="save">💾 حفظ</button>
       </header>
+
+      <!-- لوحة الهوية البصرية -->
+      <div v-if="showIdentity" class="identity app-card">
+        <span class="identity__label">🎨 لون هوية القالب</span>
+        <input v-model="draft.accent" type="color" class="identity__color" @input="touch" />
+        <input v-model="draft.accent" type="text" class="identity__hex" placeholder="#2563eb" @input="touch" />
+        <button class="app-btn app-btn--outlined identity__btn" @click="useSystemAccent">استخدام لون النظام</button>
+        <button class="app-btn identity__btn" :disabled="!draft.accent" @click="applyAccentToHeadings">تطبيق على كل العناوين</button>
+        <span class="identity__hint">يُطبَّق اللون على العناوين وترويسة المستند عند التوليد.</span>
+      </div>
 
       <!-- وضع البناء -->
       <div v-if="view === 'build'" class="build">
@@ -293,6 +320,22 @@ function save() {
     &.is-on { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
   }
 }
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-block-end: 14px;
+  flex-wrap: wrap;
+
+  &__label { font-size: 13px; font-weight: 700; }
+  &__color { inline-size: 40px; block-size: 34px; padding: 2px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+  &__hex { inline-size: 100px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; background: var(--surface); color: var(--text); }
+  &__btn { padding: 7px 12px; font-size: 13px; }
+  &__hint { font-size: 12px; color: var(--text-muted); flex-basis: 100%; }
+}
+.is-on { border-color: var(--primary); color: var(--primary); }
 
 .build {
   display: grid;

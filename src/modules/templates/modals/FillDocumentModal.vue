@@ -79,6 +79,7 @@ function build() {
     title: props.template.name,
     subtitle: docTypeMeta(props.template.docType)?.label,
     body: previewHtml.value,
+    accent: props.template.accent || undefined, // هوية القالب تتقدّم على الهوية العامة
   })
 }
 

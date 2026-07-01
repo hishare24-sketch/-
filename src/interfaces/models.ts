@@ -492,6 +492,7 @@ export interface DocTemplate {
   docType: TemplateDocType
   status: TemplateStatus
   sections: TemplateSection[]
+  accent?: string // لون هوية القالب (يُطبّق على العناوين وترويسة المستند المُصدَّر)
   createdAt: string
   updatedAt: string
   createdBy?: string
