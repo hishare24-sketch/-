@@ -67,7 +67,14 @@ const doneChips = (d: DocItem) => (d.performedActions ?? []).map((k) => ACTION_I
 const showForm = ref(false)
 const showTemplates = ref(false)
 const viewing = ref<DocItem | null>(null)
+const viewAutoAnalyze = ref(false) // يُفعَّل فقط عند فتح مستند جديد بخيار التحليل التلقائي
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
+
+// فتح مركز الإجراءات من الكرت (بلا تحليل تلقائي)
+function openDoc(d: DocItem) {
+  viewAutoAnalyze.value = false
+  viewing.value = d
+}
 
 // نموذج الإجراء المُنشأ من المستند (مع تعبئة مسبقة)
 const action = ref<{ kind: DocActionKind; preset: FormPreset } | null>(null)
@@ -88,11 +95,14 @@ function closeAction() {
   actionDocId.value = null
 }
 
-// بعد إنشاء مستند مع خيار التحليل التلقائي → افتح التحليل الذكي مباشرة
-function onDocCreated(docId: string) {
+// بعد إنشاء أي مستند → افتح مركز الإجراءات مباشرة (والتحليل تلقائياً إن طُلب)
+function onDocCreated(docId: string, autoAnalyze: boolean) {
   showForm.value = false
   const doc = documentsStore.documents.find((d) => d.id === docId)
-  if (doc) viewing.value = doc
+  if (doc) {
+    viewAutoAnalyze.value = autoAnalyze
+    viewing.value = doc
+  }
 }
 
 async function onDelete(d: DocItem) {
@@ -151,7 +161,7 @@ async function onDelete(d: DocItem) {
 
     <div class="grid">
       <div v-if="!filtered.length" class="empty app-card">لا توجد مستندات مطابقة.</div>
-      <div v-for="d in filtered" :key="d.id" class="doc app-card" @click="viewing = d">
+      <div v-for="d in filtered" :key="d.id" class="doc app-card" @click="openDoc(d)">
         <div class="doc__top">
           <span class="doc__icon">{{ docIcon(d.type) }}</span>
           <span class="doc__badge" :class="{ 'is-read': d.aiRead }">
@@ -172,8 +182,8 @@ async function onDelete(d: DocItem) {
           <span v-for="(ic, i) in doneChips(d)" :key="i" class="doc__done-chip">{{ ic }}</span>
         </div>
         <div class="doc__actions" @click.stop>
-          <button class="app-btn app-btn--outlined proc-btn" @click="viewing = d">
-            {{ d.aiRead ? '✨ تحليل وإجراءات' : '✨ تحليل ذكي' }}
+          <button class="app-btn app-btn--outlined proc-btn" @click="openDoc(d)">
+            ⚡ الإجراءات
           </button>
           <button class="icon-btn icon-btn--danger" title="حذف" @click="onDelete(d)">🗑️</button>
         </div>
@@ -182,7 +192,7 @@ async function onDelete(d: DocItem) {
 
     <DocFormModal v-if="showForm" :project-id="activeProjectId" @created="onDocCreated" @close="showForm = false" />
     <DocTemplateModal v-if="showTemplates" @close="showTemplates = false" />
-    <DocDetailsModal v-if="viewing" :doc="viewing" @action="onDocAction" @close="viewing = null" />
+    <DocDetailsModal v-if="viewing" :doc="viewing" :auto-analyze="viewAutoAnalyze" @action="onDocAction" @close="viewing = null" />
 
     <!-- نماذج الإجراءات المُنشأة من المستند (تعبئة مسبقة) -->
     <TxFormModal v-if="action?.kind === 'tx'" :project-id="action.preset.projectId ?? activeProjectId" :tx="null" :preset="action.preset" @saved="onActionSaved" @close="closeAction" />

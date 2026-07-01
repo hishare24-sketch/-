@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useDocumentsStore } from '@/stores/DocumentsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useToast } from '@/composables/useToast'
@@ -9,7 +9,8 @@ import type { FormPreset } from '@/interfaces/forms'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
-const props = defineProps<{ doc: DocItem }>()
+// autoAnalyze: يُشغّل التحليل تلقائياً عند الفتح (يُمرَّر عند إنشاء مستند جديد بخيار التحليل)
+const props = defineProps<{ doc: DocItem; autoAnalyze?: boolean }>()
 const emit = defineEmits<{
   (e: 'action', payload: { kind: DocActionKind; preset: FormPreset }): void
   (e: 'close'): void
@@ -69,12 +70,19 @@ function presetFor(kind: DocActionKind): FormPreset {
 }
 
 function onActionClick(kind: DocActionKind) {
+  // منع تكرار نفس نوع الإجراء على نفس المستند (بحسب نوع الإجراء لا رقم المستند فقط)
   if (isDone(kind)) {
-    toast.info('لقد سبق لك تنفيذ هذا الإجراء على هذا المستند')
+    const label = ALL_DOC_ACTIONS.find((a) => a.kind === kind)?.label ?? 'هذا الإجراء'
+    toast.info(`تم تنفيذ «${label}» مسبقاً على هذا المستند`)
     return
   }
   emit('action', { kind, preset: presetFor(kind) })
 }
+
+// التحليل التلقائي عند فتح مستند جديد (إن طُلب) — الإجراءات تظهر دائماً بأي حال
+onMounted(() => {
+  if (props.autoAnalyze && !analyzed.value) runAnalysis()
+})
 </script>
 
 <template>
@@ -129,9 +137,9 @@ function onActionClick(kind: DocActionKind) {
       </div>
     </div>
 
-    <!-- مركز الإجراءات (كل الإجراءات الممكنة) -->
-    <div v-if="analyzed" class="actions">
-      <span class="actions__label">⚡ مركز الإجراءات — حوّل المستند إلى أي عنصر</span>
+    <!-- مركز الإجراءات (كل الإجراءات الممكنة) — يظهر دائماً -->
+    <div class="actions">
+      <span class="actions__label">⚡ مركز الإجراءات — كل ما يمكن عمله من هذا المستند</span>
       <div class="actions__grid">
         <button
           v-for="a in actions"

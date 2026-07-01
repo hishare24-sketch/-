@@ -11,7 +11,7 @@ import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ projectId: string }>()
-const emit = defineEmits<{ (e: 'close'): void; (e: 'created', docId: string): void }>()
+const emit = defineEmits<{ (e: 'close'): void; (e: 'created', docId: string, autoAnalyze: boolean): void }>()
 
 const projectsStore = useProjectsStore()
 const documentsStore = useDocumentsStore()
@@ -64,7 +64,8 @@ function save() {
     aiRead: false,
     attachments: form.attachments,
   })
-  if (form.autoAnalyze) emit('created', id)
+  // يُفتح مركز الإجراءات دائماً بعد الإضافة؛ autoAnalyze يقرّر تشغيل التحليل تلقائياً
+  emit('created', id, form.autoAnalyze)
   emit('close')
 }
 </script>
