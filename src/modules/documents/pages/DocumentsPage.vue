@@ -11,6 +11,7 @@ import type { DocActionKind } from '../docAI'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import DocFormModal from '../modals/DocFormModal.vue'
 import DocDetailsModal from '../modals/DocDetailsModal.vue'
+import DocTemplateModal from '../modals/DocTemplateModal.vue'
 import TxFormModal from '@/modules/finance/modals/TxFormModal.vue'
 import TrackingFormModal from '@/modules/trackings/modals/TrackingFormModal.vue'
 import AssetFormModal from '@/modules/assets/modals/AssetFormModal.vue'
@@ -60,6 +61,7 @@ const docIcon = (type: string) => {
 }
 
 const showForm = ref(false)
+const showTemplates = ref(false)
 const viewing = ref<DocItem | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 
@@ -93,7 +95,10 @@ async function onDelete(d: DocItem) {
         <h1>المستندات <HelpIcon section="documents" /></h1>
         <p>الفواتير والعقود والوثائق ومعالجتها</p>
       </div>
-      <button class="app-btn" @click="showForm = true">＋ مستند جديد</button>
+      <div class="documents__actions">
+        <button class="app-btn app-btn--outlined" @click="showTemplates = true">🧾 توليد مستند</button>
+        <button class="app-btn" @click="showForm = true">＋ مستند جديد</button>
+      </div>
     </header>
 
 
@@ -156,6 +161,7 @@ async function onDelete(d: DocItem) {
     </div>
 
     <DocFormModal v-if="showForm" :project-id="activeProjectId" @created="onDocCreated" @close="showForm = false" />
+    <DocTemplateModal v-if="showTemplates" @close="showTemplates = false" />
     <DocDetailsModal v-if="viewing" :doc="viewing" @action="onDocAction" @close="viewing = null" />
 
     <!-- نماذج الإجراءات المُنشأة من المستند (تعبئة مسبقة) -->
@@ -183,6 +189,12 @@ async function onDelete(d: DocItem) {
 
     h1 { font-size: 22px; font-weight: 700; }
     p { color: var(--text-muted); font-size: 14px; margin-block-start: 4px; }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 
   &__stats {
