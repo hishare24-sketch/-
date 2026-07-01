@@ -22,20 +22,29 @@ const collapsed = ref(false)
       <span class="chart-card__title">{{ title }}</span>
       <div class="chart-card__tools">
         <!-- مبدّل نوع الشكل -->
-        <div v-if="views && views.length > 1" class="switch">
+        <div v-if="views && views.length > 1" class="switch" role="group" :aria-label="`نوع عرض: ${title}`">
           <button
             v-for="v in views"
             :key="v.id"
             class="switch__btn"
             :class="{ 'is-active': modelValue === v.id }"
             :title="v.label"
+            :aria-label="v.label"
+            :aria-pressed="modelValue === v.id"
             @click="emit('update:modelValue', v.id)"
           >
             {{ v.icon }}
           </button>
         </div>
         <!-- طيّ -->
-        <button v-if="collapsible" class="collapse" :title="collapsed ? 'إظهار' : 'إخفاء'" @click="collapsed = !collapsed">
+        <button
+          v-if="collapsible"
+          class="collapse"
+          :title="collapsed ? 'إظهار' : 'إخفاء'"
+          :aria-label="collapsed ? 'إظهار الرسم' : 'إخفاء الرسم'"
+          :aria-expanded="!collapsed"
+          @click="collapsed = !collapsed"
+        >
           {{ collapsed ? '▸' : '▾' }}
         </button>
       </div>

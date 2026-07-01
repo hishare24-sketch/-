@@ -13,7 +13,7 @@ import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ projectId: string; tx: Transaction | null; preset?: FormPreset }>()
-const emit = defineEmits<{ (e: 'close'): void }>()
+const emit = defineEmits<{ (e: 'close'): void; (e: 'saved'): void }>()
 
 const projectsStore = useProjectsStore()
 const financeStore = useFinanceStore()
@@ -80,6 +80,7 @@ function save() {
     toProject: form.type === 'transfer' ? form.toProject : undefined,
     createdBy: props.tx?.createdBy ?? CURRENT_USER,
   })
+  emit('saved')
   emit('close')
 }
 </script>

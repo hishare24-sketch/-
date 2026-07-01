@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Commitment } from '@/interfaces/models'
+import type { Commitment, Attachment } from '@/interfaces/models'
 import { INITIAL_COMMITMENTS } from '@/data/seed'
 import { uid } from '@/helpers/id'
 import { today, advanceDate } from '@/helpers/date'
@@ -48,14 +48,15 @@ export const useCommitmentsStore = defineStore('commitments', {
       useAuditStore().log('إلغاء', 'التزام دوري', c.name)
     },
     // تسجيل دفعة (مع تفاصيل اختيارية) → عملية مالية فعلية + تقديم تاريخ الاستحقاق
-    payCommitment(id: string, opts?: { amount?: number; date?: string; note?: string }) {
+    payCommitment(id: string, opts?: { amount?: number; date?: string; note?: string; attachments?: Attachment[] }) {
       const c = this.commitments.find((x) => x.id === id)
       if (!c) return
       const isOut = c.direction === 'out'
       const amount = opts?.amount ?? c.amount
       const date = opts?.date ?? today()
+      const atts = opts?.attachments ?? []
       const dueLabel = `دفعة ${c.paidCount + 1}${c.totalCount ? `/${c.totalCount}` : ''}`
-      c.payments.push({ id: uid('cp'), amount, date, dueLabel, createdBy: CURRENT_USER })
+      c.payments.push({ id: uid('cp'), amount, date, dueLabel, createdBy: CURRENT_USER, attachments: atts.length ? atts : undefined })
       c.paidCount += 1
       const reachedEnd = c.totalCount != null && c.paidCount >= c.totalCount
       if (reachedEnd) c.active = false
@@ -69,7 +70,8 @@ export const useCommitmentsStore = defineStore('commitments', {
         amount,
         category: c.kind === 'subscription' ? 'اشتراكات' : c.kind === 'installment' ? 'أقساط' : 'التزامات',
         date,
-        hasDoc: false,
+        hasDoc: atts.length > 0,
+        attachments: atts.length ? atts : undefined,
         source: c.party,
         memberId: c.memberId,
         note: opts?.note?.trim() || `دفعة ${FREQ_LABEL[c.freq]}`,

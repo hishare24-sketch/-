@@ -81,9 +81,9 @@ const navItems = computed(() => [
     <!-- المحتوى -->
     <div class="content-wrapper">
       <header class="navbar">
-        <button class="navbar__toggle" @click="toggleNav">☰</button>
-        <button class="navbar__back" title="رجوع للخلف" @click="goBack">
-          <span class="navbar__back-arrow">›</span>
+        <button class="navbar__toggle" aria-label="القائمة" @click="toggleNav">☰</button>
+        <button class="navbar__back" title="رجوع للخلف" aria-label="رجوع للخلف" @click="goBack">
+          <span class="navbar__back-arrow" aria-hidden="true">›</span>
           <span class="navbar__back-text">رجوع</span>
         </button>
         <div class="navbar__title">{{ t('app.subtitle') }}</div>
@@ -91,12 +91,18 @@ const navItems = computed(() => [
         <button
           class="navbar__theme"
           :title="themeMode === 'dark' ? 'الوضع الفاتح' : 'الوضع الداكن'"
+          :aria-label="themeMode === 'dark' ? 'التبديل للوضع الفاتح' : 'التبديل للوضع الداكن'"
           @click="settingsStore.toggleThemeMode()"
         >
           {{ themeMode === 'dark' ? '☀️' : '🌙' }}
         </button>
-        <RouterLink :to="{ name: 'notifications-page' }" class="navbar__bell" title="الإشعارات">
-          🔔
+        <RouterLink
+          :to="{ name: 'notifications-page' }"
+          class="navbar__bell"
+          title="الإشعارات"
+          :aria-label="unreadCount ? `الإشعارات، ${unreadCount} غير مقروء` : 'الإشعارات'"
+        >
+          <span aria-hidden="true">🔔</span>
           <span v-if="unreadCount" class="navbar__bell-count">{{ unreadCount }}</span>
         </RouterLink>
         <div class="navbar__user">👤 محمد العمري</div>
@@ -211,12 +217,16 @@ const navItems = computed(() => [
 }
 
 .navbar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--z-sticky);
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 0 20px;
   block-size: 60px;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
   border-block-end: 1px solid var(--border);
 
   &__toggle {

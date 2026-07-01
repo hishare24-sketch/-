@@ -4,8 +4,9 @@ import { useCommitmentsStore } from '@/stores/CommitmentsStore'
 import { COMMITMENT_KINDS, FREQ_LABEL } from '@/constants'
 import { fmt } from '@/helpers/format'
 import { today } from '@/helpers/date'
-import type { Commitment } from '@/interfaces/models'
+import type { Commitment, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ commitment: Commitment }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -19,6 +20,7 @@ const form = reactive({
   amount: props.commitment.amount as number | null,
   date: today(),
   note: '',
+  attachments: [] as Attachment[],
 })
 
 const valid = computed(() => form.amount != null && form.amount > 0 && form.date)
@@ -29,6 +31,7 @@ function pay() {
     amount: Number(form.amount),
     date: form.date,
     note: form.note,
+    attachments: form.attachments,
   })
   emit('close')
 }
@@ -68,6 +71,10 @@ function pay() {
     <div class="field">
       <label>ملاحظة (اختياري)</label>
       <input v-model="form.note" type="text" placeholder="مثال: دفعت عبر تحويل بنكي" />
+    </div>
+    <div class="field">
+      <label>المرفقات (إيصال، سند تحويل) — اختياري</label>
+      <AttachmentsField v-model="form.attachments" />
     </div>
 
     <p class="hint">

@@ -5,6 +5,7 @@ import { useReceivablesStore } from '@/stores/ReceivablesStore'
 import { recvPaid, recvRemaining } from '@/helpers/calc'
 import { fmt, fmtNum } from '@/helpers/format'
 import { exportPDF, docHTML } from '@/helpers/export'
+import { useToast } from '@/composables/useToast'
 import { RECEIVABLE_STATUS } from '@/constants'
 import type { Receivable, ReceivableStatus } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
@@ -15,6 +16,7 @@ const emit = defineEmits<{ (e: 'pay', r: Receivable): void; (e: 'edit', r: Recei
 
 const projectsStore = useProjectsStore()
 const receivablesStore = useReceivablesStore()
+const toast = useToast()
 const isRecv = computed(() => props.receivable.kind === 'receivable')
 const statusMeta = computed(() => RECEIVABLE_STATUS[props.receivable.status])
 const canPay = computed(() => !['settled', 'written_off', 'cancelled'].includes(props.receivable.status))
@@ -54,7 +56,9 @@ function exportStatement() {
       <tr><td style="padding:6px 0;font-weight:700">المدفوع</td><td style="text-align:left;font-weight:700;color:var(--ok-text)">${fmtNum(paid.value)} ر.س</td></tr>
       <tr><td style="padding:6px 0;font-weight:800;border-top:2px solid #2563eb">المتبقّي</td><td style="text-align:left;font-weight:800;border-top:2px solid #2563eb;color:var(--danger-text)">${fmtNum(remaining.value)} ر.س</td></tr>
     </table>`
-  exportPDF(`كشف_حساب_${r.party}`, docHTML({ title: 'كشف حساب ذمة', subtitle: r.party, body })).catch((e) => alert(e.message))
+  exportPDF(`كشف_حساب_${r.party}`, docHTML({ title: 'كشف حساب ذمة', subtitle: r.party, body }))
+    .then(() => toast.success('تم تصدير كشف الحساب'))
+    .catch((e) => toast.error(e.message))
 }
 </script>
 

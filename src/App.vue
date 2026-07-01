@@ -5,6 +5,8 @@ import { useSettingsStore } from '@/stores/SettingsStore'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BlankLayout from '@/layouts/BlankLayout.vue'
 import FormsLayout from '@/layouts/FormsLayout.vue'
+import ToastHost from '@/components/base/ToastHost.vue'
+import CommandPalette from '@/components/base/CommandPalette.vue'
 
 const route = useRoute()
 const settingsStore = useSettingsStore()
@@ -13,6 +15,7 @@ const settingsStore = useSettingsStore()
 onMounted(() => {
   settingsStore.applyTheme()
   settingsStore.applyBranding()
+  settingsStore.applyDensity()
 })
 
 const layout = computed(() => {
@@ -31,4 +34,6 @@ const layout = computed(() => {
   <component :is="layout">
     <RouterView />
   </component>
+  <ToastHost />
+  <CommandPalette />
 </template>

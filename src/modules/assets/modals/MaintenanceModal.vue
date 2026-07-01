@@ -19,14 +19,24 @@ const form = reactive({
   meter: (props.asset.usageMeter ?? null) as number | null,
   note: '',
   attachments: [] as Attachment[],
+  // ضمان فرعي اختياري لهذا الإصلاح/المكوّن
+  addWarranty: false,
+  warrantyName: '',
+  warrantyProvider: (props.asset.supplier ?? '') as string,
+  warrantyEnd: '',
 })
 
 const showMeter = computed(() => props.asset.usageUnit != null && props.asset.usageUnit !== '')
-const valid = computed(() => form.cost != null && form.cost >= 0)
+const valid = computed(
+  () =>
+    form.cost != null &&
+    form.cost >= 0 &&
+    (!form.addWarranty || (form.warrantyName.trim() !== '' && form.warrantyEnd !== '')),
+)
 
 function save() {
   if (!valid.value) return
-  assetsStore.addMaintenance(props.asset.id, {
+  const mnId = assetsStore.addMaintenance(props.asset.id, {
     type: form.type,
     date: form.date,
     cost: Number(form.cost),
@@ -35,6 +45,22 @@ function save() {
     attachments: form.attachments,
     createdBy: CURRENT_USER,
   })
+  // إنشاء ضمان فرعي مرتبط بهذه العملية، يرث مرفقاتها ويُربط بالتذكيرات
+  if (mnId && form.addWarranty) {
+    const id = assetsStore.addWarranty(props.asset.id, {
+      name: form.warrantyName.trim(),
+      provider: form.warrantyProvider.trim() || undefined,
+      context: form.type === 'إصلاح' ? 'repair' : form.type === 'صيانة' ? 'maintenance' : 'component',
+      startDate: form.date,
+      endDate: form.warrantyEnd,
+      cost: form.cost != null ? Number(form.cost) : undefined,
+      linkedMaintenanceId: mnId,
+      note: form.note.trim() || undefined,
+      attachments: form.attachments.length ? [...form.attachments] : undefined,
+      createdBy: CURRENT_USER,
+    })
+    if (id) assetsStore.linkSubWarranty(props.asset.id, id)
+  }
   emit('close')
 }
 </script>
@@ -71,6 +97,29 @@ function save() {
     <div class="field">
       <label>المرفقات (فاتورة، تقرير فحص، صور)</label>
       <AttachmentsField v-model="form.attachments" />
+    </div>
+
+    <!-- ضمان فرعي اختياري لهذا الإصلاح/المكوّن -->
+    <label class="check">
+      <input v-model="form.addWarranty" type="checkbox" />
+      🛡️ لهذا الإصلاح/المكوّن ضمان — أضِفه وتتبّعه
+    </label>
+    <div v-if="form.addWarranty" class="warr-box">
+      <div class="field">
+        <label>اسم الضمان / المكوّن</label>
+        <input v-model="form.warrantyName" type="text" placeholder="مثال: ضمان قطعة الغيار، بطارية..." />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>الجهة الضامنة (اختياري)</label>
+          <input v-model="form.warrantyProvider" type="text" placeholder="الورشة / المورّد" />
+        </div>
+        <div class="field">
+          <label>تاريخ انتهاء الضمان</label>
+          <input v-model="form.warrantyEnd" type="date" />
+        </div>
+      </div>
+      <p class="warr-note">سيُربط الضمان بهذه العملية ويرث مرفقاتها، ويظهر في التذكيرات قبل انتهائه.</p>
     </div>
 
     <p class="hint">ℹ️ ستُسجّل التكلفة كمصروف فعلي في الإدارة المالية للمشروع.</p>
@@ -132,6 +181,33 @@ function save() {
   background: var(--primary-soft);
   padding: 10px 12px;
   border-radius: var(--radius-sm);
+  line-height: 1.6;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  margin-block-end: 12px;
+  cursor: pointer;
+
+  input { inline-size: 16px; block-size: 16px; accent-color: var(--primary); }
+}
+
+.warr-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-block-end: 16px;
+  background: var(--bg);
+}
+
+.warr-note {
+  font-size: 11.5px;
+  color: var(--text-muted);
   line-height: 1.6;
 }
 </style>

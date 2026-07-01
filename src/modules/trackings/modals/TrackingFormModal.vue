@@ -11,7 +11,7 @@ import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ projectId: string; tracking: Tracking | null; preset?: FormPreset }>()
-const emit = defineEmits<{ (e: 'close'): void }>()
+const emit = defineEmits<{ (e: 'close'): void; (e: 'saved'): void }>()
 
 const projectsStore = useProjectsStore()
 const trackingsStore = useTrackingsStore()
@@ -62,6 +62,7 @@ function save() {
     specs: cleanSpecs(),
     attachments: form.attachments,
   })
+  emit('saved')
   emit('close')
 }
 </script>

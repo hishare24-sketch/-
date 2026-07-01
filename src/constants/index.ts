@@ -80,6 +80,7 @@ export const DEFAULT_PREFS: UserPrefs = {
   statsAutoScroll: false,
   statsScrollSeconds: 4,
   statsLayout: 'horizontal',
+  density: 'comfortable',
 }
 
 export const TX_TYPES: { id: TxType; label: string; icon: string }[] = [
@@ -130,7 +131,27 @@ export const TRACKING_FIELD_SCHEMAS: Record<string, { key: string; label: string
   ],
 }
 
-export const REQUEST_TYPES = ['مصروف', 'تحويل', 'عهدة', 'صيانة', 'شراء']
+export const REQUEST_TYPES = [
+  'مصروف', 'تحصيل', 'تحويل', 'عهدة', 'تعزيز عهدة', 'سلفة',
+  'استرداد مصروف', 'شراء', 'أمر شراء', 'صيانة', 'تعميد صرف', 'سداد التزام', 'إجازة',
+]
+
+// أيقونة واتجاه مالي لكل نوع طلب: out=مصروف · in=إيراد · none=غير مالي (لا يُنشئ عملية)
+export const REQUEST_TYPE_META: Record<string, { icon: string; flow: 'out' | 'in' | 'none'; hint?: string }> = {
+  'مصروف': { icon: '💸', flow: 'out', hint: 'صرف مبلغ من المشروع' },
+  'تحصيل': { icon: '📥', flow: 'in', hint: 'قبض مبلغ لصالح المشروع' },
+  'تحويل': { icon: '🔄', flow: 'out', hint: 'تحويل بين المشاريع/الجهات' },
+  'عهدة': { icon: '🧰', flow: 'out', hint: 'صرف عهدة نقدية' },
+  'تعزيز عهدة': { icon: '💰', flow: 'out', hint: 'زيادة رصيد عهدة قائمة' },
+  'سلفة': { icon: '🤝', flow: 'out', hint: 'سلفة تُسترد لاحقاً' },
+  'استرداد مصروف': { icon: '↩️', flow: 'out', hint: 'تعويض مصروف مدفوع سلفاً' },
+  'شراء': { icon: '🛒', flow: 'out', hint: 'طلب شراء عام' },
+  'أمر شراء': { icon: '📦', flow: 'out', hint: 'أمر شراء رسمي لمورد' },
+  'صيانة': { icon: '🛠️', flow: 'out', hint: 'صيانة أصل/معدّة' },
+  'تعميد صرف': { icon: '✅', flow: 'out', hint: 'اعتماد صرف لمستفيد' },
+  'سداد التزام': { icon: '📌', flow: 'out', hint: 'دفعة التزام دوري' },
+  'إجازة': { icon: '🏖️', flow: 'none', hint: 'طلب إداري بلا أثر مالي' },
+}
 
 // حالات الطلب (دورة الاعتماد: معلّق → مراجعة → اعتماد/رفض، + إلغاء)
 export const REQUEST_STATUS: Record<RequestStatus, { label: string; color: string; bg: string }> = {
@@ -143,14 +164,52 @@ export const REQUEST_STATUS: Record<RequestStatus, { label: string; color: strin
 
 // حقول إضافية حسب نوع الطلب (تُخزَّن في request.specs)
 export const REQUEST_FIELD_SCHEMAS: Record<string, { key: string; label: string; placeholder?: string }[]> = {
+  مصروف: [{ key: 'category', label: 'بند المصروف' }],
+  تحصيل: [
+    { key: 'payer', label: 'الجهة الدافعة' },
+    { key: 'method', label: 'طريقة التحصيل', placeholder: 'نقد / تحويل / شبكة' },
+    { key: 'against', label: 'مقابل (ذمة/فاتورة) — اختياري' },
+  ],
   تحويل: [{ key: 'toProject', label: 'الجهة/المشروع الوجهة' }],
+  عهدة: [{ key: 'purpose', label: 'الغرض من العهدة' }],
+  'تعزيز عهدة': [
+    { key: 'fund', label: 'العهدة/الصندوق' },
+    { key: 'currentBalance', label: 'الرصيد الحالي — اختياري' },
+  ],
+  سلفة: [
+    { key: 'repayMonths', label: 'مدة السداد (بالأشهر)' },
+    { key: 'repayMethod', label: 'طريقة الاسترداد', placeholder: 'خصم من الراتب / دفعات' },
+  ],
+  'استرداد مصروف': [
+    { key: 'category', label: 'بند المصروف' },
+    { key: 'spentDate', label: 'تاريخ الصرف الأصلي' },
+  ],
   شراء: [
     { key: 'supplier', label: 'المورّد المقترح' },
     { key: 'quantity', label: 'الكمية' },
   ],
+  'أمر شراء': [
+    { key: 'supplier', label: 'المورّد' },
+    { key: 'quantity', label: 'الكمية' },
+    { key: 'deliveryDate', label: 'تاريخ التسليم المطلوب' },
+    { key: 'poNumber', label: 'رقم أمر الشراء — اختياري' },
+  ],
   صيانة: [{ key: 'asset', label: 'الأصل/المعدّة المعنية' }],
-  عهدة: [{ key: 'purpose', label: 'الغرض من العهدة' }],
-  مصروف: [{ key: 'category', label: 'بند المصروف' }],
+  'تعميد صرف': [
+    { key: 'beneficiary', label: 'المستفيد' },
+    { key: 'reason', label: 'سبب الصرف' },
+    { key: 'payMethod', label: 'طريقة الدفع', placeholder: 'نقد / تحويل / شيك' },
+  ],
+  'سداد التزام': [
+    { key: 'commitment', label: 'الالتزام' },
+    { key: 'installmentNo', label: 'رقم الدفعة — اختياري' },
+  ],
+  إجازة: [
+    { key: 'leaveType', label: 'نوع الإجازة', placeholder: 'سنوية / مرضية / اضطرارية' },
+    { key: 'fromDate', label: 'من تاريخ' },
+    { key: 'toDate', label: 'إلى تاريخ' },
+    { key: 'days', label: 'عدد الأيام' },
+  ],
 }
 
 export const ASSET_CATEGORIES: { id: AssetCategory; label: string; icon: string }[] = [

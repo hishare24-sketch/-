@@ -2,7 +2,8 @@
 import { ref, computed } from 'vue'
 import { useDocumentsStore } from '@/stores/DocumentsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
-import { aiExtract, suggestedActions, type DocActionKind } from '../docAI'
+import { useToast } from '@/composables/useToast'
+import { aiExtract, ALL_DOC_ACTIONS, recommendedKinds, type DocActionKind } from '../docAI'
 import type { DocItem } from '@/interfaces/models'
 import type { FormPreset } from '@/interfaces/forms'
 import ModalShell from '@/components/shared/ModalShell.vue'
@@ -16,10 +17,24 @@ const emit = defineEmits<{
 
 const documentsStore = useDocumentsStore()
 const projectsStore = useProjectsStore()
+const toast = useToast()
 
 const project = computed(() => projectsStore.projectById(props.doc.projectId))
 const extraction = computed(() => aiExtract(props.doc))
-const actions = computed(() => suggestedActions(props.doc.type))
+// كل الإجراءات الممكنة، مع إبراز المُوصى بها حسب نوع المستند
+const recommended = computed(() => recommendedKinds(props.doc.type))
+const actions = computed(() =>
+  [...ALL_DOC_ACTIONS].sort(
+    (a, b) => Number(recommended.value.has(b.kind)) - Number(recommended.value.has(a.kind)),
+  ),
+)
+const isDone = (kind: DocActionKind) => !!props.doc.performedActions?.includes(kind)
+// ملخّص الإجراءات المُنفّذة من هذا المستند
+const performed = computed(() =>
+  (props.doc.performedActions ?? [])
+    .map((k) => ALL_DOC_ACTIONS.find((a) => a.kind === k))
+    .filter((a): a is (typeof ALL_DOC_ACTIONS)[number] => !!a),
+)
 
 // حالة التحليل
 const analyzing = ref(false)
@@ -53,7 +68,11 @@ function presetFor(kind: DocActionKind): FormPreset {
   }
 }
 
-function trigger(kind: DocActionKind) {
+function onActionClick(kind: DocActionKind) {
+  if (isDone(kind)) {
+    toast.info('لقد سبق لك تنفيذ هذا الإجراء على هذا المستند')
+    return
+  }
   emit('action', { kind, preset: presetFor(kind) })
 }
 </script>
@@ -100,12 +119,32 @@ function trigger(kind: DocActionKind) {
       </div>
     </div>
 
-    <!-- الإجراءات المقترحة -->
+    <!-- ملخّص الإجراءات المُنفّذة من هذا المستند -->
+    <div v-if="performed.length" class="performed">
+      <span class="performed__label">✅ نُفّذ من هذا المستند ({{ performed.length }})</span>
+      <div class="performed__list">
+        <span v-for="p in performed" :key="p.kind" class="performed__chip">
+          <span class="performed__icon">{{ p.icon }}</span> {{ p.label }}
+        </span>
+      </div>
+    </div>
+
+    <!-- مركز الإجراءات (كل الإجراءات الممكنة) -->
     <div v-if="analyzed" class="actions">
-      <span class="actions__label">⚡ إجراءات مقترحة (من المستند إلى عملية)</span>
+      <span class="actions__label">⚡ مركز الإجراءات — حوّل المستند إلى أي عنصر</span>
       <div class="actions__grid">
-        <button v-for="a in actions" :key="a.kind" class="action" @click="trigger(a.kind)">
-          <span class="action__icon">{{ a.icon }}</span>
+        <button
+          v-for="a in actions"
+          :key="a.kind"
+          class="action"
+          :class="{ 'is-recommended': recommended.has(a.kind), 'is-done': isDone(a.kind) }"
+          @click="onActionClick(a.kind)"
+        >
+          <span class="action__head">
+            <span class="action__icon">{{ a.icon }}</span>
+            <span v-if="isDone(a.kind)" class="action__tag is-done">✓ تم</span>
+            <span v-else-if="recommended.has(a.kind)" class="action__tag is-rec">★ موصى به</span>
+          </span>
           <span class="action__label">{{ a.label }}</span>
           <span class="action__desc">{{ a.desc }}</span>
         </button>
@@ -208,6 +247,30 @@ function trigger(kind: DocActionKind) {
   to { transform: rotate(360deg); }
 }
 
+.performed {
+  margin-block-end: 16px;
+  padding: 12px 14px;
+  background: var(--ok-bg);
+  border-radius: var(--radius-sm);
+
+  &__label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ok-text); margin-block-end: 8px; }
+  &__list { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    background: var(--surface);
+    color: var(--text);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  &__icon { font-size: 13px; }
+}
+
 .actions {
   &__label { display: block; font-size: 13px; font-weight: 700; margin-block-end: 12px; }
 
@@ -229,10 +292,40 @@ function trigger(kind: DocActionKind) {
   background: var(--surface);
   text-align: start;
   cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 
   &:hover { border-color: var(--primary); background: var(--primary-soft); }
 
+  &.is-recommended { border-color: var(--primary); }
+
+  &.is-done {
+    background: var(--surface-2);
+    border-color: var(--border);
+    cursor: default;
+    opacity: 0.75;
+    &:hover { border-color: var(--border); background: var(--surface-2); }
+    .action__label { color: var(--text-muted); }
+  }
+
+  &__head {
+    inline-size: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
   &__icon { font-size: 22px; }
+
+  &__tag {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+
+    &.is-rec { background: var(--primary-soft); color: var(--primary); }
+    &.is-done { background: var(--ok-bg); color: var(--ok-text); }
+  }
+
   &__label { font-size: 13px; font-weight: 700; }
   &__desc { font-size: 11px; color: var(--text-muted); }
 }

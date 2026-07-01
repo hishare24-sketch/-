@@ -11,7 +11,7 @@ import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ projectId: string; preset?: FormPreset; commitment?: Commitment | null }>()
-const emit = defineEmits<{ (e: 'close'): void }>()
+const emit = defineEmits<{ (e: 'close'): void; (e: 'saved'): void }>()
 
 const projectsStore = useProjectsStore()
 const commitmentsStore = useCommitmentsStore()
@@ -68,6 +68,7 @@ function save() {
   } else {
     commitmentsStore.addCommitment({ ...base, paidCount: 0, nextDue: form.startDate, active: true, payments: [], createdBy: CURRENT_USER })
   }
+  emit('saved')
   emit('close')
 }
 </script>

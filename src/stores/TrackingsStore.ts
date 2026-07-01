@@ -2,8 +2,10 @@ import { defineStore } from 'pinia'
 import type { Tracking } from '@/interfaces/models'
 import { INITIAL_TRACKINGS } from '@/data/seed'
 import { uid } from '@/helpers/id'
-import { daysBetween, statusFromDays } from '@/helpers/date'
+import { daysBetween, statusFromDays, today } from '@/helpers/date'
+import { CURRENT_USER } from '@/constants'
 import { useAuditStore } from '@/stores/AuditStore'
+import { useFinanceStore } from '@/stores/FinanceStore'
 
 export type TrackingPayload = Omit<Tracking, 'id'> & { id?: string }
 
@@ -38,7 +40,8 @@ export const useTrackingsStore = defineStore('trackings', {
       useAuditStore().log('إنشاء', 'متابعة', t.name)
     },
     // تجديد المتابعة: تاريخ انتهاء جديد → إعادة حساب الحالة + عدّاد التجديد
-    renewTracking(id: string, newExpiry: string) {
+    // opts.feeAsExpense: تسجيل رسوم التجديد كمصروف فعلي في المالية (دمج مع قسم المالية)
+    renewTracking(id: string, newExpiry: string, opts?: { feeAsExpense?: number }) {
       const t = this.trackings.find((x) => x.id === id)
       if (!t || !newExpiry) return
       const d = daysBetween(newExpiry)
@@ -48,6 +51,22 @@ export const useTrackingsStore = defineStore('trackings', {
       t.cancelled = false
       t.renewedCount = (t.renewedCount ?? 0) + 1
       useAuditStore().log('تجديد', 'متابعة', `${t.name} → ${newExpiry}`)
+
+      const fee = opts?.feeAsExpense ?? 0
+      if (fee > 0) {
+        useFinanceStore().saveTransaction({
+          projectId: t.projectId,
+          type: 'expense',
+          description: `تجديد ${t.type}: ${t.name}`,
+          amount: fee,
+          category: 'رسوم وتجديدات',
+          date: today(),
+          hasDoc: false,
+          memberId: t.memberId,
+          note: 'رسوم تجديد متابعة',
+          createdBy: CURRENT_USER,
+        })
+      }
     },
     // إلغاء المتابعة (لم تعد سارية)
     cancelTracking(id: string) {

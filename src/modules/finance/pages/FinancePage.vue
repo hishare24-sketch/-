@@ -7,6 +7,7 @@ import { useFinanceStore } from '@/stores/FinanceStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
 import { fmt, fmtNum } from '@/helpers/format'
 import { exportXLSX } from '@/helpers/export'
+import { useToast } from '@/composables/useToast'
 import { txErrors } from '@/helpers/txAnalysis'
 import { CURRENT_USER } from '@/constants'
 import type { Transaction, TxType } from '@/interfaces/models'
@@ -21,7 +22,7 @@ const projectsStore = useProjectsStore()
 const financeStore = useFinanceStore()
 const settingsStore = useSettingsStore()
 const { activeProjectId, activeProject, projects } = storeToRefs(projectsStore)
-
+const toast = useToast()
 
 const txns = computed(() => financeStore.byProject(activeProjectId.value))
 
@@ -104,7 +105,10 @@ function editFromView(t: Transaction) {
 }
 async function onDelete(t: Transaction) {
   const ok = await confirmRef.value?.open({ title: 'حذف العملية', message: `حذف "${t.description}"؟` })
-  if (ok) financeStore.deleteTransaction(t.id)
+  if (ok) {
+    financeStore.deleteTransaction(t.id)
+    toast.success('تم حذف العملية')
+  }
 }
 
 function exportExcel() {
@@ -121,7 +125,9 @@ function exportExcel() {
         بواسطة: t.createdBy ?? CURRENT_USER,
       })),
     },
-  ]).catch((e) => alert(e.message))
+  ])
+    .then(() => toast.success('تم تصدير ملف العمليات'))
+    .catch((e) => toast.error(e.message))
 }
 
 function clearFilters() {

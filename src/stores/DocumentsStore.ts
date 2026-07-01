@@ -37,5 +37,12 @@ export const useDocumentsStore = defineStore('documents', {
         d.status = 'processed'
       }
     },
+    // تسجيل تنفيذ إجراء من المستند (يمنع تكراره)
+    markActionDone(id: string, kind: string) {
+      const d = this.documents.find((x) => x.id === id)
+      if (!d) return
+      if (!d.performedActions) d.performedActions = []
+      if (!d.performedActions.includes(kind)) d.performedActions.push(kind)
+    },
   },
 })

@@ -9,6 +9,7 @@ import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useFinanceStore } from '@/stores/FinanceStore'
 import { fmt, fmtNum } from '@/helpers/format'
 import { exportXLSX } from '@/helpers/export'
+import { useToast } from '@/composables/useToast'
 import { txErrors } from '@/helpers/txAnalysis'
 import { useFocusHighlight } from '@/composables/useFocusHighlight'
 import { useLedgerRows, type LedgerRow } from '../composables/useLedger'
@@ -16,6 +17,7 @@ import { useLedgerRows, type LedgerRow } from '../composables/useLedger'
 const router = useRouter()
 const projectsStore = useProjectsStore()
 const financeStore = useFinanceStore()
+const toast = useToast()
 const { projects, members } = storeToRefs(projectsStore)
 const { rows, projName, memName } = useLedgerRows()
 const { isFocused } = useFocusHighlight()
@@ -175,7 +177,9 @@ function exportExcel() {
         الحالة: r.status,
       })),
     },
-  ]).catch((e) => alert(e.message))
+  ])
+    .then(() => toast.success('تم تصدير السجل المالي'))
+    .catch((e) => toast.error(e.message))
 }
 </script>
 

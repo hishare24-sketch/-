@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, toRef } from 'vue'
 import { exportXLSX, exportPDF, docHTML } from '@/helpers/export'
+import { useToast } from '@/composables/useToast'
 import { useSurveysStore } from '@/stores/SurveysStore'
 import { useSurveyStats } from '../composables/useSurveyStats'
 import type { Survey } from '@/interfaces/models'
@@ -10,6 +11,7 @@ const props = defineProps<{ survey: Survey }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const surveysStore = useSurveysStore()
+const toast = useToast()
 const live = computed(() => surveysStore.byId(props.survey.id) ?? props.survey)
 const { responseCount, respondentCount, responseRate, questionStats } = useSurveyStats(toRef(props, 'survey'))
 
@@ -52,7 +54,9 @@ function exportExcel() {
   exportXLSX(`نتائج_${props.survey.title}`, [
     { name: 'الملخص', rows: summaryRows },
     { name: 'الردود', rows: responseRows.length ? responseRows : [{ '—': 'لا توجد ردود' }] },
-  ]).catch((e) => alert(e.message))
+  ])
+    .then(() => toast.success('تم تصدير ملف النتائج'))
+    .catch((e) => toast.error(e.message))
 }
 
 // تصدير PDF: تقرير النتائج
@@ -68,7 +72,9 @@ function exportReport() {
       return `<div style="margin-bottom:18px"><div style="font-weight:700;margin-bottom:6px">${i + 1}. ${st.question.text}</div>${detail}</div>`
     })
     .join('')
-  exportPDF(`تقرير_${props.survey.title}`, docHTML({ title: 'تقرير نتائج استبيان', subtitle: `${props.survey.title} · ${responseCount.value} رد`, body })).catch((e) => alert(e.message))
+  exportPDF(`تقرير_${props.survey.title}`, docHTML({ title: 'تقرير نتائج استبيان', subtitle: `${props.survey.title} · ${responseCount.value} رد`, body }))
+    .then(() => toast.success('تم تصدير التقرير'))
+    .catch((e) => toast.error(e.message))
 }
 </script>
 

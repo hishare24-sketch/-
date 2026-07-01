@@ -58,7 +58,22 @@ const { isFocused } = useFocusHighlight()
 const showForm = ref(false)
 const editing = ref<Tracking | null>(null)
 const viewing = ref<Tracking | null>(null)
+const autoRenew = ref(false)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
+
+// فتح التفاصيل مع فتح نموذج التجديد تلقائياً (من زر التجديد على الكرت)
+function openRenew(t: Tracking) {
+  autoRenew.value = true
+  viewing.value = t
+}
+function openDetails(t: Tracking) {
+  autoRenew.value = false
+  viewing.value = t
+}
+// المتابعة تحتاج تجديداً (توشك/منتهية وغير ملغاة)
+function needsRenew(t: Tracking) {
+  return !t.cancelled && (t.status === 'expiring' || t.status === 'expired')
+}
 
 function openCreate() {
   editing.value = null
@@ -130,7 +145,7 @@ async function onDelete(t: Tracking) {
             {{ badgeOf(t).l }}
           </span>
         </div>
-        <span class="track__name track__clickable" @click="viewing = t">
+        <span class="track__name track__clickable" @click="openDetails(t)">
           {{ t.name }}
           <span v-if="t.attachments?.length" class="track__clip" title="مرفقات">📎{{ t.attachments.length }}</span>
         </span>
@@ -141,7 +156,15 @@ async function onDelete(t: Tracking) {
             {{ t.daysLeft < 0 ? `منتهٍ منذ ${Math.abs(t.daysLeft)} يوم` : `يتبقّى ${t.daysLeft} يوم` }}
           </span>
         </div>
+        <!-- إجراءات على وجه الكرت -->
         <div class="track__actions">
+          <button
+            class="face-btn"
+            :class="needsRenew(t) ? 'face-btn--warn' : 'face-btn--primary'"
+            title="تجديد"
+            @click="openRenew(t)"
+          >🔄 تجديد</button>
+          <button class="face-btn" title="التفاصيل والإجراءات" @click="openDetails(t)">⚙️ إدارة</button>
           <button class="icon-btn" title="تعديل" @click="openEdit(t)">✎</button>
           <button class="icon-btn icon-btn--danger" title="حذف" @click="onDelete(t)">🗑️</button>
         </div>
@@ -149,7 +172,7 @@ async function onDelete(t: Tracking) {
     </div>
 
     <TrackingFormModal v-if="showForm" :project-id="activeProjectId" :tracking="editing" @close="closeForm" />
-    <TrackingDetailsModal v-if="viewing" :tracking="viewing" @edit="openEdit" @close="viewing = null" />
+    <TrackingDetailsModal v-if="viewing" :tracking="viewing" :auto-renew="autoRenew" @edit="openEdit" @close="viewing = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>
@@ -305,8 +328,35 @@ async function onDelete(t: Tracking) {
 
   &__actions {
     display: flex;
+    align-items: center;
     gap: 6px;
-    margin-block-start: 8px;
+    margin-block-start: 10px;
+    flex-wrap: wrap;
+  }
+}
+
+.face-btn {
+  flex: 1 1 auto;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+
+  &:hover { border-color: var(--primary); color: var(--primary); }
+
+  &--primary { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+  &--warn {
+    border-color: transparent;
+    background: var(--warn-text);
+    color: #fff;
+    &:hover { color: #fff; opacity: 0.9; }
   }
 }
 
@@ -318,6 +368,7 @@ async function onDelete(t: Tracking) {
   background: var(--surface);
   color: var(--text-muted);
   font-size: 13px;
+  flex-shrink: 0;
 
   &:hover { border-color: var(--primary); color: var(--primary); }
   &--danger:hover { border-color: var(--error); color: var(--error); }

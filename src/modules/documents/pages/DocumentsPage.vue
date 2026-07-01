@@ -60,6 +60,10 @@ const docIcon = (type: string) => {
   return '📄'
 }
 
+// أيقونات الإجراءات المنفّذة لعرضها على وجه الكرت
+const ACTION_ICON: Record<string, string> = { tx: '💸', tracking: '🛡️', receivable: '⇄', commitment: '🔁', asset: '📦' }
+const doneChips = (d: DocItem) => (d.performedActions ?? []).map((k) => ACTION_ICON[k] ?? '⚡')
+
 const showForm = ref(false)
 const showTemplates = ref(false)
 const viewing = ref<DocItem | null>(null)
@@ -67,12 +71,21 @@ const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 
 // نموذج الإجراء المُنشأ من المستند (مع تعبئة مسبقة)
 const action = ref<{ kind: DocActionKind; preset: FormPreset } | null>(null)
+const actionDocId = ref<string | null>(null)
 function onDocAction(payload: { kind: DocActionKind; preset: FormPreset }) {
+  actionDocId.value = viewing.value?.id ?? null
   viewing.value = null
   action.value = payload
 }
+// عند حفظ الإجراء فعلياً → علّم المستند بأن هذا الإجراء نُفّذ (يمنع تكراره)
+function onActionSaved() {
+  if (actionDocId.value && action.value) {
+    documentsStore.markActionDone(actionDocId.value, action.value.kind)
+  }
+}
 function closeAction() {
   action.value = null
+  actionDocId.value = null
 }
 
 // بعد إنشاء مستند مع خيار التحليل التلقائي → افتح التحليل الذكي مباشرة
@@ -138,20 +151,27 @@ async function onDelete(d: DocItem) {
 
     <div class="grid">
       <div v-if="!filtered.length" class="empty app-card">لا توجد مستندات مطابقة.</div>
-      <div v-for="d in filtered" :key="d.id" class="doc app-card">
+      <div v-for="d in filtered" :key="d.id" class="doc app-card" @click="viewing = d">
         <div class="doc__top">
           <span class="doc__icon">{{ docIcon(d.type) }}</span>
           <span class="doc__badge" :class="{ 'is-read': d.aiRead }">
             {{ d.aiRead ? '✓ معالَج' : 'قيد المعالجة' }}
           </span>
         </div>
-        <span class="doc__name doc__clickable" @click="viewing = d">
+        <span class="doc__name">
           {{ d.name }}
           <span v-if="d.attachments?.length" class="doc__clip" title="مرفقات">📎{{ d.attachments.length }}</span>
         </span>
-        <span class="doc__meta">{{ d.type }} · {{ projectsStore.projectById(d.projectId)?.name }}</span>
-        <span class="doc__sub">{{ d.date }} · {{ d.size }}</span>
-        <div class="doc__actions">
+        <span class="doc__meta">{{ docIcon(d.type) }} {{ d.type }} · {{ projectsStore.projectById(d.projectId)?.name }}</span>
+        <div class="doc__foot">
+          <span class="doc__by">{{ d.date }} · {{ d.size }}<template v-if="d.createdBy"> · {{ d.createdBy }}</template></span>
+        </div>
+        <!-- الإجراءات المُنفّذة من هذا المستند -->
+        <div v-if="doneChips(d).length" class="doc__done" :title="`${doneChips(d).length} إجراء منفّذ`">
+          <span class="doc__done-label">⚡ نُفّذ:</span>
+          <span v-for="(ic, i) in doneChips(d)" :key="i" class="doc__done-chip">{{ ic }}</span>
+        </div>
+        <div class="doc__actions" @click.stop>
           <button class="app-btn app-btn--outlined proc-btn" @click="viewing = d">
             {{ d.aiRead ? '✨ تحليل وإجراءات' : '✨ تحليل ذكي' }}
           </button>
@@ -165,11 +185,11 @@ async function onDelete(d: DocItem) {
     <DocDetailsModal v-if="viewing" :doc="viewing" @action="onDocAction" @close="viewing = null" />
 
     <!-- نماذج الإجراءات المُنشأة من المستند (تعبئة مسبقة) -->
-    <TxFormModal v-if="action?.kind === 'tx'" :project-id="action.preset.projectId ?? activeProjectId" :tx="null" :preset="action.preset" @close="closeAction" />
-    <TrackingFormModal v-if="action?.kind === 'tracking'" :project-id="action.preset.projectId ?? activeProjectId" :tracking="null" :preset="action.preset" @close="closeAction" />
-    <AssetFormModal v-if="action?.kind === 'asset'" :project-id="action.preset.projectId ?? activeProjectId" :preset="action.preset" @close="closeAction" />
-    <CommitmentFormModal v-if="action?.kind === 'commitment'" :project-id="action.preset.projectId ?? activeProjectId" :preset="action.preset" @close="closeAction" />
-    <ReceivableFormModal v-if="action?.kind === 'receivable'" :project-id="action.preset.projectId ?? activeProjectId" :preset="action.preset" @close="closeAction" />
+    <TxFormModal v-if="action?.kind === 'tx'" :project-id="action.preset.projectId ?? activeProjectId" :tx="null" :preset="action.preset" @saved="onActionSaved" @close="closeAction" />
+    <TrackingFormModal v-if="action?.kind === 'tracking'" :project-id="action.preset.projectId ?? activeProjectId" :tracking="null" :preset="action.preset" @saved="onActionSaved" @close="closeAction" />
+    <AssetFormModal v-if="action?.kind === 'asset'" :project-id="action.preset.projectId ?? activeProjectId" :preset="action.preset" @saved="onActionSaved" @close="closeAction" />
+    <CommitmentFormModal v-if="action?.kind === 'commitment'" :project-id="action.preset.projectId ?? activeProjectId" :preset="action.preset" @saved="onActionSaved" @close="closeAction" />
+    <ReceivableFormModal v-if="action?.kind === 'receivable'" :project-id="action.preset.projectId ?? activeProjectId" :preset="action.preset" @saved="onActionSaved" @close="closeAction" />
 
     <ConfirmModal ref="confirmRef" />
   </section>
@@ -297,6 +317,10 @@ async function onDelete(d: DocItem) {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+
+  &:hover { transform: translateY(-2px); box-shadow: var(--elev-2); border-color: var(--primary); }
 
   &__top {
     display: flex;
@@ -318,16 +342,48 @@ async function onDelete(d: DocItem) {
     &.is-read { background: var(--ok-bg); color: var(--ok-text); }
   }
 
-  &__name { font-weight: 700; font-size: 14px; }
-  &__clickable { cursor: pointer; }
+  &__name {
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
   &__clip { font-size: 11px; color: var(--primary); margin-inline-start: 4px; }
   &__meta { font-size: 12px; color: var(--text-muted); }
-  &__sub { font-size: 11px; color: var(--text-muted); }
+
+  &__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-block-start: 2px;
+  }
+
+  &__by { font-size: 11px; color: var(--text-muted); }
+
+  &__done {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-block-start: 8px;
+    padding: 6px 10px;
+    background: var(--ok-bg);
+    border-radius: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__done-label { font-size: 11px; font-weight: 700; color: var(--ok-text); }
+  &__done-chip { font-size: 13px; }
 
   &__actions {
     display: flex;
     gap: 8px;
-    margin-block-start: 8px;
+    margin-block-start: 10px;
+    padding-block-start: 10px;
+    border-block-start: 1px solid var(--border);
   }
 }
 

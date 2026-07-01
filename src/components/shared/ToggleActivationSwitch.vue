@@ -15,6 +15,9 @@ function toggle() {
     class="toggle"
     :class="{ 'is-on': modelValue, 'is-disabled': disabled }"
     type="button"
+    role="switch"
+    :aria-checked="modelValue"
+    :aria-disabled="disabled || undefined"
     @click="toggle"
   >
     <span class="toggle__knob" />

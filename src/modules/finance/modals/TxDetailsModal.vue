@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { fmt } from '@/helpers/format'
 import { exportPDF, docHTML } from '@/helpers/export'
+import { useToast } from '@/composables/useToast'
 import { TX_TYPES, CURRENT_USER } from '@/constants'
 import type { Transaction } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
@@ -12,6 +13,7 @@ const props = defineProps<{ tx: Transaction }>()
 const emit = defineEmits<{ (e: 'edit', tx: Transaction): void; (e: 'close'): void }>()
 
 const projectsStore = useProjectsStore()
+const toast = useToast()
 const project = computed(() => projectsStore.projectById(props.tx.projectId))
 const typeLabel = computed(() => TX_TYPES.find((t) => t.id === props.tx.type)?.label ?? props.tx.type)
 
@@ -36,7 +38,9 @@ function exportInvoice() {
       ${rows.value.map(([k, v]) => `<tr><td style="padding:8px 0;color:#666;width:160px">${k}</td><td style="padding:8px 0;font-weight:600">${v}</td></tr>`).join('')}
       <tr style="font-size:18px"><td style="padding:14px 0;font-weight:800;border-top:2px solid #2563eb">الإجمالي</td><td style="padding:14px 0;font-weight:800;border-top:2px solid #2563eb;color:var(--info-text)">${fmt(t.amount)}</td></tr>
     </table>`
-  exportPDF(`فاتورة_${t.description}`, docHTML({ title: 'سند مالي', subtitle: t.description, body })).catch((e) => alert(e.message))
+  exportPDF(`فاتورة_${t.description}`, docHTML({ title: 'سند مالي', subtitle: t.description, body }))
+    .then(() => toast.success('تم تصدير السند'))
+    .catch((e) => toast.error(e.message))
 }
 </script>
 

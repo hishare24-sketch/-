@@ -96,6 +96,20 @@ export function aiExtract(doc: DocItem): DocExtraction {
   }
 }
 
+// كل الإجراءات الممكنة من أي مستند (تُعرض كاملةً في مركز الإجراءات)
+export const ALL_DOC_ACTIONS: DocSuggestion[] = [
+  { kind: 'tx', icon: '💸', label: 'تسجيل عملية مالية', desc: 'مصروف/إيراد من المستند' },
+  { kind: 'tracking', icon: '🛡️', label: 'إضافة متابعة', desc: 'ضمان/عقد/وثيقة بتاريخ انتهاء' },
+  { kind: 'receivable', icon: '⇄', label: 'تسجيل ذمة', desc: 'مبلغ مستحق لك أو عليك' },
+  { kind: 'commitment', icon: '🔁', label: 'إنشاء التزام دوري', desc: 'دفعات متكررة (قسط/اشتراك)' },
+  { kind: 'asset', icon: '📦', label: 'تسجيل كأصل', desc: 'أصل ملموس بقيمة شراء' },
+]
+
+// أنواع الإجراءات المُوصى بها لنوع المستند (لإبرازها ضمن القائمة الكاملة)
+export function recommendedKinds(docType: string): Set<DocActionKind> {
+  return new Set(suggestedActions(docType).map((a) => a.kind))
+}
+
 // الإجراءات المقترحة حسب نوع المستند
 export function suggestedActions(docType: string): DocSuggestion[] {
   if (docType === 'فاتورة')

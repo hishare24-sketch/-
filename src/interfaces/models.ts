@@ -112,6 +112,7 @@ export interface CommitmentPayment {
   date: string
   dueLabel: string
   createdBy?: string
+  attachments?: Attachment[]
 }
 
 export interface Commitment {
@@ -172,6 +173,26 @@ export interface AssetPeriodic {
   nextDue: string
 }
 
+// سياق الضمان الفرعي: من الشراء الأصلي، مكوّن مُشترى، صيانة، إصلاح، أو غير ذلك
+export type WarrantyContext = 'purchase' | 'component' | 'maintenance' | 'repair' | 'other'
+
+// ضمان فرعي داخل الأصل — لكل مكوّن/إصلاح ضمانه وفاتورته وتاريخ انتهائه ومرفقاته، قابل للتتبّع والتذكير
+export interface AssetWarranty {
+  id: string
+  name: string
+  provider?: string
+  context: WarrantyContext
+  startDate?: string
+  endDate: string
+  cost?: number
+  invoiceNo?: string
+  linkedMaintenanceId?: string
+  note?: string
+  attachments?: Attachment[]
+  trackingId?: string
+  createdBy?: string
+}
+
 export interface Asset {
   id: string
   projectId: string
@@ -195,6 +216,7 @@ export interface Asset {
   trackingId?: string
   periodic?: AssetPeriodic
   events?: AssetEvent[]
+  warranties?: AssetWarranty[]
   saleValue?: number
   saleDate?: string
 }
@@ -266,6 +288,8 @@ export interface DocItem {
   aiRead: boolean
   attachments?: Attachment[]
   createdBy?: string
+  // أنواع الإجراءات التي سبق تنفيذها من هذا المستند (لمنع تكرارها)
+  performedActions?: string[]
 }
 
 // الاستبيانات
@@ -363,6 +387,7 @@ export interface UserPrefs {
   statsAutoScroll: boolean
   statsScrollSeconds: number
   statsLayout: 'horizontal' | 'vertical'
+  density: 'comfortable' | 'compact'
 }
 
 // قوائم قابلة للتخصيص (من صفحة التخصيص)

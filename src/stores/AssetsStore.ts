@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Asset, AssetEventKind, AssetPeriodic, AssetStatus, MaintenanceEntry } from '@/interfaces/models'
+import type { Asset, AssetEventKind, AssetPeriodic, AssetStatus, AssetWarranty, MaintenanceEntry } from '@/interfaces/models'
 import { INITIAL_ASSETS } from '@/data/seed'
 import { uid } from '@/helpers/id'
 import { fmt } from '@/helpers/format'
@@ -47,10 +47,11 @@ export const useAssetsStore = defineStore('assets', {
     },
 
     // صيانة/إصلاح/عطل/فحص/دورية → تُسجّل مصروفاً إن كان لها تكلفة + تحدّث العداد/الحالة
-    addMaintenance(assetId: string, m: Omit<MaintenanceEntry, 'id'>) {
+    addMaintenance(assetId: string, m: Omit<MaintenanceEntry, 'id'>): string | null {
       const a = this.assets.find((x) => x.id === assetId)
-      if (!a) return
-      a.maintenance.push({ ...m, id: uid('mn') })
+      if (!a) return null
+      const mnId = uid('mn')
+      a.maintenance.push({ ...m, id: mnId })
       if (m.meter != null) a.usageMeter = m.meter
       if (m.type === 'عطل') a.status = 'maintenance'
 
@@ -70,6 +71,7 @@ export const useAssetsStore = defineStore('assets', {
       // جدولة الدورة التالية عند تسجيل صيانة دورية
       if (m.type === 'دورية' && a.periodic) a.periodic.nextDue = this._nextDue(m.date, a.periodic)
       useAuditStore().log('تسجيل', 'صيانة أصل', `${a.name} — ${m.type} ${fmt(m.cost)}`)
+      return mnId
     },
 
     // تحديث قراءة العداد
@@ -138,6 +140,60 @@ export const useAssetsStore = defineStore('assets', {
       else if (p.unit === 'شهر') d.setMonth(d.getMonth() + p.every)
       else d.setFullYear(d.getFullYear() + p.every)
       return d.toISOString().slice(0, 10)
+    },
+
+    // ── الضمانات الفرعية داخل الأصل ──
+    // إضافة ضمان فرعي (لمكوّن/إصلاح/صيانة...) — قابل للتتبّع والتذكير
+    addWarranty(assetId: string, w: Omit<AssetWarranty, 'id'>): string | null {
+      const a = this.assets.find((x) => x.id === assetId)
+      if (!a) return null
+      if (!a.warranties) a.warranties = []
+      const id = uid('wr')
+      a.warranties.unshift({ ...w, id })
+      this._event(a, 'warranty', `إضافة ضمان فرعي: ${w.name}`)
+      useAuditStore().log('إضافة', 'ضمان أصل', `${a.name} — ${w.name}`)
+      return id
+    },
+
+    updateWarranty(assetId: string, warrantyId: string, patch: Partial<AssetWarranty>) {
+      const a = this.assets.find((x) => x.id === assetId)
+      const w = a?.warranties?.find((x) => x.id === warrantyId)
+      if (!a || !w) return
+      Object.assign(w, patch)
+      this._event(a, 'warranty', `تعديل ضمان فرعي: ${w.name}`)
+    },
+
+    removeWarranty(assetId: string, warrantyId: string) {
+      const a = this.assets.find((x) => x.id === assetId)
+      if (!a || !a.warranties) return
+      const w = a.warranties.find((x) => x.id === warrantyId)
+      if (w?.trackingId) useTrackingsStore().deleteTracking(w.trackingId)
+      a.warranties = a.warranties.filter((x) => x.id !== warrantyId)
+      if (w) this._event(a, 'warranty', `حذف ضمان فرعي: ${w.name}`)
+    },
+
+    // ربط ضمان فرعي بالمتابعات (يظهر في التذكيرات ولوحة التحكم والإشعارات)
+    linkSubWarranty(assetId: string, warrantyId: string): boolean {
+      const a = this.assets.find((x) => x.id === assetId)
+      const w = a?.warranties?.find((x) => x.id === warrantyId)
+      if (!a || !w || w.trackingId) return false
+      const days = daysBetween(w.endDate)
+      const trackingId = uid('tr')
+      useTrackingsStore().addTracking({
+        id: trackingId,
+        name: `ضمان ${w.name} — ${a.name}`,
+        type: 'ضمان',
+        icon: '🛡️',
+        status: statusFromDays(days),
+        daysLeft: days,
+        expiryDate: w.endDate,
+        projectId: a.projectId,
+        note: `ضمان فرعي للأصل: ${a.name}${w.provider ? ` · ${w.provider}` : ''}`,
+        createdBy: CURRENT_USER,
+      })
+      w.trackingId = trackingId
+      this._event(a, 'warranty', `ربط ضمان «${w.name}» بالمتابعات`)
+      return true
     },
 
     // ربط الضمان كمتابعة (تظهر في التذكيرات) والإشارة إليها

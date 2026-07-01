@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useRequestsStore } from '@/stores/RequestsStore'
 import { fmt } from '@/helpers/format'
-import { REQUEST_STATUS, REQUEST_FIELD_SCHEMAS } from '@/constants'
+import { REQUEST_STATUS, REQUEST_FIELD_SCHEMAS, REQUEST_TYPE_META } from '@/constants'
 import type { RequestItem } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
@@ -17,6 +17,12 @@ const requestsStore = useRequestsStore()
 const project = computed(() => projectsStore.projectById(props.request.projectId))
 const member = computed(() => (props.request.memberId ? projectsStore.memberById(props.request.memberId)?.name : null))
 const statusMeta = computed(() => REQUEST_STATUS[props.request.status])
+const typeMeta = computed(() => REQUEST_TYPE_META[props.request.type])
+const flowLabel = computed(() =>
+  typeMeta.value?.flow === 'in' ? '📥 وارد'
+    : typeMeta.value?.flow === 'none' ? 'ⓘ غير مالي'
+    : '📤 صادر',
+)
 const specFields = computed(() => (REQUEST_FIELD_SCHEMAS[props.request.type] ?? []).filter((f) => props.request.specs?.[f.key]))
 const openStage = computed(() => props.request.status === 'pending' || props.request.status === 'under_review')
 
@@ -45,6 +51,13 @@ function cancel() {
       <span class="amount">{{ fmt(request.amount) }}</span>
     </div>
 
+    <!-- نوع الطلب واتجاهه المالي -->
+    <div class="typechip">
+      <span class="typechip__type">{{ typeMeta?.icon ?? '📋' }} {{ request.type }}</span>
+      <span class="typechip__flow" :class="`is-${typeMeta?.flow ?? 'out'}`">{{ flowLabel }}</span>
+      <span v-if="typeMeta?.hint" class="typechip__hint">{{ typeMeta.hint }}</span>
+    </div>
+
     <!-- مركز الإجراءات -->
     <div v-if="openStage" class="hub">
       <button class="hub__btn hub__btn--ok" @click="approve">✅ اعتماد</button>
@@ -61,7 +74,7 @@ function cancel() {
     </div>
 
     <table class="rows">
-      <tr><td class="rows__key">النوع</td><td>{{ request.type }}</td></tr>
+      <tr><td class="rows__key">النوع</td><td>{{ typeMeta?.icon ?? '📋' }} {{ request.type }}</td></tr>
       <tr><td class="rows__key">المشروع</td><td>{{ project?.name }}</td></tr>
       <tr><td class="rows__key">مقدّم الطلب</td><td>{{ request.requestedBy }}</td></tr>
       <tr v-if="member"><td class="rows__key">مُسنَد إلى</td><td>{{ member }}</td></tr>
@@ -94,6 +107,35 @@ function cancel() {
 
 .status-badge { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 20px; }
 .amount { font-size: 20px; font-weight: 800; }
+
+.typechip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-block-end: 14px;
+
+  &__type {
+    font-size: 13px;
+    font-weight: 700;
+    background: var(--surface-2);
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  &__flow {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+
+    &.is-out { background: var(--danger-bg); color: var(--danger-text); }
+    &.is-in { background: var(--ok-bg); color: var(--ok-text); }
+    &.is-none { background: var(--surface-2); color: var(--text-muted); }
+  }
+
+  &__hint { font-size: 11.5px; color: var(--text-muted); }
+}
 
 .hub {
   display: flex;

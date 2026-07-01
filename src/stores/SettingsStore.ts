@@ -37,6 +37,12 @@ export const useSettingsStore = defineStore('settings', {
     // ── التفضيلات ──
     setPref<K extends keyof UserPrefs>(key: K, value: UserPrefs[K]) {
       this.prefs[key] = value
+      if (key === 'density') this.applyDensity()
+    },
+
+    // تطبيق كثافة الواجهة على الجذر (مريح/مدمج)
+    applyDensity() {
+      document.documentElement.setAttribute('data-density', this.prefs.density ?? 'comfortable')
     },
 
     // ── القوائم المخصّصة ──

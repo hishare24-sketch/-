@@ -3,7 +3,7 @@ import { reactive, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useRequestsStore } from '@/stores/RequestsStore'
-import { REQUEST_TYPES, REQUEST_FIELD_SCHEMAS, CURRENT_USER } from '@/constants'
+import { REQUEST_TYPES, REQUEST_FIELD_SCHEMAS, REQUEST_TYPE_META, CURRENT_USER } from '@/constants'
 import { today } from '@/helpers/date'
 import type { Attachment, RequestItem } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
@@ -32,7 +32,14 @@ const form = reactive({
 
 const typeFields = computed(() => REQUEST_FIELD_SCHEMAS[form.type] ?? [])
 const projMembers = computed(() => projectsStore.membersByProject(form.projectId))
-const valid = computed(() => form.title.trim() && form.amount != null && form.amount > 0)
+const typeMeta = computed(() => REQUEST_TYPE_META[form.type])
+const isFinancial = computed(() => (typeMeta.value?.flow ?? 'out') !== 'none')
+const flowLabel = computed(() =>
+  typeMeta.value?.flow === 'in' ? '📥 وارد — يزيد الرصيد عند الاعتماد'
+    : typeMeta.value?.flow === 'none' ? 'ⓘ طلب إداري — بلا أثر مالي'
+    : '📤 صادر — يُنشئ مصروفاً عند الاعتماد',
+)
+const valid = computed(() => !!form.title.trim() && (!isFinancial.value || (form.amount != null && form.amount > 0)))
 
 function cleanSpecs(): Record<string, string> | undefined {
   const out: Record<string, string> = {}
@@ -50,7 +57,7 @@ function save() {
     title: form.title.trim(),
     type: form.type,
     projectId: form.projectId,
-    amount: Number(form.amount),
+    amount: Number(form.amount) || 0,
     requestedBy: form.requestedBy,
     status: props.request?.status ?? 'pending',
     date: props.request?.date ?? today(),
@@ -69,9 +76,10 @@ function save() {
       <label>نوع الطلب</label>
       <div class="types">
         <button v-for="t in REQUEST_TYPES" :key="t" type="button" class="type" :class="{ 'is-active': form.type === t }" @click="form.type = t">
-          {{ t }}
+          <span>{{ REQUEST_TYPE_META[t]?.icon ?? '📋' }}</span> {{ t }}
         </button>
       </div>
+      <span class="flow" :class="`flow--${typeMeta?.flow ?? 'out'}`">{{ flowLabel }}</span>
     </div>
     <div class="field">
       <label>المشروع</label>
@@ -84,7 +92,7 @@ function save() {
       <input v-model="form.title" type="text" placeholder="مثال: طلب صرف مصروفات السفر" />
     </div>
     <div class="field">
-      <label>المبلغ (ر.س)</label>
+      <label>المبلغ (ر.س){{ isFinancial ? '' : ' — اختياري' }}</label>
       <input v-model.number="form.amount" type="number" placeholder="0" />
     </div>
 
@@ -163,14 +171,32 @@ function save() {
   gap: 8px;
 
   .type {
-    padding: 8px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
     border-radius: var(--radius-sm);
     border: 1.5px solid var(--border);
     background: var(--surface);
+    color: var(--text);
     font-family: inherit;
-    font-size: 13px;
+    font-size: 12.5px;
+    cursor: pointer;
 
     &.is-active { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
   }
+}
+
+.flow {
+  display: inline-block;
+  margin-block-start: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+
+  &--out { background: var(--danger-bg); color: var(--danger-text); }
+  &--in { background: var(--ok-bg); color: var(--ok-text); }
+  &--none { background: var(--surface-2); color: var(--text-muted); }
 }
 </style>

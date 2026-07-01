@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSettingsStore, type CustomTheme } from '@/stores/SettingsStore'
-import { THEME_PRESETS, SCREENS, PRICING_PLANS } from '@/constants'
+import { THEME_PRESETS, SCREENS, PRICING_PLANS, DEFAULT_HELP } from '@/constants'
 import type { CustomLists, UserPrefs } from '@/interfaces/models'
 import ToggleActivationSwitch from '@/components/shared/ToggleActivationSwitch.vue'
 import IntegrationsPanel from '../components/IntegrationsPanel.vue'
@@ -65,10 +65,53 @@ function addItem(key: keyof CustomLists) {
   newItem[key] = ''
 }
 
-// شروحات الأقسام — اختيار الشاشة من قائمة
-const selectedScreen = ref(SCREENS[0].id)
-watch(selectedScreen, (id) => settingsStore.ensureHelp(id), { immediate: true })
-const selectedHelp = computed(() => help.value[selectedScreen.value])
+// ── شروحات الأقسام — كل الشاشات قابلة للتحرير مباشرةً ──
+// نضمن وجود مدخل شرح لكل شاشة حتى يعمل الربط ثنائي الاتجاه (v-model)
+SCREENS.forEach((s) => settingsStore.ensureHelp(s.id))
+
+const SCREEN_ICONS: Record<string, string> = {
+  dashboard: '📊', tasks: '✅', projects: '🏢', members: '👥', finance: '💰',
+  ledger: '⛃', receivables: '🧾', commitments: '📌', assets: '🚗', trackings: '🔔',
+  requests: '📥', documents: '📄', surveys: '📋', notifications: '🔔', audit: '🗂️', settings: '⚙️',
+}
+
+const helpSearch = ref('')
+const expandedScreen = ref<string | null>(SCREENS[0].id)
+const confirmingHelpReset = ref(false)
+
+// هل الشرح الحالي مطابق للنص الأصلي؟ (لإظهار شارة «مُعدّل» وتعطيل الاستعادة)
+function isDefaultHelp(id: string): boolean {
+  const cur = help.value[id]
+  const def = DEFAULT_HELP[id]
+  if (!def) return !cur?.title && !cur?.body
+  return cur?.title === def.title && cur?.body === def.body && cur?.show === def.show
+}
+
+const filteredScreens = computed(() => {
+  const q = helpSearch.value.trim()
+  if (!q) return SCREENS
+  return SCREENS.filter(
+    (s) => s.label.includes(q) || (help.value[s.id]?.body ?? '').includes(q) || (help.value[s.id]?.title ?? '').includes(q),
+  )
+})
+
+const helpStats = computed(() => {
+  let visible = 0
+  let customized = 0
+  for (const s of SCREENS) {
+    if (help.value[s.id]?.show) visible++
+    if (!isDefaultHelp(s.id)) customized++
+  }
+  return { visible, hidden: SCREENS.length - visible, customized, total: SCREENS.length }
+})
+
+function toggleExpand(id: string) {
+  expandedScreen.value = expandedScreen.value === id ? null : id
+}
+function resetAllHelp() {
+  SCREENS.forEach((s) => settingsStore.resetHelp(s.id))
+  confirmingHelpReset.value = false
+}
 
 // التكاملات (عرض فقط)
 </script>
@@ -82,9 +125,17 @@ const selectedHelp = computed(() => help.value[selectedScreen.value])
 
     <div class="settings__body">
       <!-- التبويبات الجانبية -->
-      <nav class="settings__tabs">
-        <button v-for="t in TABS" :key="t.id" class="stab" :class="{ 'is-active': tab === t.id }" @click="tab = t.id">
-          <span>{{ t.icon }}</span>{{ t.label }}
+      <nav class="settings__tabs" role="tablist" aria-label="أقسام الإعدادات">
+        <button
+          v-for="t in TABS"
+          :key="t.id"
+          class="stab"
+          :class="{ 'is-active': tab === t.id }"
+          role="tab"
+          :aria-selected="tab === t.id"
+          @click="tab = t.id"
+        >
+          <span aria-hidden="true">{{ t.icon }}</span>{{ t.label }}
         </button>
       </nav>
 
@@ -106,6 +157,13 @@ const selectedHelp = computed(() => help.value[selectedScreen.value])
               <option value="1m">آخر شهر</option>
               <option value="6m">آخر 6 أشهر</option>
               <option value="12m">آخر سنة</option>
+            </select>
+          </div>
+          <div class="toggle-row">
+            <span>كثافة الواجهة</span>
+            <select :value="prefs.density" class="select" @change="settingsStore.setPref('density', ($event.target as HTMLSelectElement).value as 'comfortable' | 'compact')">
+              <option value="comfortable">مريحة</option>
+              <option value="compact">مدمجة</option>
             </select>
           </div>
         </div>
@@ -208,38 +266,84 @@ const selectedHelp = computed(() => help.value[selectedScreen.value])
           </button>
         </div>
 
-        <!-- شروحات الأقسام (قابلة للتحرير) -->
+        <!-- شروحات الأقسام — كل الشاشات قابلة للتحرير -->
         <div v-else-if="tab === 'help'" class="help-edit">
           <div class="app-card panel help-intro">
             <h2>💡 شروحات الأقسام</h2>
-            <p class="muted" style="margin: 0">
-              اختر الشاشة من القائمة واكتب الشرح — ستظهر أيقونة (ⓘ) بجانب عنوان تلك الشاشة، وعند النقر عليها يرى المستخدم الشرح في نافذة منبثقة.
+            <p class="muted" style="margin-block-end: 14px">
+              تظهر أيقونة (ⓘ) بجانب عنوان كل شاشة مُفعّلة؛ نقرة عليها تُظهر الشرح للمستخدم في نافذة منبثقة. عدّل أي شرح مباشرةً من القائمة أدناه.
             </p>
-          </div>
 
-          <!-- اختيار الشاشة -->
-          <div class="app-card panel">
-            <div class="field">
-              <label>اختر الشاشة</label>
-              <select v-model="selectedScreen">
-                <option v-for="s in SCREENS" :key="s.id" :value="s.id">{{ s.label }}</option>
-              </select>
+            <!-- ملخّص سريع -->
+            <div class="help-summary">
+              <span class="help-summary__pill is-on">👁️ ظاهر <b>{{ helpStats.visible }}</b></span>
+              <span class="help-summary__pill is-off">🚫 مخفي <b>{{ helpStats.hidden }}</b></span>
+              <span class="help-summary__pill is-custom">✏️ مُعدّل <b>{{ helpStats.customized }}</b></span>
+              <span class="help-summary__pill">📋 الإجمالي <b>{{ helpStats.total }}</b></span>
             </div>
 
-            <div v-if="selectedHelp" class="help-card">
-              <div class="help-card__head">
-                <input v-model="selectedHelp.title" class="help-card__title" placeholder="عنوان الشرح" />
-                <div class="help-card__toggle">
-                  <span>{{ selectedHelp.show ? 'ظاهر' : 'مخفي' }}</span>
-                  <ToggleActivationSwitch :model-value="selectedHelp.show" @update:model-value="settingsStore.toggleHelp(selectedScreen)" />
-                </div>
+            <!-- أدوات: بحث + استعادة الكل -->
+            <div class="help-tools">
+              <div class="help-search">
+                <span>🔍</span>
+                <input v-model="helpSearch" type="text" placeholder="ابحث باسم الشاشة أو داخل نص الشرح..." />
+                <button v-if="helpSearch" class="help-search__x" @click="helpSearch = ''">✕</button>
               </div>
-              <textarea v-model="selectedHelp.body" rows="5" class="help-card__body" placeholder="اكتب نص الشرح الذي سيظهر للمستخدم..."></textarea>
-              <div class="help-card__foot">
-                <button class="restore-btn" @click="settingsStore.resetHelp(selectedScreen)">استعادة النص الافتراضي</button>
-                <span class="help-card__preview">
-                  معاينة: <span class="help-card__chip">ⓘ</span> بجانب عنوان "{{ SCREENS.find((s) => s.id === selectedScreen)?.label }}"
-                </span>
+              <template v-if="!confirmingHelpReset">
+                <button class="app-btn app-btn--outlined" :disabled="!helpStats.customized" @click="confirmingHelpReset = true">
+                  ↺ استعادة كل الشروحات
+                </button>
+              </template>
+              <template v-else>
+                <span class="data-confirm">سيُستبدل كل شرح بالنص الأصلي.</span>
+                <button class="app-btn app-btn--danger" @click="resetAllHelp">نعم</button>
+                <button class="app-btn app-btn--ghost" @click="confirmingHelpReset = false">إلغاء</button>
+              </template>
+            </div>
+          </div>
+
+          <!-- لا نتائج -->
+          <div v-if="!filteredScreens.length" class="app-card panel help-empty">
+            لا توجد شاشة مطابقة لـ «{{ helpSearch }}».
+          </div>
+
+          <!-- قائمة الشاشات (أكورديون) -->
+          <div
+            v-for="s in filteredScreens"
+            :key="s.id"
+            class="hrow app-card"
+            :class="{ 'is-open': expandedScreen === s.id, 'is-hidden': !help[s.id]?.show }"
+          >
+            <button class="hrow__head" @click="toggleExpand(s.id)">
+              <span class="hrow__icon">{{ SCREEN_ICONS[s.id] ?? '📄' }}</span>
+              <span class="hrow__label">{{ s.label }}</span>
+              <span v-if="!isDefaultHelp(s.id)" class="hrow__badge is-custom">مُعدّل</span>
+              <span class="hrow__badge" :class="help[s.id]?.show ? 'is-on' : 'is-off'">
+                {{ help[s.id]?.show ? 'ظاهر' : 'مخفي' }}
+              </span>
+              <span class="hrow__chev">{{ expandedScreen === s.id ? '▾' : '▸' }}</span>
+            </button>
+
+            <div v-if="expandedScreen === s.id" class="hrow__body">
+              <label class="hrow__lbl">عنوان الشرح</label>
+              <input v-model="help[s.id].title" class="hrow__title" placeholder="عنوان الشرح" />
+
+              <label class="hrow__lbl">نص الشرح</label>
+              <textarea
+                v-model="help[s.id].body"
+                rows="5"
+                class="hrow__text"
+                placeholder="اكتب الشرح الذي سيراه المستخدم عند الضغط على أيقونة (ⓘ)..."
+              ></textarea>
+
+              <div class="hrow__foot">
+                <div class="hrow__toggle">
+                  <ToggleActivationSwitch :model-value="help[s.id].show" @update:model-value="settingsStore.toggleHelp(s.id)" />
+                  <span>{{ help[s.id].show ? 'يظهر للمستخدم' : 'مخفي عن المستخدم' }}</span>
+                </div>
+                <button class="restore-btn" :disabled="isDefaultHelp(s.id)" @click="settingsStore.resetHelp(s.id)">
+                  ↺ استعادة النص الأصلي
+                </button>
               </div>
             </div>
           </div>
@@ -411,11 +515,6 @@ const selectedHelp = computed(() => help.value[selectedScreen.value])
   color: var(--danger-text);
 }
 
-.app-btn--danger {
-  background: var(--error);
-  color: #fff;
-}
-
 .select {
   padding: 8px 12px;
   border-radius: var(--radius-sm);
@@ -585,62 +684,164 @@ const selectedHelp = computed(() => help.value[selectedScreen.value])
 .help-edit {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .help-intro { padding: 20px 24px; }
 
-.help-card {
-  padding: 16px 18px;
+.help-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-end: 14px;
+
+  &__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+
+    b { color: var(--text); font-size: 13px; }
+
+    &.is-on { background: var(--ok-bg); color: var(--ok-text); border-color: transparent; b { color: inherit; } }
+    &.is-off { background: var(--surface-2); }
+    &.is-custom { background: var(--info-bg); color: var(--info-text); border-color: transparent; b { color: inherit; } }
+  }
+}
+
+.help-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.help-search {
+  flex: 1;
+  min-inline-size: 200px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-size: 13px;
+
+  &:focus-within { border-color: var(--primary); }
+
+  input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--text);
+    &:focus { outline: none; }
+  }
+
+  &__x {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+}
+
+.help-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 24px;
+}
+
+.hrow {
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+
+  &.is-open { border-color: var(--primary); }
+  &.is-hidden:not(.is-open) { opacity: 0.7; }
 
   &__head {
+    inline-size: 100%;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-block-end: 10px;
+    gap: 12px;
+    padding: 14px 18px;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    text-align: start;
+    color: var(--text);
+
+    &:hover { background: var(--primary-soft); }
+  }
+
+  &__icon { font-size: 19px; flex-shrink: 0; }
+
+  &__label { flex: 1; font-weight: 600; font-size: 14px; }
+
+  &__badge {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 20px;
+    flex-shrink: 0;
+
+    &.is-on { background: var(--ok-bg); color: var(--ok-text); }
+    &.is-off { background: var(--surface-2); color: var(--text-muted); }
+    &.is-custom { background: var(--info-bg); color: var(--info-text); }
+  }
+
+  &__chev { color: var(--text-muted); font-size: 12px; flex-shrink: 0; }
+
+  &__body {
+    padding: 4px 18px 18px;
+    border-block-start: 1px solid var(--border);
+  }
+
+  &__lbl {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin: 14px 0 6px;
   }
 
   &__title {
-    flex: 1;
-    font-weight: 700;
-    font-size: 14px;
-    color: var(--text);
-    background: transparent;
-    border: none;
-    border-block-end: 1px solid transparent;
+    inline-size: 100%;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
     font-family: inherit;
-    padding: 2px 0;
-
-    &:focus { outline: none; border-block-end-color: var(--border); }
+    font-size: 13.5px;
+    font-weight: 600;
+    background: var(--bg);
+    color: var(--text);
+    &:focus { outline: none; border-color: var(--primary); }
   }
 
-  &__toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-    font-size: 11.5px;
-    color: var(--text-muted);
-  }
-
-  &__body {
+  &__text {
     inline-size: 100%;
     padding: 10px 12px;
     border-radius: 8px;
     border: 1px solid var(--border);
     font-family: inherit;
     font-size: 12.5px;
-    line-height: 1.8;
+    line-height: 1.9;
     background: var(--bg);
     color: var(--text);
     resize: vertical;
-
     &:focus { outline: none; border-color: var(--primary); }
   }
 
   &__foot {
-    margin-block-start: 8px;
+    margin-block-start: 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -648,22 +849,12 @@ const selectedHelp = computed(() => help.value[selectedScreen.value])
     flex-wrap: wrap;
   }
 
-  &__preview {
-    font-size: 11px;
-    color: var(--text-muted);
-  }
-
-  &__chip {
-    display: inline-flex;
+  &__toggle {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    inline-size: 18px;
-    block-size: 18px;
-    border-radius: 50%;
-    background: var(--primary-soft);
-    color: var(--primary);
-    font-weight: 700;
-    font-size: 11px;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
   }
 }
 
@@ -671,10 +862,13 @@ const selectedHelp = computed(() => help.value[selectedScreen.value])
   background: none;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 4px 10px;
-  font-size: 11px;
+  padding: 6px 12px;
+  font-size: 12px;
   color: var(--text-muted);
   font-family: inherit;
+
+  &:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+  &:disabled { opacity: 0.45; cursor: default; }
 }
 
 .integration {

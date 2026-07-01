@@ -6,7 +6,7 @@ import { useRequestsStore } from '@/stores/RequestsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
 import { fmt } from '@/helpers/format'
-import { REQUEST_STATUS } from '@/constants'
+import { REQUEST_STATUS, REQUEST_TYPE_META } from '@/constants'
 import { useFocusHighlight } from '@/composables/useFocusHighlight'
 import type { RequestItem, RequestStatus } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
@@ -120,7 +120,7 @@ async function onDelete(r: RequestItem) {
         <div class="req__main" @click="viewing = r">
           <div class="req__title-row">
             <span class="req__title">{{ r.title }}</span>
-            <span class="req__type">{{ r.type }}</span>
+            <span class="req__type">{{ REQUEST_TYPE_META[r.type]?.icon ?? '📋' }} {{ r.type }}</span>
             <span v-if="r.attachments?.length" class="req__clip" title="مرفقات">📎{{ r.attachments.length }}</span>
           </div>
           <span class="req__meta">
