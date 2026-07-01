@@ -346,7 +346,7 @@ body {
 //  ضبط الريسبونس العام للجوال (يطبّق على كل الشاشات)
 //  يستخدم !important لتجاوز الأنماط المحلية (scoped) عند الحاجة
 // ═══════════════════════════════════════════
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   // عناوين الصفحات أصغر
   h1 {
     font-size: 19px !important;
@@ -417,6 +417,22 @@ body {
     }
   }
 
+  // تبويبات الإعدادات الكثيرة: شريط تمرير أفقي أنيق بدل الالتفاف المزدحم
+  .settings__tabs {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    > * {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+  }
+
   // أشرطة الفلاتر: كل عنصر بعرض مناسب
   .filters {
     &__search {
@@ -458,6 +474,34 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  // أهداف لمس ≥ 40px (WCAG) — يتجاوز أنماط المكوّنات المحدودة عبر !important
+  .icon-btn {
+    min-inline-size: 40px !important;
+    min-block-size: 40px !important;
+  }
+
+  // تذييل المودال: الأزرار تلتف وتتمدد بدل الازدحام
+  .modal__footer {
+    flex-wrap: wrap !important;
+
+    .app-btn {
+      flex: 1 1 auto;
+    }
+  }
+
+  // زر إغلاق المودال هدف لمس مناسب
+  .modal__close {
+    min-inline-size: 34px;
+    min-block-size: 34px;
+  }
+
+  // كسر النصوص العربية الطويلة داخل البطاقات (منع التجاوز الأفقي)
+  [class$='__name'],
+  [class$='__title'],
+  [class$='__party'] {
+    overflow-wrap: anywhere;
   }
 }
 
