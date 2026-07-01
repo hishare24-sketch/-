@@ -160,8 +160,8 @@ function save() {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #7c3aed;
-  background: #faf5ff;
+  color: var(--purple-text);
+  background: var(--purple-bg);
   padding: 12px 14px;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -174,12 +174,12 @@ function save() {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: #faf5ff;
+  background: var(--purple-bg);
   border-radius: 10px;
   padding: 10px 14px;
   margin-block: -8px 16px;
   font-size: 12px;
-  color: #7c3aed;
+  color: var(--purple-text);
 
   button {
     background: #7c3aed;

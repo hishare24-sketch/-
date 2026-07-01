@@ -45,10 +45,10 @@ const filtered = computed(() =>
 )
 
 const typeMeta: Record<string, { icon: string; color: string; bg: string }> = {
-  danger: { icon: '🔴', color: '#dc2626', bg: '#fef2f2' },
-  warning: { icon: '🟠', color: '#d97706', bg: '#fffbeb' },
-  success: { icon: '🟢', color: '#059669', bg: '#ecfdf5' },
-  info: { icon: '🔵', color: '#0891b2', bg: '#ecfeff' },
+  danger: { icon: '🔴', color: 'var(--danger-text)', bg: 'var(--danger-bg)' },
+  warning: { icon: '🟠', color: 'var(--warn-text)', bg: 'var(--warn-bg)' },
+  success: { icon: '🟢', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+  info: { icon: '🔵', color: 'var(--info-text)', bg: 'var(--info-bg)' },
 }
 const meta = (t: string) => typeMeta[t] ?? typeMeta.info
 

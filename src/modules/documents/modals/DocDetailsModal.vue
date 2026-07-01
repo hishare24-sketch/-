@@ -134,7 +134,7 @@ function trigger(kind: DocActionKind) {
 }
 
 .ai {
-  background: linear-gradient(135deg, #faf5ff, var(--surface));
+  background: linear-gradient(135deg, var(--purple-bg), var(--surface));
   border: 1px solid #e9d5ff;
   border-radius: var(--radius);
   padding: 18px;
@@ -147,22 +147,22 @@ function trigger(kind: DocActionKind) {
     margin-block-end: 14px;
   }
 
-  &__title { font-weight: 700; font-size: 14px; color: #7c3aed; }
-  &__conf { font-size: 12px; font-weight: 600; color: #059669; background: #ecfdf5; padding: 2px 10px; border-radius: 20px; }
+  &__title { font-weight: 700; font-size: 14px; color: var(--purple-text); }
+  &__conf { font-size: 12px; font-weight: 600; color: var(--ok-text); background: var(--ok-bg); padding: 2px 10px; border-radius: 20px; }
 
   &__run {
     inline-size: 100%;
     padding: 12px;
     border: 1.5px dashed #c4b5fd;
     border-radius: var(--radius-sm);
-    background: #fff;
-    color: #7c3aed;
+    background: var(--surface);
+    color: var(--purple-text);
     font-family: inherit;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
 
-    &:hover { background: #faf5ff; }
+    &:hover { background: var(--purple-bg); }
   }
 
   &__loading {
@@ -170,7 +170,7 @@ function trigger(kind: DocActionKind) {
     align-items: center;
     gap: 12px;
     padding: 16px;
-    color: #6d28d9;
+    color: var(--purple-text);
     font-size: 14px;
   }
 
@@ -178,7 +178,7 @@ function trigger(kind: DocActionKind) {
     inline-size: 22px;
     block-size: 22px;
     border: 3px solid #ddd6fe;
-    border-block-start-color: #7c3aed;
+    border-block-start-color: var(--purple-text);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
@@ -195,7 +195,7 @@ function trigger(kind: DocActionKind) {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    background: #fff;
+    background: var(--surface);
     border-radius: var(--radius-sm);
     padding: 8px 12px;
   }

@@ -688,8 +688,8 @@ const integrations = [
 
   &__save {
     font-size: 11px;
-    background: #ecfdf5;
-    color: #059669;
+    background: var(--ok-bg);
+    color: var(--ok-text);
     padding: 1px 8px;
     border-radius: 20px;
   }

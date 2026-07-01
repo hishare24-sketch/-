@@ -32,8 +32,8 @@ function exportStatement() {
     <div style="font-weight:700;margin-bottom:8px">سجل الدفعات</div>
     <table style="width:100%;border-collapse:collapse;font-size:13px;border-top:1px solid #ddd">${payRows}</table>
     <table style="width:100%;border-collapse:collapse;font-size:16px;margin-top:16px">
-      <tr><td style="padding:6px 0;font-weight:700">المدفوع</td><td style="text-align:left;font-weight:700;color:#15803d">${fmtNum(paid.value)} ر.س</td></tr>
-      <tr><td style="padding:6px 0;font-weight:800;border-top:2px solid #2563eb">المتبقّي</td><td style="text-align:left;font-weight:800;border-top:2px solid #2563eb;color:#b91c1c">${fmtNum(remaining.value)} ر.س</td></tr>
+      <tr><td style="padding:6px 0;font-weight:700">المدفوع</td><td style="text-align:left;font-weight:700;color:var(--ok-text)">${fmtNum(paid.value)} ر.س</td></tr>
+      <tr><td style="padding:6px 0;font-weight:800;border-top:2px solid #2563eb">المتبقّي</td><td style="text-align:left;font-weight:800;border-top:2px solid #2563eb;color:var(--danger-text)">${fmtNum(remaining.value)} ر.س</td></tr>
     </table>`
   exportPDF(`كشف_حساب_${r.party}`, docHTML({ title: 'كشف حساب ذمة', subtitle: r.party, body })).catch((e) => alert(e.message))
 }
@@ -103,8 +103,8 @@ function exportStatement() {
     span { display: block; font-size: 11px; color: var(--text-muted); margin-block-end: 4px; }
     strong { font-size: 15px; }
 
-    &.is-paid strong { color: #15803d; }
-    &.is-remaining strong { color: #b91c1c; }
+    &.is-paid strong { color: var(--ok-text); }
+    &.is-remaining strong { color: var(--danger-text); }
   }
 }
 

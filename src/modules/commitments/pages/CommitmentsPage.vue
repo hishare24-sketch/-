@@ -60,10 +60,10 @@ const monthlyImpact = computed(() => {
 })
 
 const stats = computed(() => [
-  { label: 'التزامات نشطة', value: String(commitments.value.filter((c) => c.active).length), icon: '📌', color: '#0891b2', bg: '#ecfeff' },
-  { label: 'أثر شهري صادر', value: fmtNum(monthlyImpact.value.out), icon: '📤', color: '#dc2626', bg: '#fef2f2' },
-  { label: 'أثر شهري وارد', value: fmtNum(monthlyImpact.value.inc), icon: '📥', color: '#059669', bg: '#ecfdf5' },
-  { label: 'صافي شهري', value: fmtNum(monthlyImpact.value.inc - monthlyImpact.value.out), icon: '📊', color: '#7e22ce', bg: '#faf5ff' },
+  { label: 'التزامات نشطة', value: String(commitments.value.filter((c) => c.active).length), icon: '📌', color: 'var(--info-text)', bg: 'var(--info-bg)' },
+  { label: 'أثر شهري صادر', value: fmtNum(monthlyImpact.value.out), icon: '📤', color: 'var(--danger-text)', bg: 'var(--danger-bg)' },
+  { label: 'أثر شهري وارد', value: fmtNum(monthlyImpact.value.inc), icon: '📥', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+  { label: 'صافي شهري', value: fmtNum(monthlyImpact.value.inc - monthlyImpact.value.out), icon: '📊', color: '#7e22ce', bg: 'var(--purple-bg)' },
 ])
 
 const kindLabel = (k: CommitmentKind) => COMMITMENT_KINDS.find((x) => x.id === k)?.label ?? k
@@ -327,8 +327,8 @@ function onPay(c: Commitment) {
 
   &__value {
     font-weight: 700;
-    &.out { color: #b91c1c; }
-    &.in { color: #15803d; }
+    &.out { color: var(--danger-text); }
+    &.in { color: var(--ok-text); }
   }
 
   &__due { font-size: 11px; color: var(--text-muted); }
@@ -341,7 +341,7 @@ function onPay(c: Commitment) {
 
   &__done {
     font-size: 13px;
-    color: #059669;
+    color: var(--ok-text);
     font-weight: 600;
   }
 }

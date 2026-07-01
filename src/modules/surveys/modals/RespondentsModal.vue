@@ -177,7 +177,7 @@ const sourceLabel: Record<string, string> = { member: 'عضو', manual: 'يدو�
   &__name { font-weight: 600; font-size: 13px; }
   &__email { flex: 1; font-size: 12px; color: var(--text-muted); }
   &__add { padding: 5px 12px; font-size: 12px; }
-  &__added { border: none; background: #ecfdf5; color: #059669; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; }
+  &__added { border: none; background: var(--ok-bg); color: var(--ok-text); border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; }
 }
 
 .manual {

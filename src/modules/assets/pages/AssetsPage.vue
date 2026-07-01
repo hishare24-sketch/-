@@ -46,10 +46,10 @@ const totalValue = computed(() => assets.value.reduce((s, a) => s + a.purchaseVa
 const totalMaint = computed(() => assets.value.reduce((s, a) => s + assetMaintCost(a), 0))
 
 const stats = computed(() => [
-  { label: 'عدد الأصول', value: String(assets.value.length), icon: '📦', color: '#0891b2', bg: '#ecfeff' },
-  { label: 'إجمالي القيمة', value: fmt(totalValue.value), icon: '💎', color: '#059669', bg: '#ecfdf5' },
-  { label: 'تكاليف الصيانة', value: fmt(totalMaint.value), icon: '🔧', color: '#dc2626', bg: '#fef2f2' },
-  { label: 'تحت الصيانة', value: String(assets.value.filter((a) => a.status === 'maintenance').length), icon: '⚠️', color: '#d97706', bg: '#fffbeb' },
+  { label: 'عدد الأصول', value: String(assets.value.length), icon: '📦', color: 'var(--info-text)', bg: 'var(--info-bg)' },
+  { label: 'إجمالي القيمة', value: fmt(totalValue.value), icon: '💎', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+  { label: 'تكاليف الصيانة', value: fmt(totalMaint.value), icon: '🔧', color: 'var(--danger-text)', bg: 'var(--danger-bg)' },
+  { label: 'تحت الصيانة', value: String(assets.value.filter((a) => a.status === 'maintenance').length), icon: '⚠️', color: 'var(--warn-text)', bg: 'var(--warn-bg)' },
 ])
 
 const catInfo = (c: AssetCategory) => ASSET_CATEGORIES.find((x) => x.id === c)!
@@ -58,9 +58,9 @@ const catInfo = (c: AssetCategory) => ASSET_CATEGORIES.find((x) => x.id === c)!
 function warrantyInfo(a: Asset) {
   if (!a.warrantyEnd) return null
   const d = daysBetween(a.warrantyEnd)
-  if (d < 0) return { label: 'الضمان منتهٍ', days: d, color: '#dc2626', bg: '#fef2f2' }
-  if (d <= 30) return { label: `الضمان: ${d} يوم`, days: d, color: '#d97706', bg: '#fffbeb' }
-  return { label: 'الضمان ساري', days: d, color: '#059669', bg: '#ecfdf5' }
+  if (d < 0) return { label: 'الضمان منتهٍ', days: d, color: 'var(--danger-text)', bg: 'var(--danger-bg)' }
+  if (d <= 30) return { label: `الضمان: ${d} يوم`, days: d, color: 'var(--warn-text)', bg: 'var(--warn-bg)' }
+  return { label: 'الضمان ساري', days: d, color: 'var(--ok-text)', bg: 'var(--ok-bg)' }
 }
 const holderName = (a: Asset) => (a.memberId ? projectsStore.memberById(a.memberId)?.name : null)
 

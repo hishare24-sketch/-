@@ -82,8 +82,8 @@ const totalPaid = computed(() => props.commitment.payments.reduce((s, p) => s + 
     font-size: 22px;
     font-weight: 800;
 
-    &.out { color: #b91c1c; }
-    &.in { color: #15803d; }
+    &.out { color: var(--danger-text); }
+    &.in { color: var(--ok-text); }
   }
 
   &__freq { font-size: 13px; color: var(--text-muted); }

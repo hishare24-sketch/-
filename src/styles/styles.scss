@@ -10,10 +10,23 @@
 
   --bg: #f8f9fb;
   --surface: #ffffff;
+  --surface-2: #f3f4f6;
   --border: #e5e7eb;
 
   --text: #111827;
   --text-muted: #6b7280;
+
+  // ألوان دلالية متكيّفة (خلفية فاتحة + نص داكن في الوضع الفاتح)
+  --ok-bg: #ecfdf5;
+  --ok-text: #15803d;
+  --danger-bg: #fef2f2;
+  --danger-text: #b91c1c;
+  --warn-bg: #fffbeb;
+  --warn-text: #a16207;
+  --info-bg: #eff6ff;
+  --info-text: #1d4ed8;
+  --purple-bg: #faf5ff;
+  --purple-text: #7c3aed;
 
   --radius: 12px;
   --radius-sm: 8px;
@@ -23,8 +36,22 @@
 
 // الوضع الداكن — القيم الأساسية تُحقَن من SettingsStore، وهذه لمسات إضافية
 [data-theme='dark'] {
+  --surface-2: #212a3b;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+
+  // نُسخ داكنة: خلفية شفّافة ملوّنة + نص فاتح لتباين مريح
+  --ok-bg: rgba(34, 197, 94, 0.14);
+  --ok-text: #4ade80;
+  --danger-bg: rgba(248, 113, 113, 0.15);
+  --danger-text: #f87171;
+  --warn-bg: rgba(245, 158, 11, 0.15);
+  --warn-text: #fbbf24;
+  --info-bg: rgba(96, 165, 250, 0.16);
+  --info-text: #60a5fa;
+  --purple-bg: rgba(192, 132, 252, 0.16);
+  --purple-text: #c084fc;
+
   color-scheme: dark;
 }
 

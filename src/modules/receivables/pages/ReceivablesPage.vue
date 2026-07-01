@@ -57,16 +57,16 @@ const totalPay = computed(() => receivables.value.filter((r) => r.kind === 'paya
 const overdue = computed(() => receivables.value.filter((r) => r.status !== 'settled' && r.dueDate && r.dueDate < today()).length)
 
 const stats = computed(() => [
-  { label: 'ذمم مدينة (لنا)', value: fmtNum(totalRecv.value), icon: '📥', color: '#059669', bg: '#ecfdf5' },
-  { label: 'ذمم دائنة (علينا)', value: fmtNum(totalPay.value), icon: '📤', color: '#dc2626', bg: '#fef2f2' },
-  { label: 'صافي الذمم', value: fmtNum(totalRecv.value - totalPay.value), icon: '⇄', color: '#0891b2', bg: '#ecfeff' },
-  { label: 'متأخرة السداد', value: String(overdue.value), icon: '⏰', color: '#d97706', bg: '#fffbeb' },
+  { label: 'ذمم مدينة (لنا)', value: fmtNum(totalRecv.value), icon: '📥', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+  { label: 'ذمم دائنة (علينا)', value: fmtNum(totalPay.value), icon: '📤', color: 'var(--danger-text)', bg: 'var(--danger-bg)' },
+  { label: 'صافي الذمم', value: fmtNum(totalRecv.value - totalPay.value), icon: '⇄', color: 'var(--info-text)', bg: 'var(--info-bg)' },
+  { label: 'متأخرة السداد', value: String(overdue.value), icon: '⏰', color: 'var(--warn-text)', bg: 'var(--warn-bg)' },
 ])
 
 function statusInfo(s: ReceivableStatus) {
-  if (s === 'settled') return { l: 'مسددة', c: '#15803d', bg: '#ecfdf5' }
-  if (s === 'partial') return { l: 'جزئية', c: '#a16207', bg: '#fffbeb' }
-  return { l: 'مفتوحة', c: '#1d4ed8', bg: '#dbeafe' }
+  if (s === 'settled') return { l: 'مسددة', c: 'var(--ok-text)', bg: 'var(--ok-bg)' }
+  if (s === 'partial') return { l: 'جزئية', c: 'var(--warn-text)', bg: 'var(--warn-bg)' }
+  return { l: 'مفتوحة', c: 'var(--info-text)', bg: 'var(--info-bg)' }
 }
 
 // المودالات
@@ -298,8 +298,8 @@ async function onDelete(r: Receivable) {
     justify-content: center;
     font-size: 20px;
 
-    &.receivable { background: #ecfdf5; }
-    &.payable { background: #fef2f2; }
+    &.receivable { background: var(--ok-bg); }
+    &.payable { background: var(--danger-bg); }
   }
 
   &__main {

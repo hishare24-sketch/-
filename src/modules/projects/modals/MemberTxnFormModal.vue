@@ -194,11 +194,11 @@ function save() {
     font-weight: 600;
 
     &.to_member {
-      color: #15803d;
+      color: var(--ok-text);
     }
 
     &.from_member {
-      color: #b91c1c;
+      color: var(--danger-text);
     }
   }
 }

@@ -13,7 +13,7 @@ export interface CustomTheme {
 
 // القيم الافتراضية للوضعين الفاتح والداكن
 const LIGHT = { bg: '#f8f9fb', surface: '#ffffff', text: '#111827', border: '#e5e7eb', muted: '#6b7280' }
-const DARK = { bg: '#0b0f17', surface: '#161b26', text: '#f1f5f9', border: '#2a3346', muted: '#94a3b8' }
+const DARK = { bg: '#0b0f17', surface: '#1a2130', text: '#f1f5f9', border: '#313c52', muted: '#a3b0c2' }
 
 // تفضيلات المستخدم + القوائم + شروحات الأقسام + الثيم
 export const useSettingsStore = defineStore('settings', {

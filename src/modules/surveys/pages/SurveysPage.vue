@@ -17,9 +17,9 @@ const projectsStore = useProjectsStore()
 const { surveys } = storeToRefs(surveysStore)
 
 const stats = computed(() => [
-  { label: 'إجمالي الاستبيانات', value: String(surveys.value.length), icon: '📋', color: '#0891b2', bg: '#ecfeff' },
-  { label: 'نشطة', value: String(surveys.value.filter((s) => s.status === 'active').length), icon: '🟢', color: '#059669', bg: '#ecfdf5' },
-  { label: 'إجمالي الردود', value: String(surveys.value.reduce((s, sv) => s + sv.responses.length, 0)), icon: '💬', color: '#7e22ce', bg: '#faf5ff' },
+  { label: 'إجمالي الاستبيانات', value: String(surveys.value.length), icon: '📋', color: 'var(--info-text)', bg: 'var(--info-bg)' },
+  { label: 'نشطة', value: String(surveys.value.filter((s) => s.status === 'active').length), icon: '🟢', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+  { label: 'إجمالي الردود', value: String(surveys.value.reduce((s, sv) => s + sv.responses.length, 0)), icon: '💬', color: '#7e22ce', bg: 'var(--purple-bg)' },
 ])
 
 // الفلاتر والفرز
@@ -46,9 +46,9 @@ function clearFilters() {
 const tplIcon = (type: string) => SURVEY_TEMPLATES.find((t) => t.id === type)?.icon ?? '📋'
 
 function statusInfo(s: Survey['status']) {
-  if (s === 'active') return { l: 'نشط', c: '#059669', bg: '#ecfdf5' }
-  if (s === 'closed') return { l: 'مغلق', c: '#dc2626', bg: '#fef2f2' }
-  return { l: 'مسودة', c: '#d97706', bg: '#fffbeb' }
+  if (s === 'active') return { l: 'نشط', c: 'var(--ok-text)', bg: 'var(--ok-bg)' }
+  if (s === 'closed') return { l: 'مغلق', c: 'var(--danger-text)', bg: 'var(--danger-bg)' }
+  return { l: 'مسودة', c: 'var(--warn-text)', bg: 'var(--warn-bg)' }
 }
 
 const showBuilder = ref(false)

@@ -58,9 +58,9 @@ const warnings = computed(() => {
 const hasError = computed(() => warnings.value.some((w) => w.level === 'error'))
 
 function wMeta(level: string) {
-  if (level === 'error') return { c: '#dc2626', bg: '#fef2f2', icon: '🔴' }
-  if (level === 'warning') return { c: '#d97706', bg: '#fffbeb', icon: '🟠' }
-  return { c: '#0891b2', bg: '#ecfeff', icon: 'ℹ️' }
+  if (level === 'error') return { c: 'var(--danger-text)', bg: 'var(--danger-bg)', icon: '🔴' }
+  if (level === 'warning') return { c: 'var(--warn-text)', bg: 'var(--warn-bg)', icon: '🟠' }
+  return { c: 'var(--info-text)', bg: 'var(--info-bg)', icon: 'ℹ️' }
 }
 
 function save() {

@@ -36,16 +36,16 @@ const filtered = computed(() =>
 )
 
 const stats = computed(() => [
-  { label: 'إجمالي المتابعات', value: String(trackings.value.length), icon: '🔔', color: '#0891b2', bg: '#ecfeff' },
-  { label: 'نشطة', value: String(trackings.value.filter((t) => t.status === 'active').length), icon: '✅', color: '#059669', bg: '#ecfdf5' },
-  { label: 'توشك على الانتهاء', value: String(trackings.value.filter((t) => t.status === 'expiring').length), icon: '⏳', color: '#d97706', bg: '#fffbeb' },
-  { label: 'منتهية', value: String(trackings.value.filter((t) => t.status === 'expired').length), icon: '⛔', color: '#dc2626', bg: '#fef2f2' },
+  { label: 'إجمالي المتابعات', value: String(trackings.value.length), icon: '🔔', color: 'var(--info-text)', bg: 'var(--info-bg)' },
+  { label: 'نشطة', value: String(trackings.value.filter((t) => t.status === 'active').length), icon: '✅', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+  { label: 'توشك على الانتهاء', value: String(trackings.value.filter((t) => t.status === 'expiring').length), icon: '⏳', color: 'var(--warn-text)', bg: 'var(--warn-bg)' },
+  { label: 'منتهية', value: String(trackings.value.filter((t) => t.status === 'expired').length), icon: '⛔', color: 'var(--danger-text)', bg: 'var(--danger-bg)' },
 ])
 
 function statusInfo(s: TrackingStatus) {
-  if (s === 'active') return { l: 'نشط', c: '#059669', bg: '#ecfdf5' }
-  if (s === 'expiring') return { l: 'يوشك على الانتهاء', c: '#a16207', bg: '#fffbeb' }
-  return { l: 'منتهي', c: '#dc2626', bg: '#fef2f2' }
+  if (s === 'active') return { l: 'نشط', c: 'var(--ok-text)', bg: 'var(--ok-bg)' }
+  if (s === 'expiring') return { l: 'يوشك على الانتهاء', c: 'var(--warn-text)', bg: 'var(--warn-bg)' }
+  return { l: 'منتهي', c: 'var(--danger-text)', bg: 'var(--danger-bg)' }
 }
 
 const showForm = ref(false)

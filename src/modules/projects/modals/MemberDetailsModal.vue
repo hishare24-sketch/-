@@ -16,9 +16,9 @@ const txns = computed(() => projectsStore.txnsByMember(props.member.id))
 const txnInfo = (t: MemberTxn) => MEMBER_TXN_TYPES.find((x) => x.id === t.type)
 const permLabel = (id: string) => PERMISSIONS.find((p) => p.id === id)?.label ?? id
 function statusInfo(s: MemberTxn['status']) {
-  if (s === 'accepted') return { l: 'مقبولة', c: '#059669', bg: '#ecfdf5' }
-  if (s === 'rejected') return { l: 'مرفوضة', c: '#dc2626', bg: '#fef2f2' }
-  return { l: 'معلّقة', c: '#d97706', bg: '#fffbeb' }
+  if (s === 'accepted') return { l: 'مقبولة', c: 'var(--ok-text)', bg: 'var(--ok-bg)' }
+  if (s === 'rejected') return { l: 'مرفوضة', c: 'var(--danger-text)', bg: 'var(--danger-bg)' }
+  return { l: 'معلّقة', c: 'var(--warn-text)', bg: 'var(--warn-bg)' }
 }
 </script>
 
@@ -146,8 +146,8 @@ function statusInfo(s: MemberTxn['status']) {
     font-weight: 600;
     font-size: 13px;
 
-    &.to_member { color: #15803d; }
-    &.from_member { color: #b91c1c; }
+    &.to_member { color: var(--ok-text); }
+    &.from_member { color: var(--danger-text); }
   }
 
   &__status {

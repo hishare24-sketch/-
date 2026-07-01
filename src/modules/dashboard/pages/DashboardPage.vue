@@ -268,11 +268,11 @@ const chartSeries = computed(() => [
     margin-block-end: 8px;
 
     &.is-expired {
-      background: #fef2f2;
+      background: var(--danger-bg);
     }
 
     &.is-expiring {
-      background: #fffbeb;
+      background: var(--warn-bg);
     }
   }
 
@@ -337,18 +337,18 @@ const chartSeries = computed(() => [
     flex-shrink: 0;
 
     &.is-income {
-      background: #ecfdf5;
-      color: #059669;
+      background: var(--ok-bg);
+      color: var(--ok-text);
     }
 
     &.is-expense {
-      background: #fef2f2;
-      color: #dc2626;
+      background: var(--danger-bg);
+      color: var(--danger-text);
     }
 
     &.is-transfer {
-      background: #eff6ff;
-      color: #2563eb;
+      background: var(--info-bg);
+      color: var(--info-text);
     }
   }
 
@@ -377,15 +377,15 @@ const chartSeries = computed(() => [
     flex-shrink: 0;
 
     &.is-income {
-      color: #15803d;
+      color: var(--ok-text);
     }
 
     &.is-expense {
-      color: #b91c1c;
+      color: var(--danger-text);
     }
 
     &.is-transfer {
-      color: #1d4ed8;
+      color: var(--info-text);
     }
   }
 }

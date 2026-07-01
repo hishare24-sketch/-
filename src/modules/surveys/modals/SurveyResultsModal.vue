@@ -274,9 +274,9 @@ function exportReport() {
   &__score { font-size: 34px; font-weight: 800; }
   &__bd { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
   &__seg { padding: 2px 10px; border-radius: 20px;
-    &.is-promoter { background: #ecfdf5; color: #059669; }
-    &.is-passive { background: #fffbeb; color: #d97706; }
-    &.is-detractor { background: #fef2f2; color: #dc2626; }
+    &.is-promoter { background: var(--ok-bg); color: var(--ok-text); }
+    &.is-passive { background: var(--warn-bg); color: var(--warn-text); }
+    &.is-detractor { background: var(--danger-bg); color: var(--danger-text); }
   }
 }
 

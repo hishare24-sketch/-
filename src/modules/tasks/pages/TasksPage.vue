@@ -251,8 +251,8 @@ const payingRecv = ref<Receivable | null>(null)
   font-weight: 600;
   font-family: inherit;
 
-  &--ok { background: #ecfdf5; color: #059669; }
-  &--no { background: #fef2f2; color: #dc2626; }
+  &--ok { background: var(--ok-bg); color: var(--ok-text); }
+  &--no { background: var(--danger-bg); color: var(--danger-text); }
   &--primary { background: var(--primary-soft); color: var(--primary); }
 }
 </style>

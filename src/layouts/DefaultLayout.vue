@@ -4,11 +4,16 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useNotificationsStore } from '@/stores/NotificationsStore'
+import { useSettingsStore } from '@/stores/SettingsStore'
 import { useTasks } from '@/modules/tasks/composables/useTasks'
 import themeConfig from '@themeConfig'
 
 const { t } = useI18n()
 const router = useRouter()
+
+// تبديل الوضع الفاتح/الداكن
+const settingsStore = useSettingsStore()
+const { themeMode } = storeToRefs(settingsStore)
 
 // رجوع للشاشة السابقة (عام لكل الشاشات)
 function goBack() {
@@ -83,6 +88,13 @@ const navItems = computed(() => [
         </button>
         <div class="navbar__title">{{ t('app.subtitle') }}</div>
         <div class="navbar__spacer" />
+        <button
+          class="navbar__theme"
+          :title="themeMode === 'dark' ? 'الوضع الفاتح' : 'الوضع الداكن'"
+          @click="settingsStore.toggleThemeMode()"
+        >
+          {{ themeMode === 'dark' ? '☀️' : '🌙' }}
+        </button>
         <RouterLink :to="{ name: 'notifications-page' }" class="navbar__bell" title="الإشعارات">
           🔔
           <span v-if="unreadCount" class="navbar__bell-count">{{ unreadCount }}</span>
@@ -246,6 +258,25 @@ const navItems = computed(() => [
 
   &__spacer {
     flex: 1;
+  }
+
+  &__theme {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 36px;
+    block-size: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-size: 16px;
+    line-height: 1;
+    transition: border-color 0.15s ease, background 0.15s ease;
+
+    &:hover {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
   }
 
   &__bell {

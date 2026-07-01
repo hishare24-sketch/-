@@ -73,10 +73,10 @@ const totalIn = computed(() => filtered.value.filter((r) => r.dir === 'in').redu
 const totalOut = computed(() => filtered.value.filter((r) => r.dir === 'out').reduce((s, r) => s + r.amount, 0))
 
 const summary = computed(() => [
-  { l: 'إجمالي الوارد', v: fmt(totalIn.value), c: '#15803d', bg: '#ecfdf5', i: '↓' },
-  { l: 'إجمالي الصادر', v: fmt(totalOut.value), c: '#b91c1c', bg: '#fef2f2', i: '↑' },
-  { l: 'صافي التدفق', v: fmt(totalIn.value - totalOut.value), c: '#1d4ed8', bg: '#eff6ff', i: '⇄' },
-  { l: 'عدد العمليات', v: fmtNum(filtered.value.length), c: '#7c3aed', bg: '#faf5ff', i: '#' },
+  { l: 'إجمالي الوارد', v: fmt(totalIn.value), c: 'var(--ok-text)', bg: 'var(--ok-bg)', i: '↓' },
+  { l: 'إجمالي الصادر', v: fmt(totalOut.value), c: 'var(--danger-text)', bg: 'var(--danger-bg)', i: '↑' },
+  { l: 'صافي التدفق', v: fmt(totalIn.value - totalOut.value), c: 'var(--info-text)', bg: 'var(--info-bg)', i: '⇄' },
+  { l: 'عدد العمليات', v: fmtNum(filtered.value.length), c: 'var(--purple-text)', bg: 'var(--purple-bg)', i: '#' },
 ])
 
 const hasFilter = computed(() => fType.value !== 'all' || fProject.value !== 'all' || fMember.value !== 'all' || fPeriod.value !== 'all' || search.value !== '')
@@ -466,7 +466,7 @@ td {
   cursor: pointer;
 
   &:hover { background: var(--primary-soft); }
-  &.is-flagged { background: #fef2f2; &:hover { background: #fee2e2; } }
+  &.is-flagged { background: var(--danger-bg); &:hover { background: var(--danger-bg); } }
 }
 
 .empty {
@@ -484,8 +484,8 @@ td {
   font-weight: 600;
   white-space: nowrap;
 
-  &.is-in { color: #15803d; }
-  &.is-out { color: #b91c1c; }
+  &.is-in { color: var(--ok-text); }
+  &.is-out { color: var(--danger-text); }
 }
 
 .warn { margin-inline-start: 5px; }
@@ -494,8 +494,8 @@ td {
   font-weight: 600;
   white-space: nowrap;
 
-  &.is-in { color: #15803d; }
-  &.is-out { color: #b91c1c; }
+  &.is-in { color: var(--ok-text); }
+  &.is-out { color: var(--danger-text); }
 }
 
 .status {
@@ -505,9 +505,9 @@ td {
   white-space: nowrap;
 
   &.is-منفّذة,
-  &.is-مقبولة { background: #ecfdf5; color: #15803d; }
-  &.is-معلّقة { background: #fffbeb; color: #a16207; }
-  &.is-مرفوضة { background: #fef2f2; color: #b91c1c; }
+  &.is-مقبولة { background: var(--ok-bg); color: var(--ok-text); }
+  &.is-معلّقة { background: var(--warn-bg); color: var(--warn-text); }
+  &.is-مرفوضة { background: var(--danger-bg); color: var(--danger-text); }
 }
 
 // تحليل التدفقات
@@ -536,7 +536,7 @@ td {
     margin-block-end: 5px;
   }
 
-  &__net { font-weight: 600; color: #15803d; &.is-neg { color: #b91c1c; } }
+  &__net { font-weight: 600; color: var(--ok-text); &.is-neg { color: var(--danger-text); } }
 
   &__bar {
     display: flex;
@@ -548,8 +548,8 @@ td {
   &__tag {
     inline-size: 36px;
     font-size: 10px;
-    &.is-in { color: #15803d; }
-    &.is-out { color: #b91c1c; }
+    &.is-in { color: var(--ok-text); }
+    &.is-out { color: var(--danger-text); }
   }
 
   &__track {
@@ -570,8 +570,8 @@ td {
     inline-size: 66px;
     text-align: end;
     font-size: 11px;
-    &.is-in { color: #15803d; }
-    &.is-out { color: #b91c1c; }
+    &.is-in { color: var(--ok-text); }
+    &.is-out { color: var(--danger-text); }
   }
 }
 
@@ -593,8 +593,8 @@ td {
     gap: 14px;
     font-size: 12px;
 
-    .is-in { color: #15803d; }
-    .is-out { color: #b91c1c; }
+    .is-in { color: var(--ok-text); }
+    .is-out { color: var(--danger-text); }
   }
 }
 

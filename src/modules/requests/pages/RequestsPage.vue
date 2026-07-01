@@ -36,16 +36,16 @@ const filtered = computed(() =>
 )
 
 const stats = computed(() => [
-  { label: 'إجمالي الطلبات', value: String(requests.value.length), icon: '📥', color: '#0891b2', bg: '#ecfeff' },
-  { label: 'معلقة', value: String(requests.value.filter((r) => r.status === 'pending').length), icon: '⏳', color: '#d97706', bg: '#fffbeb' },
-  { label: 'معتمدة', value: String(requests.value.filter((r) => r.status === 'approved').length), icon: '✅', color: '#059669', bg: '#ecfdf5' },
-  { label: 'مرفوضة', value: String(requests.value.filter((r) => r.status === 'rejected').length), icon: '⛔', color: '#dc2626', bg: '#fef2f2' },
+  { label: 'إجمالي الطلبات', value: String(requests.value.length), icon: '📥', color: 'var(--info-text)', bg: 'var(--info-bg)' },
+  { label: 'معلقة', value: String(requests.value.filter((r) => r.status === 'pending').length), icon: '⏳', color: 'var(--warn-text)', bg: 'var(--warn-bg)' },
+  { label: 'معتمدة', value: String(requests.value.filter((r) => r.status === 'approved').length), icon: '✅', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+  { label: 'مرفوضة', value: String(requests.value.filter((r) => r.status === 'rejected').length), icon: '⛔', color: 'var(--danger-text)', bg: 'var(--danger-bg)' },
 ])
 
 function statusInfo(s: RequestStatus) {
-  if (s === 'approved') return { l: 'معتمد', c: '#059669', bg: '#ecfdf5' }
-  if (s === 'rejected') return { l: 'مرفوض', c: '#dc2626', bg: '#fef2f2' }
-  return { l: 'معلّق', c: '#d97706', bg: '#fffbeb' }
+  if (s === 'approved') return { l: 'معتمد', c: 'var(--ok-text)', bg: 'var(--ok-bg)' }
+  if (s === 'rejected') return { l: 'مرفوض', c: 'var(--danger-text)', bg: 'var(--danger-bg)' }
+  return { l: 'معلّق', c: 'var(--warn-text)', bg: 'var(--warn-bg)' }
 }
 
 const showForm = ref(false)
@@ -325,8 +325,8 @@ async function onDelete(r: RequestItem) {
   font-weight: 600;
   font-family: inherit;
 
-  &--ok { background: #ecfdf5; color: #059669; }
-  &--no { background: #fef2f2; color: #dc2626; }
+  &--ok { background: var(--ok-bg); color: var(--ok-text); }
+  &--no { background: var(--danger-bg); color: var(--danger-text); }
 }
 
 .icon-btn {

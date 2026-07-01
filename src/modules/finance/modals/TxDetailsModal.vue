@@ -34,7 +34,7 @@ function exportInvoice() {
   const body = `
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       ${rows.value.map(([k, v]) => `<tr><td style="padding:8px 0;color:#666;width:160px">${k}</td><td style="padding:8px 0;font-weight:600">${v}</td></tr>`).join('')}
-      <tr style="font-size:18px"><td style="padding:14px 0;font-weight:800;border-top:2px solid #2563eb">الإجمالي</td><td style="padding:14px 0;font-weight:800;border-top:2px solid #2563eb;color:#2563eb">${fmt(t.amount)}</td></tr>
+      <tr style="font-size:18px"><td style="padding:14px 0;font-weight:800;border-top:2px solid #2563eb">الإجمالي</td><td style="padding:14px 0;font-weight:800;border-top:2px solid #2563eb;color:var(--info-text)">${fmt(t.amount)}</td></tr>
     </table>`
   exportPDF(`فاتورة_${t.description}`, docHTML({ title: 'سند مالي', subtitle: t.description, body })).catch((e) => alert(e.message))
 }
@@ -73,9 +73,9 @@ function exportInvoice() {
   border-radius: var(--radius-sm);
   margin-block-end: 18px;
 
-  &.is-income { background: #ecfdf5; color: #15803d; }
-  &.is-expense { background: #fef2f2; color: #b91c1c; }
-  &.is-transfer { background: #eff6ff; color: #1d4ed8; }
+  &.is-income { background: var(--ok-bg); color: var(--ok-text); }
+  &.is-expense { background: var(--danger-bg); color: var(--danger-text); }
+  &.is-transfer { background: var(--info-bg); color: var(--info-text); }
 }
 
 .rows {

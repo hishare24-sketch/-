@@ -53,10 +53,10 @@ const transfersIn = computed(() => txns.value.filter((t) => t.type === 'transfer
 const transfersOut = computed(() => txns.value.filter((t) => t.type === 'transfer' && t.transferDir === 'out').reduce((s, t) => s + t.amount, 0))
 
 const stats = computed(() => [
-  { label: 'إجمالي الإيرادات', val: income.value, color: '#059669', bg: '#ecfdf5', icon: '📈' },
-  { label: 'إجمالي المصروفات', val: expense.value, color: '#dc2626', bg: '#fef2f2', icon: '📉' },
-  { label: 'صافي الربح', val: income.value - expense.value, color: '#0891b2', bg: '#ecfeff', icon: '💰' },
-  { label: 'صافي التحويلات', val: transfersIn.value - transfersOut.value, color: '#d97706', bg: '#fffbeb', icon: '↔' },
+  { label: 'إجمالي الإيرادات', val: income.value, color: 'var(--ok-text)', bg: 'var(--ok-bg)', icon: '📈' },
+  { label: 'إجمالي المصروفات', val: expense.value, color: 'var(--danger-text)', bg: 'var(--danger-bg)', icon: '📉' },
+  { label: 'صافي الربح', val: income.value - expense.value, color: 'var(--info-text)', bg: 'var(--info-bg)', icon: '💰' },
+  { label: 'صافي التحويلات', val: transfersIn.value - transfersOut.value, color: 'var(--warn-text)', bg: 'var(--warn-bg)', icon: '↔' },
 ])
 
 // توزيع المصروفات حسب التصنيف
@@ -470,7 +470,7 @@ td {
 }
 
 tbody tr.is-flagged {
-  background: #fef2f2;
+  background: var(--danger-bg);
 }
 
 tbody tr.clickable {
@@ -500,18 +500,18 @@ tbody tr.clickable {
     flex-shrink: 0;
 
     &.is-income {
-      background: #ecfdf5;
-      color: #059669;
+      background: var(--ok-bg);
+      color: var(--ok-text);
     }
 
     &.is-expense {
-      background: #fef2f2;
-      color: #dc2626;
+      background: var(--danger-bg);
+      color: var(--danger-text);
     }
 
     &.is-transfer {
-      background: #eff6ff;
-      color: #2563eb;
+      background: var(--info-bg);
+      color: var(--info-text);
     }
   }
 
@@ -522,7 +522,7 @@ tbody tr.clickable {
 
   &__flag {
     font-size: 11px;
-    color: #dc2626;
+    color: var(--danger-text);
   }
 
   &__source {
@@ -548,15 +548,15 @@ tbody tr.clickable {
   font-weight: 600;
 
   &.is-income {
-    color: #15803d;
+    color: var(--ok-text);
   }
 
   &.is-expense {
-    color: #b91c1c;
+    color: var(--danger-text);
   }
 
   &.is-transfer {
-    color: #1d4ed8;
+    color: var(--info-text);
   }
 }
 

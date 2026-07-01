@@ -50,10 +50,10 @@ const stats = computed(() => {
   const income = financeStore.transactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const expense = financeStore.transactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
   return [
-    { label: 'عدد المشاريع', value: String(projects.value.length), icon: '🏢', color: '#0891b2', bg: '#ecfeff' },
-    { label: 'إجمالي الأرصدة', value: fmt(totalBalance), icon: '💰', color: '#059669', bg: '#ecfdf5' },
-    { label: 'إجمالي الإيرادات', value: fmtNum(income), icon: '📈', color: '#059669', bg: '#ecfdf5' },
-    { label: 'إجمالي المصروفات', value: fmtNum(expense), icon: '📉', color: '#dc2626', bg: '#fef2f2' },
+    { label: 'عدد المشاريع', value: String(projects.value.length), icon: '🏢', color: 'var(--info-text)', bg: 'var(--info-bg)' },
+    { label: 'إجمالي الأرصدة', value: fmt(totalBalance), icon: '💰', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+    { label: 'إجمالي الإيرادات', value: fmtNum(income), icon: '📈', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+    { label: 'إجمالي المصروفات', value: fmtNum(expense), icon: '📉', color: 'var(--danger-text)', bg: 'var(--danger-bg)' },
   ]
 })
 
@@ -391,13 +391,13 @@ async function onDelete(p: Project) {
   }
 
   &--income {
-    background: #ecfdf5;
-    color: #059669;
+    background: var(--ok-bg);
+    color: var(--ok-text);
   }
 
   &--expense {
-    background: #fef2f2;
-    color: #dc2626;
+    background: var(--danger-bg);
+    color: var(--danger-text);
   }
 }
 

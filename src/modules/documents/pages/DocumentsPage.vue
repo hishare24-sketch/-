@@ -46,9 +46,9 @@ const filtered = computed(() =>
 )
 
 const stats = computed(() => [
-  { label: 'إجمالي المستندات', value: String(documents.value.length), icon: '📄', color: '#0891b2', bg: '#ecfeff' },
-  { label: 'معالَجة', value: String(documents.value.filter((d) => d.aiRead).length), icon: '✅', color: '#059669', bg: '#ecfdf5' },
-  { label: 'قيد المعالجة', value: String(documents.value.filter((d) => !d.aiRead).length), icon: '⏳', color: '#d97706', bg: '#fffbeb' },
+  { label: 'إجمالي المستندات', value: String(documents.value.length), icon: '📄', color: 'var(--info-text)', bg: 'var(--info-bg)' },
+  { label: 'معالَجة', value: String(documents.value.filter((d) => d.aiRead).length), icon: '✅', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+  { label: 'قيد المعالجة', value: String(documents.value.filter((d) => !d.aiRead).length), icon: '⏳', color: 'var(--warn-text)', bg: 'var(--warn-bg)' },
 ])
 
 const docIcon = (type: string) => {
@@ -300,10 +300,10 @@ async function onDelete(d: DocItem) {
     font-weight: 600;
     padding: 3px 10px;
     border-radius: 20px;
-    background: #fffbeb;
-    color: #d97706;
+    background: var(--warn-bg);
+    color: var(--warn-text);
 
-    &.is-read { background: #ecfdf5; color: #059669; }
+    &.is-read { background: var(--ok-bg); color: var(--ok-text); }
   }
 
   &__name { font-weight: 700; font-size: 14px; }

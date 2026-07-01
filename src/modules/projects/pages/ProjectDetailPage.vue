@@ -216,24 +216,24 @@ const memberSummary = computed(() => {
 
       <!-- بطاقات الإحصائيات -->
       <div class="ov-stats">
-        <div class="ov-card" style="background: #ecfdf5">
+        <div class="ov-card" style="background: var(--ok-bg)">
           <span class="ov-card__icon">📈</span>
-          <strong style="color: #15803d">{{ fmt(income) }}</strong>
+          <strong style="color: var(--ok-text)">{{ fmt(income) }}</strong>
           <span class="ov-card__label">إجمالي الإيرادات</span>
         </div>
-        <div class="ov-card" style="background: #fef2f2">
+        <div class="ov-card" style="background: var(--danger-bg)">
           <span class="ov-card__icon">📉</span>
-          <strong style="color: #b91c1c">{{ fmt(expense) }}</strong>
+          <strong style="color: var(--danger-text)">{{ fmt(expense) }}</strong>
           <span class="ov-card__label">إجمالي المصروفات</span>
         </div>
-        <div class="ov-card" style="background: #eff6ff">
+        <div class="ov-card" style="background: var(--info-bg)">
           <span class="ov-card__icon">💰</span>
-          <strong style="color: #1d4ed8">{{ fmt(income - expense) }}</strong>
+          <strong style="color: var(--info-text)">{{ fmt(income - expense) }}</strong>
           <span class="ov-card__label">صافي الربح</span>
         </div>
-        <div class="ov-card" style="background: #faf5ff">
+        <div class="ov-card" style="background: var(--purple-bg)">
           <span class="ov-card__icon">👥</span>
-          <strong style="color: #7c3aed">{{ projMembers.length }}</strong>
+          <strong style="color: var(--purple-text)">{{ projMembers.length }}</strong>
           <span class="ov-card__label">عدد الأعضاء</span>
         </div>
       </div>
@@ -306,22 +306,22 @@ const memberSummary = computed(() => {
     <div v-else-if="tab === 'members'" class="ov">
       <!-- ملخّص الأعضاء -->
       <div class="ov-stats">
-        <div class="ov-card" style="background: #faf5ff">
+        <div class="ov-card" style="background: var(--purple-bg)">
           <span class="ov-card__icon">👥</span>
-          <strong style="color: #7c3aed">{{ memberSummary.total }}</strong>
+          <strong style="color: var(--purple-text)">{{ memberSummary.total }}</strong>
           <span class="ov-card__label">إجمالي الأعضاء</span>
         </div>
-        <div class="ov-card" style="background: #ecfdf5">
+        <div class="ov-card" style="background: var(--ok-bg)">
           <span class="ov-card__icon">📤</span>
-          <strong style="color: #15803d">{{ fmt(memberSummary.custody) }}</strong>
+          <strong style="color: var(--ok-text)">{{ fmt(memberSummary.custody) }}</strong>
           <span class="ov-card__label">إجمالي العهد القائمة</span>
         </div>
-        <div class="ov-card" style="background: #fffbeb">
+        <div class="ov-card" style="background: var(--warn-bg)">
           <span class="ov-card__icon">✉️</span>
-          <strong style="color: #a16207">{{ memberSummary.invited }}</strong>
+          <strong style="color: var(--warn-text)">{{ memberSummary.invited }}</strong>
           <span class="ov-card__label">دعوات معلّقة</span>
         </div>
-        <div class="ov-card" :style="{ background: memberSummary.issues ? '#fef2f2' : '#eff6ff' }">
+        <div class="ov-card" :style="{ background: memberSummary.issues ? 'var(--danger-bg)' : 'var(--info-bg)' }">
           <span class="ov-card__icon">{{ memberSummary.issues ? '⚠️' : '✅' }}</span>
           <strong :style="{ color: memberSummary.issues ? '#b91c1c' : '#1d4ed8' }">{{ memberSummary.issues }}</strong>
           <span class="ov-card__label">تنبيهات رصيد</span>
@@ -433,20 +433,20 @@ const memberSummary = computed(() => {
     <div v-else class="ov">
       <!-- بطاقات أنواع التدفق -->
       <div class="ov-stats">
-        <div class="ov-card" style="background: #ecfdf5">
-          <strong style="color: #15803d">{{ fmt(income) }}</strong>
+        <div class="ov-card" style="background: var(--ok-bg)">
+          <strong style="color: var(--ok-text)">{{ fmt(income) }}</strong>
           <span class="ov-card__label">تدفق داخل (إيرادات)</span>
         </div>
-        <div class="ov-card" style="background: #fef2f2">
-          <strong style="color: #b91c1c">{{ fmt(expense) }}</strong>
+        <div class="ov-card" style="background: var(--danger-bg)">
+          <strong style="color: var(--danger-text)">{{ fmt(expense) }}</strong>
           <span class="ov-card__label">تدفق خارج (مصروفات)</span>
         </div>
-        <div class="ov-card" style="background: #eff6ff">
-          <strong style="color: #1d4ed8">{{ fmt(transfersIn) }}</strong>
+        <div class="ov-card" style="background: var(--info-bg)">
+          <strong style="color: var(--info-text)">{{ fmt(transfersIn) }}</strong>
           <span class="ov-card__label">تحويلات واردة</span>
         </div>
-        <div class="ov-card" style="background: #fffbeb">
-          <strong style="color: #a16207">{{ fmt(transfersOut) }}</strong>
+        <div class="ov-card" style="background: var(--warn-bg)">
+          <strong style="color: var(--warn-text)">{{ fmt(transfersOut) }}</strong>
           <span class="ov-card__label">تحويلات صادرة</span>
         </div>
       </div>
@@ -610,10 +610,10 @@ const memberSummary = computed(() => {
   &-value {
     font-size: 24px;
     font-weight: 800;
-    color: #15803d;
+    color: var(--ok-text);
 
     &.is-neg {
-      color: #b91c1c;
+      color: var(--danger-text);
     }
   }
 }
@@ -704,10 +704,10 @@ const memberSummary = computed(() => {
     font-weight: 500;
     cursor: pointer;
 
-    &--ok { background: #ecfdf5; color: #059669; }
-    &--info { background: #ecfeff; color: #0891b2; }
-    &--warn { background: #fffbeb; color: #d97706; }
-    &--purple { background: #faf5ff; color: #7c3aed; }
+    &--ok { background: var(--ok-bg); color: var(--ok-text); }
+    &--info { background: var(--info-bg); color: var(--info-text); }
+    &--warn { background: var(--warn-bg); color: var(--warn-text); }
+    &--purple { background: var(--purple-bg); color: var(--purple-text); }
 
     &:hover { filter: brightness(0.97); }
   }
@@ -781,8 +781,8 @@ const memberSummary = computed(() => {
   border-radius: 10px;
   margin-block-end: 8px;
 
-  &--warn { background: #fffbeb; }
-  &--danger { background: #fef2f2; }
+  &--warn { background: var(--warn-bg); }
+  &--danger { background: var(--danger-bg); }
 
   &__title { display: block; font-size: 12.5px; font-weight: 500; }
   &__sub { font-size: 11.5px; color: var(--text-muted); }
@@ -807,7 +807,7 @@ const memberSummary = computed(() => {
   &__icon { font-size: 18px; }
   &__info { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; }
   &__name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  &__sub { font-size: 11px; color: var(--text-muted); &.is-expired { color: #b91c1c; } }
+  &__sub { font-size: 11px; color: var(--text-muted); &.is-expired { color: var(--danger-text); } }
   &__action { font-size: 11.5px; font-weight: 600; color: var(--primary); background: var(--primary-soft); padding: 5px 10px; border-radius: 8px; flex-shrink: 0; }
   &__chev { color: var(--text-muted); }
 }
@@ -839,9 +839,9 @@ const memberSummary = computed(() => {
 
   &__net {
     font-weight: 600;
-    color: #15803d;
+    color: var(--ok-text);
 
-    &.is-neg { color: #b91c1c; }
+    &.is-neg { color: var(--danger-text); }
   }
 
   &__bar {
@@ -855,8 +855,8 @@ const memberSummary = computed(() => {
     inline-size: 40px;
     font-size: 10px;
 
-    &.is-in { color: #15803d; }
-    &.is-out { color: #b91c1c; }
+    &.is-in { color: var(--ok-text); }
+    &.is-out { color: var(--danger-text); }
   }
 
   &__track {
@@ -880,8 +880,8 @@ const memberSummary = computed(() => {
     text-align: end;
     font-size: 11px;
 
-    &.is-in { color: #15803d; }
-    &.is-out { color: #b91c1c; }
+    &.is-in { color: var(--ok-text); }
+    &.is-out { color: var(--danger-text); }
   }
 }
 
@@ -908,7 +908,7 @@ const memberSummary = computed(() => {
 
   &.is-in { border-inline-start-color: #22c55e; }
   &.is-out { border-inline-start-color: #f87171; }
-  &.is-flagged { background: #fef2f2; border-inline-start-color: var(--error); }
+  &.is-flagged { background: var(--danger-bg); border-inline-start-color: var(--error); }
 
   &:hover { filter: brightness(0.98); }
 
@@ -922,8 +922,8 @@ const memberSummary = computed(() => {
     font-size: 16px;
     flex-shrink: 0;
 
-    &.is-in { background: #ecfdf5; color: #059669; }
-    &.is-out { background: #fef2f2; color: #dc2626; }
+    &.is-in { background: var(--ok-bg); color: var(--ok-text); }
+    &.is-out { background: var(--danger-bg); color: var(--danger-text); }
   }
 
   &__info { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; }
@@ -945,8 +945,8 @@ const memberSummary = computed(() => {
     font-weight: 700;
     flex-shrink: 0;
 
-    &.is-in { color: #15803d; }
-    &.is-out { color: #b91c1c; }
+    &.is-in { color: var(--ok-text); }
+    &.is-out { color: var(--danger-text); }
   }
 }
 
@@ -1008,13 +1008,13 @@ const memberSummary = computed(() => {
   font-family: inherit;
 
   &--ok {
-    background: #ecfdf5;
-    color: #059669;
+    background: var(--ok-bg);
+    color: var(--ok-text);
   }
 
   &--no {
-    background: #fef2f2;
-    color: #dc2626;
+    background: var(--danger-bg);
+    color: var(--danger-text);
   }
 }
 
@@ -1096,7 +1096,7 @@ const memberSummary = computed(() => {
     font-size: 12px;
     color: var(--text-muted);
 
-    strong { font-size: 15px; color: var(--text-muted); &.is-pos { color: #15803d; } }
+    strong { font-size: 15px; color: var(--text-muted); &.is-pos { color: var(--ok-text); } }
   }
 
   &__perms {
@@ -1126,14 +1126,14 @@ const memberSummary = computed(() => {
   font-family: inherit;
   vertical-align: middle;
 
-  &--invite { background: #fffbeb; color: #a16207; }
-  &--issue { background: #fef2f2; cursor: pointer; padding: 1px 5px; }
+  &--invite { background: var(--warn-bg); color: var(--warn-text); }
+  &--issue { background: var(--danger-bg); cursor: pointer; padding: 1px 5px; }
 }
 
 .issue {
   margin-block-start: 12px;
   padding: 12px 14px;
-  background: #fef2f2;
+  background: var(--danger-bg);
   border-radius: 10px;
 
   &__head {
@@ -1142,7 +1142,7 @@ const memberSummary = computed(() => {
     gap: 7px;
     margin-block-end: 6px;
 
-    strong { font-size: 12.5px; color: #b91c1c; }
+    strong { font-size: 12.5px; color: var(--danger-text); }
   }
 
   &__body { font-size: 12px; color: var(--text); line-height: 1.7; margin-block-end: 10px; }
