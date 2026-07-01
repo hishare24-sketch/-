@@ -5,6 +5,7 @@ import { useSettingsStore, type CustomTheme } from '@/stores/SettingsStore'
 import { THEME_PRESETS, SCREENS, PRICING_PLANS } from '@/constants'
 import type { CustomLists, UserPrefs } from '@/interfaces/models'
 import ToggleActivationSwitch from '@/components/shared/ToggleActivationSwitch.vue'
+import IntegrationsPanel from '../components/IntegrationsPanel.vue'
 import { resetPersistedData } from '@/plugins/persistence'
 
 // إدارة البيانات: استعادة البيانات التجريبية (تفريغ الحفظ المحلي)
@@ -66,12 +67,6 @@ watch(selectedScreen, (id) => settingsStore.ensureHelp(id), { immediate: true })
 const selectedHelp = computed(() => help.value[selectedScreen.value])
 
 // التكاملات (عرض فقط)
-const integrations = [
-  { name: 'البريد الإلكتروني', icon: '📧', desc: 'إشعارات عبر البريد', connected: false },
-  { name: 'الرسائل النصية', icon: '💬', desc: 'تنبيهات SMS عند الاستحقاقات', connected: false },
-  { name: 'التخزين السحابي', icon: '☁️', desc: 'نسخ احتياطي للمستندات', connected: false },
-  { name: 'واتساب للأعمال', icon: '📱', desc: 'إشعارات عبر واتساب', connected: false },
-]
 </script>
 
 <template>
@@ -247,16 +242,7 @@ const integrations = [
         </div>
 
         <!-- التكاملات -->
-        <div v-else-if="tab === 'integrations'" class="integrations">
-          <div v-for="ig in integrations" :key="ig.name" class="app-card integration">
-            <span class="integration__icon">{{ ig.icon }}</span>
-            <div class="integration__info">
-              <span class="integration__name">{{ ig.name }}</span>
-              <span class="integration__desc">{{ ig.desc }}</span>
-            </div>
-            <button class="app-btn app-btn--outlined">ربط</button>
-          </div>
-        </div>
+        <IntegrationsPanel v-else-if="tab === 'integrations'" />
 
         <!-- الاشتراك والباقات -->
         <div v-else class="plans">
