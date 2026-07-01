@@ -1,4 +1,6 @@
-// نموذج المستخدم والمصادقة (هيكل جاهز — غير مُفعّل إجبارياً حتى يتوفّر backend)
+// نموذج المستخدم والمصادقة
+import type { MemberRole } from '@/interfaces/models'
+
 export interface DropdownMenuItem {
   id: number | string
   name: string
@@ -15,6 +17,8 @@ export interface User {
   permissions: string[]
   roles: DropdownMenuItem[]
   apps: string[]
+  /** الدور الأساسي — يشتق منه مجموعة الصلاحيات (وضع عدم وجود backend) */
+  role: MemberRole
 }
 
 export interface LoginPayload {

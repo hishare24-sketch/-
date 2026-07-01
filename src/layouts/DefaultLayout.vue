@@ -5,6 +5,8 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useNotificationsStore } from '@/stores/NotificationsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
+import { useAuthStore } from '@/stores/AuthStore'
+import { useCan } from '@/composables/useCan'
 import { useTasks } from '@/modules/tasks/composables/useTasks'
 import themeConfig from '@themeConfig'
 
@@ -14,6 +16,18 @@ const router = useRouter()
 // تبديل الوضع الفاتح/الداكن
 const settingsStore = useSettingsStore()
 const { themeMode } = storeToRefs(settingsStore)
+
+// المصادقة والصلاحيات
+const authStore = useAuthStore()
+const { can } = useCan()
+const { currentUser, roleLabel } = storeToRefs(authStore)
+const userMenuOpen = ref(false)
+
+function logout() {
+  userMenuOpen.value = false
+  authStore.logout()
+  router.replace({ name: 'login-page' })
+}
 
 // رجوع للشاشة السابقة (عام لكل الشاشات)
 function goBack() {
@@ -40,19 +54,19 @@ const navItems = computed(() => [
   { title: t('nav.dashboard'), icon: '📊', to: { name: 'dashboard-page' }, show: true },
   { title: 'الإجراءات المطلوبة', icon: '✅', to: { name: 'tasks-page' }, show: true, badge: tasksCount.value },
   { title: t('nav.projects'), icon: '🏢', to: { name: 'projects-page' }, show: true },
-  { title: t('nav.finance'), icon: '💰', to: { name: 'finance-page' }, show: true },
-  { title: 'السجل المالي', icon: '⛃', to: { name: 'ledger-page' }, show: true },
-  { title: t('nav.receivables'), icon: '🧾', to: { name: 'receivables-page' }, show: true },
-  { title: t('nav.commitments'), icon: '📌', to: { name: 'commitments-page' }, show: true },
+  { title: t('nav.finance'), icon: '💰', to: { name: 'finance-page' }, show: can('finance_view') },
+  { title: 'السجل المالي', icon: '⛃', to: { name: 'ledger-page' }, show: can('finance_view') },
+  { title: t('nav.receivables'), icon: '🧾', to: { name: 'receivables-page' }, show: can('finance_view') },
+  { title: t('nav.commitments'), icon: '📌', to: { name: 'commitments-page' }, show: can('finance_view') },
   { title: t('nav.assets'), icon: '🚗', to: { name: 'assets-page' }, show: true },
   { title: t('nav.trackings'), icon: '🔔', to: { name: 'trackings-page' }, show: true },
   { title: t('nav.requests'), icon: '📥', to: { name: 'requests-page' }, show: true },
   { title: t('nav.documents'), icon: '📄', to: { name: 'documents-page' }, show: true },
-  { title: 'مولّد القوالب', icon: '🧩', to: { name: 'templates-page' }, show: true },
+  { title: 'مولّد القوالب', icon: '🧩', to: { name: 'templates-page' }, show: can('docs_manage') },
   { title: t('nav.surveys'), icon: '📋', to: { name: 'surveys-page' }, show: true },
   { title: t('nav.notifications'), icon: '🔔', to: { name: 'notifications-page' }, show: true, badge: unreadCount.value },
-  { title: 'سجل العمليات', icon: '🗂️', to: { name: 'audit-page' }, show: true },
-  { title: t('nav.settings'), icon: '⚙️', to: { name: 'settings-page' }, show: true },
+  { title: 'سجل العمليات', icon: '🗂️', to: { name: 'audit-page' }, show: can('audit_view') },
+  { title: t('nav.settings'), icon: '⚙️', to: { name: 'settings-page' }, show: can('project_edit') },
 ])
 </script>
 
@@ -106,7 +120,35 @@ const navItems = computed(() => [
           <span aria-hidden="true">🔔</span>
           <span v-if="unreadCount" class="navbar__bell-count">{{ unreadCount }}</span>
         </RouterLink>
-        <div class="navbar__user">👤 محمد العمري</div>
+        <div class="navbar__user-wrap">
+          <button
+            class="navbar__user"
+            :aria-expanded="userMenuOpen"
+            aria-haspopup="menu"
+            @click="userMenuOpen = !userMenuOpen"
+          >
+            <span class="navbar__user-avatar" aria-hidden="true">👤</span>
+            <span class="navbar__user-info">
+              <span class="navbar__user-name">{{ currentUser?.name }}</span>
+              <span class="navbar__user-role">{{ roleLabel }}</span>
+            </span>
+            <span class="navbar__user-caret" aria-hidden="true">▾</span>
+          </button>
+
+          <div v-if="userMenuOpen" class="user-menu">
+            <div class="user-menu__backdrop" @click="userMenuOpen = false" />
+            <div class="user-menu__panel" role="menu">
+              <div class="user-menu__head">
+                <strong>{{ currentUser?.name }}</strong>
+                <small>{{ currentUser?.email }}</small>
+                <span class="user-menu__role">{{ roleLabel }}</span>
+              </div>
+              <button class="user-menu__item" role="menuitem" @click="logout">
+                <span aria-hidden="true">🚪</span> {{ t('auth.logout') }}
+              </button>
+            </div>
+          </div>
+        </div>
       </header>
 
       <main class="page-content">
@@ -311,10 +353,121 @@ const navItems = computed(() => [
     }
   }
 
+  &__user-wrap {
+    position: relative;
+  }
+
   &__user {
-    font-weight: 500;
-    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    cursor: pointer;
+    font-family: inherit;
+
+    &:hover {
+      border-color: var(--primary);
+    }
+  }
+
+  &__user-avatar {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  &__user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.25;
+  }
+
+  &__user-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  &__user-role {
+    font-size: 11px;
     color: var(--text-muted);
+  }
+
+  &__user-caret {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+}
+
+.user-menu {
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+  }
+
+  &__panel {
+    position: absolute;
+    inset-block-start: calc(100% + 8px);
+    inset-inline-end: 0;
+    z-index: 120;
+    min-inline-size: 220px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+
+  &__head {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 14px;
+    border-block-end: 1px solid var(--border);
+
+    strong {
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    small {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+  }
+
+  &__role {
+    align-self: flex-start;
+    margin-block-start: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--primary-soft);
+    padding: 2px 8px;
+    border-radius: 99px;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    inline-size: 100%;
+    padding: 12px 14px;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--danger-text);
+    cursor: pointer;
+    text-align: start;
+
+    &:hover {
+      background: var(--danger-bg);
+    }
   }
 }
 
@@ -361,9 +514,14 @@ const navItems = computed(() => [
     padding: 0 14px;
   }
 
-  .navbar__user,
+  .navbar__user-info,
+  .navbar__user-caret,
   .navbar__back-text {
     display: none;
+  }
+
+  .navbar__user {
+    padding: 6px 8px;
   }
 }
 </style>

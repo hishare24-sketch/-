@@ -70,6 +70,19 @@ export const ROLE_PERMS: Record<MemberRole, string[]> = {
 // المستخدم الحالي (محاكاة حتى تتوفر مصادقة backend)
 export const CURRENT_USER = 'محمد العمري'
 
+// حسابات تجريبية للدخول (وضع بلا backend) — الصلاحيات تُشتق من الدور عبر ROLE_PERMS
+export const DEMO_USERS: {
+  email: string
+  password: string
+  name: string
+  role: MemberRole
+}[] = [
+  { email: 'owner@mazeen.app', password: '123456', name: 'محمد العمري', role: 'owner' },
+  { email: 'manager@mazeen.app', password: '123456', name: 'سارة المنصور', role: 'manager' },
+  { email: 'member@mazeen.app', password: '123456', name: 'خالد الدوسري', role: 'member' },
+  { email: 'viewer@mazeen.app', password: '123456', name: 'نورة العتيبي', role: 'viewer' },
+]
+
 export const DEFAULT_PREFS: UserPrefs = {
   showStats: true,
   showCharts: true,

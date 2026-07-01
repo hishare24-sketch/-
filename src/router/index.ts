@@ -32,19 +32,19 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/finance',
     component: () => import('@/modules/finance/FinanceModule.vue'),
-    meta: { layout: 'default' },
+    meta: { layout: 'default', requiredPermission: 'finance_view' },
     children: financeRoutes,
   },
   {
     path: '/receivables',
     component: () => import('@/modules/receivables/ReceivablesModule.vue'),
-    meta: { layout: 'default' },
+    meta: { layout: 'default', requiredPermission: 'finance_view' },
     children: receivablesRoutes,
   },
   {
     path: '/commitments',
     component: () => import('@/modules/commitments/CommitmentsModule.vue'),
-    meta: { layout: 'default' },
+    meta: { layout: 'default', requiredPermission: 'finance_view' },
     children: commitmentsRoutes,
   },
   {
@@ -74,7 +74,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/templates',
     component: () => import('@/modules/templates/TemplatesModule.vue'),
-    meta: { layout: 'default' },
+    meta: { layout: 'default', requiredPermission: 'docs_manage' },
     children: templatesRoutes,
   },
   {
@@ -92,7 +92,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/audit',
     component: () => import('@/modules/audit/AuditModule.vue'),
-    meta: { layout: 'default' },
+    meta: { layout: 'default', requiredPermission: 'audit_view' },
     children: auditRoutes,
   },
   {
@@ -104,7 +104,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/settings',
     component: () => import('@/modules/settings/SettingsModule.vue'),
-    meta: { layout: 'default' },
+    meta: { layout: 'default', requiredPermission: 'project_edit' },
     children: settingsRoutes,
   },
   {
@@ -150,29 +150,33 @@ export const router = createRouter({
   routes,
 })
 
-// حُرّاس المسارات — جاهزون لكن الدخول غير إجباري حالياً (REQUIRE_AUTH=false)
-const REQUIRE_AUTH = false
+// حُرّاس المسارات — الدخول إجباري مع تقييد حسب الصلاحيات
+const REQUIRE_AUTH = true
 
 router.beforeEach((to, _from, next) => {
-  const { isAuthUser, hasPermission, hasAtLeaseOnePermission } = useAuthStore()
+  const auth = useAuthStore()
+  const { isAuthUser } = auth
 
+  // منع الوصول لأي شاشة داخلية بدون تسجيل دخول
   if (REQUIRE_AUTH && to.meta.layout === 'default' && !isAuthUser) {
     return next({ name: 'login-page', query: { redirect: to.fullPath } })
   }
 
-  const requiredPermission = to.meta.requiredPermission as string | undefined
-  if (REQUIRE_AUTH && isAuthUser && requiredPermission && !hasPermission(requiredPermission)) {
-    return next({ name: 'error-page', query: { message: 'errors.you_are_not_authorized' } })
+  // المستخدم المُسجَّل لا يعود لصفحة الدخول
+  if (isAuthUser && to.name === 'login-page') {
+    return next({ name: 'dashboard-page' })
   }
 
-  const requireAtLeastOne = to.meta.requireAtLeastOnePermission as string[] | undefined
-  if (
-    REQUIRE_AUTH &&
-    isAuthUser &&
-    requireAtLeastOne &&
-    !hasAtLeaseOnePermission(requireAtLeastOne)
-  ) {
-    return next({ name: 'error-page', query: { message: 'errors.you_are_not_authorized' } })
+  if (REQUIRE_AUTH && isAuthUser) {
+    const requiredPermission = to.meta.requiredPermission as string | undefined
+    if (requiredPermission && !auth.hasPermission(requiredPermission)) {
+      return next({ name: 'error-page', query: { message: 'errors.you_are_not_authorized' } })
+    }
+
+    const requireAtLeastOne = to.meta.requireAtLeastOnePermission as string[] | undefined
+    if (requireAtLeastOne && !auth.hasAtLeaseOnePermission(requireAtLeastOne)) {
+      return next({ name: 'error-page', query: { message: 'errors.you_are_not_authorized' } })
+    }
   }
 
   return next()
