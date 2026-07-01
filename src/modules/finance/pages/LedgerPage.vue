@@ -10,6 +10,7 @@ import { useFinanceStore } from '@/stores/FinanceStore'
 import { fmt, fmtNum } from '@/helpers/format'
 import { exportXLSX } from '@/helpers/export'
 import { txErrors } from '@/helpers/txAnalysis'
+import { useFocusHighlight } from '@/composables/useFocusHighlight'
 import { useLedgerRows, type LedgerRow } from '../composables/useLedger'
 
 const router = useRouter()
@@ -17,6 +18,7 @@ const projectsStore = useProjectsStore()
 const financeStore = useFinanceStore()
 const { projects, members } = storeToRefs(projectsStore)
 const { rows, projName, memName } = useLedgerRows()
+const { isFocused } = useFocusHighlight()
 
 // التبويب: العمليات / تحليل التدفقات
 const view = ref<'log' | 'flows'>('log')
@@ -253,7 +255,7 @@ function exportExcel() {
             <tr v-if="!filtered.length">
               <td colspan="10" class="empty">لا توجد عمليات مطابقة للفلترة.</td>
             </tr>
-            <tr v-for="r in filtered" :key="r.id" class="row" :class="{ 'is-flagged': rowIssues(r) }" @click="detail = r">
+            <tr v-for="r in filtered" :key="r.id" class="row" :class="{ 'is-flagged': rowIssues(r), 'is-focused': isFocused(r.id) }" :data-focus="r.id" @click="detail = r">
               <td class="mono muted">{{ r.num }}</td>
               <td>
                 <span class="kind" :class="r.dir === 'in' ? 'is-in' : 'is-out'">

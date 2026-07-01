@@ -8,6 +8,7 @@ import { assetMaintCost } from '@/helpers/calc'
 import { fmt, fmtNum } from '@/helpers/format'
 import { daysBetween } from '@/helpers/date'
 import { ASSET_CATEGORIES, ASSET_STATUS } from '@/constants'
+import { useFocusHighlight } from '@/composables/useFocusHighlight'
 import type { Asset, AssetCategory } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import AssetFormModal from '../modals/AssetFormModal.vue'
@@ -52,6 +53,7 @@ const stats = computed(() => [
 ])
 
 const catInfo = (c: AssetCategory) => ASSET_CATEGORIES.find((x) => x.id === c)!
+const { isFocused } = useFocusHighlight()
 
 // تتبّع الضمان: حالة الضمان حسب الأيام المتبقية
 function warrantyInfo(a: Asset) {
@@ -135,7 +137,7 @@ async function onDelete(a: Asset) {
 
     <div class="grid">
       <div v-if="!filtered.length" class="empty app-card">لا توجد أصول مطابقة.</div>
-      <div v-for="a in filtered" :key="a.id" class="asset app-card">
+      <div v-for="a in filtered" :key="a.id" class="asset app-card" :class="{ 'is-focused': isFocused(a.id) }" :data-focus="a.id">
         <div class="asset__top">
           <span class="asset__icon">{{ catInfo(a.category).icon }}</span>
           <span class="asset__status" :style="{ background: ASSET_STATUS[a.status].bg, color: ASSET_STATUS[a.status].color }">

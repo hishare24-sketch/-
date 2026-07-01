@@ -9,6 +9,7 @@ import { useRequestsStore } from '@/stores/RequestsStore'
 import { fmt, fmtNum } from '@/helpers/format'
 import { txErrors } from '@/helpers/txAnalysis'
 import { ROLES, CURRENT_USER, PERMISSIONS } from '@/constants'
+import { useFocusHighlight } from '@/composables/useFocusHighlight'
 import type { Member, Transaction } from '@/interfaces/models'
 import TxDetailsModal from '@/modules/finance/modals/TxDetailsModal.vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
@@ -41,6 +42,10 @@ const income = computed(() => txns.value.filter((t) => t.type === 'income').redu
 const expense = computed(() => txns.value.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0))
 const balance = computed(() => financeStore.balanceOf(projectId.value))
 const projMembers = computed(() => projectsStore.membersByProject(projectId.value))
+
+// التنقّل من فحص الاتساق: إن كان الهدف عضواً، افتح تبويب الأعضاء وأبرِزه
+const { isFocused, focusId } = useFocusHighlight()
+if (focusId.value && projMembers.value.some((m) => m.id === focusId.value)) tab.value = 'members'
 const transfersIn = computed(() => txns.value.filter((t) => t.type === 'transfer' && t.transferDir === 'in').reduce((s, t) => s + t.amount, 0))
 const transfersOut = computed(() => txns.value.filter((t) => t.type === 'transfer' && t.transferDir === 'out').reduce((s, t) => s + t.amount, 0))
 
@@ -378,7 +383,7 @@ const memberSummary = computed(() => {
 
       <!-- بطاقات الأعضاء -->
       <div class="members">
-        <div v-for="m in filteredMembers" :key="m.id" class="member-card app-card">
+        <div v-for="m in filteredMembers" :key="m.id" class="member-card app-card" :class="{ 'is-focused': isFocused(m.id) }" :data-focus="m.id">
           <div class="member-card__top">
             <span class="member__avatar member__clickable" :style="{ background: roleOf(m).color + '20', color: roleOf(m).color }" @click="viewingMember = m">
               {{ m.name.charAt(0) }}

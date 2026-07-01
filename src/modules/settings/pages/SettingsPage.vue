@@ -7,6 +7,7 @@ import type { CustomLists, UserPrefs } from '@/interfaces/models'
 import ToggleActivationSwitch from '@/components/shared/ToggleActivationSwitch.vue'
 import IntegrationsPanel from '../components/IntegrationsPanel.vue'
 import TemplateEditor from '../components/TemplateEditor.vue'
+import HealthCheckPanel from '../components/HealthCheckPanel.vue'
 import { resetPersistedData } from '@/plugins/persistence'
 
 // إدارة البيانات: استعادة البيانات التجريبية (تفريغ الحفظ المحلي)
@@ -29,13 +30,14 @@ const colorFields: { key: keyof CustomTheme; label: string; fallback: string }[]
   { key: 'border', label: 'لون الحدود', fallback: themeMode.value === 'dark' ? '#2a3346' : '#e5e7eb' },
 ]
 
-type Tab = 'prefs' | 'lists' | 'colors' | 'templates' | 'help' | 'integrations' | 'subscription'
+type Tab = 'prefs' | 'lists' | 'colors' | 'templates' | 'health' | 'help' | 'integrations' | 'subscription'
 const tab = ref<Tab>('prefs')
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'prefs', label: 'التفضيلات', icon: '⚙️' },
   { id: 'lists', label: 'القوائم المخصّصة', icon: '🏷️' },
   { id: 'colors', label: 'الألوان والثيم', icon: '🎨' },
   { id: 'templates', label: 'قوالب المستندات', icon: '📄' },
+  { id: 'health', label: 'فحص الاتساق', icon: '🩺' },
   { id: 'help', label: 'شروحات الأقسام', icon: '💡' },
   { id: 'integrations', label: 'التكاملات', icon: '🔌' },
   { id: 'subscription', label: 'الاشتراك', icon: '💳' },
@@ -245,6 +247,10 @@ const selectedHelp = computed(() => help.value[selectedScreen.value])
 
         <!-- التكاملات -->
         <TemplateEditor v-else-if="tab === 'templates'" />
+
+        <div v-else-if="tab === 'health'" class="app-card panel">
+          <HealthCheckPanel />
+        </div>
 
         <IntegrationsPanel v-else-if="tab === 'integrations'" />
 

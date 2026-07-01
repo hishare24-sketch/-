@@ -6,6 +6,7 @@ import { useTrackingsStore } from '@/stores/TrackingsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
 import type { Tracking, TrackingStatus } from '@/interfaces/models'
+import { useFocusHighlight } from '@/composables/useFocusHighlight'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import TrackingDetailsModal from '../modals/TrackingDetailsModal.vue'
 import TrackingFormModal from '../modals/TrackingFormModal.vue'
@@ -52,6 +53,7 @@ function badgeOf(t: Tracking) {
   if (t.cancelled) return { l: 'ملغى', c: 'var(--text-muted)', bg: 'var(--surface-2)' }
   return statusInfo(t.status)
 }
+const { isFocused } = useFocusHighlight()
 
 const showForm = ref(false)
 const editing = ref<Tracking | null>(null)
@@ -121,7 +123,7 @@ async function onDelete(t: Tracking) {
 
     <div class="grid">
       <div v-if="!filtered.length" class="empty app-card">لا توجد متابعات مطابقة.</div>
-      <div v-for="t in filtered" :key="t.id" class="track app-card">
+      <div v-for="t in filtered" :key="t.id" class="track app-card" :class="{ 'is-focused': isFocused(t.id) }" :data-focus="t.id">
         <div class="track__top">
           <span class="track__icon">{{ t.icon }}</span>
           <span class="track__status" :style="{ background: badgeOf(t).bg, color: badgeOf(t).c }">

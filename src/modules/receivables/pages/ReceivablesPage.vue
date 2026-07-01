@@ -9,6 +9,7 @@ import { fmt, fmtNum } from '@/helpers/format'
 import { today } from '@/helpers/date'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { RECEIVABLE_STATUS } from '@/constants'
+import { useFocusHighlight } from '@/composables/useFocusHighlight'
 import type { Receivable, ReceivableKind } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import ReceivableFormModal from '../modals/ReceivableFormModal.vue'
@@ -65,6 +66,7 @@ const stats = computed(() => [
 ])
 
 const RSTATUS = RECEIVABLE_STATUS
+const { isFocused } = useFocusHighlight()
 const canPay = (r: Receivable) => !['settled', 'written_off', 'cancelled'].includes(r.status)
 
 // المودالات
@@ -145,7 +147,7 @@ async function onDelete(r: Receivable) {
 
     <div class="list">
       <div v-if="!filtered.length" class="empty app-card">لا توجد ذمم مطابقة.</div>
-      <div v-for="r in filtered" :key="r.id" class="rec app-card">
+      <div v-for="r in filtered" :key="r.id" class="rec app-card" :class="{ 'is-focused': isFocused(r.id) }" :data-focus="r.id">
         <span class="rec__kind" :class="r.kind">{{ r.kind === 'receivable' ? '📥' : '📤' }}</span>
         <div class="rec__main" @click="viewing = r">
           <span class="rec__party">

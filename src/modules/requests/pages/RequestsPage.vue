@@ -7,6 +7,7 @@ import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
 import { fmt } from '@/helpers/format'
 import { REQUEST_STATUS } from '@/constants'
+import { useFocusHighlight } from '@/composables/useFocusHighlight'
 import type { RequestItem, RequestStatus } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import RequestDetailsModal from '../modals/RequestDetailsModal.vue'
@@ -44,6 +45,7 @@ const stats = computed(() => [
 ])
 
 const RSTATUS = REQUEST_STATUS
+const { isFocused } = useFocusHighlight()
 const canDecide = (r: RequestItem) => r.status === 'pending' || r.status === 'under_review'
 
 const showForm = ref(false)
@@ -114,7 +116,7 @@ async function onDelete(r: RequestItem) {
 
     <div class="list">
       <div v-if="!filtered.length" class="empty app-card">لا توجد طلبات.</div>
-      <div v-for="r in filtered" :key="r.id" class="req app-card">
+      <div v-for="r in filtered" :key="r.id" class="req app-card" :class="{ 'is-focused': isFocused(r.id) }" :data-focus="r.id">
         <div class="req__main" @click="viewing = r">
           <div class="req__title-row">
             <span class="req__title">{{ r.title }}</span>

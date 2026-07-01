@@ -139,6 +139,22 @@ body {
   overflow-x: hidden;
 }
 
+// إبراز العنصر المستهدَف بعد التنقّل إليه من فحص الاتساق
+.is-focused {
+  animation: mzFocusFlash 3s ease;
+}
+
+@keyframes mzFocusFlash {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  15%,
+  55% {
+    box-shadow: 0 0 0 3px var(--primary);
+  }
+}
+
 // ═══════════════════════════════════════════
 //  ضبط الريسبونس العام للجوال (يطبّق على كل الشاشات)
 //  يستخدم !important لتجاوز الأنماط المحلية (scoped) عند الحاجة

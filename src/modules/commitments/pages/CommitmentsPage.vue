@@ -8,6 +8,7 @@ import { useSettingsStore } from '@/stores/SettingsStore'
 import { commitmentDone } from '@/helpers/calc'
 import { fmt, fmtNum } from '@/helpers/format'
 import { COMMITMENT_KINDS, FREQ_LABEL, FREQ_DAYS } from '@/constants'
+import { useFocusHighlight } from '@/composables/useFocusHighlight'
 import type { Commitment, CommitmentKind } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import ToggleActivationSwitch from '@/components/shared/ToggleActivationSwitch.vue'
@@ -69,6 +70,7 @@ const stats = computed(() => [
 ])
 
 const kindLabel = (k: CommitmentKind) => COMMITMENT_KINDS.find((x) => x.id === k)?.label ?? k
+const { isFocused } = useFocusHighlight()
 
 // المودالات
 const showForm = ref(false)
@@ -156,7 +158,7 @@ function onPay(c: Commitment) {
 
     <div class="list">
       <div v-if="!filtered.length" class="empty app-card">لا توجد التزامات.</div>
-      <div v-for="c in filtered" :key="c.id" class="cm app-card" :class="{ 'is-inactive': !c.active }">
+      <div v-for="c in filtered" :key="c.id" class="cm app-card" :class="{ 'is-inactive': !c.active, 'is-focused': isFocused(c.id) }" :data-focus="c.id">
         <div class="cm__main" @click="viewing = c">
           <span class="cm__name">
             {{ c.name }}
