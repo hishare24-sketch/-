@@ -6,9 +6,10 @@ import { useRequestsStore } from '@/stores/RequestsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
 import { fmt } from '@/helpers/format'
+import { REQUEST_STATUS } from '@/constants'
 import type { RequestItem, RequestStatus } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
-import EntityDetailsModal from '@/components/shared/EntityDetailsModal.vue'
+import RequestDetailsModal from '../modals/RequestDetailsModal.vue'
 import RequestFormModal from '../modals/RequestFormModal.vue'
 
 const requestsStore = useRequestsStore()
@@ -42,29 +43,27 @@ const stats = computed(() => [
   { label: 'مرفوضة', value: String(requests.value.filter((r) => r.status === 'rejected').length), icon: '⛔', color: 'var(--danger-text)', bg: 'var(--danger-bg)' },
 ])
 
-function statusInfo(s: RequestStatus) {
-  if (s === 'approved') return { l: 'معتمد', c: 'var(--ok-text)', bg: 'var(--ok-bg)' }
-  if (s === 'rejected') return { l: 'مرفوض', c: 'var(--danger-text)', bg: 'var(--danger-bg)' }
-  return { l: 'معلّق', c: 'var(--warn-text)', bg: 'var(--warn-bg)' }
-}
+const RSTATUS = REQUEST_STATUS
+const canDecide = (r: RequestItem) => r.status === 'pending' || r.status === 'under_review'
 
 const showForm = ref(false)
+const editing = ref<RequestItem | null>(null)
 const viewing = ref<RequestItem | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 
-const viewRows = computed<[string, string][]>(() => {
-  const r = viewing.value
-  if (!r) return []
-  return [
-    ['النوع', r.type],
-    ['المشروع', projectsStore.projectById(r.projectId)?.name ?? '—'],
-    ['المبلغ', fmt(r.amount)],
-    ['مقدّم الطلب', r.requestedBy],
-    ['التاريخ', r.date],
-    ['الحالة', statusInfo(r.status).l],
-  ]
-})
-
+function openCreate() {
+  editing.value = null
+  showForm.value = true
+}
+function onEdit(r: RequestItem) {
+  viewing.value = null
+  editing.value = r
+  showForm.value = true
+}
+function closeForm() {
+  showForm.value = false
+  editing.value = null
+}
 function decide(r: RequestItem, status: RequestStatus) {
   requestsStore.decide(r.id, status)
 }
@@ -81,7 +80,7 @@ async function onDelete(r: RequestItem) {
         <h1>الطلبات والموافقات <HelpIcon section="requests" /></h1>
         <p>دورة الاعتماد: إنشاء ← مراجعة ← اعتماد/رفض</p>
       </div>
-      <button class="app-btn" @click="showForm = true">＋ طلب جديد</button>
+      <button class="app-btn" @click="openCreate">＋ طلب جديد</button>
     </header>
 
 
@@ -96,8 +95,9 @@ async function onDelete(r: RequestItem) {
     </div>
 
     <div class="tabs">
-      <button v-for="t in (['all', 'pending', 'approved', 'rejected'] as const)" :key="t" class="tabs__btn" :class="{ 'is-active': statusTab === t }" @click="statusTab = t">
-        {{ t === 'all' ? 'الكل' : t === 'pending' ? 'معلقة' : t === 'approved' ? 'معتمدة' : 'مرفوضة' }}
+      <button class="tabs__btn" :class="{ 'is-active': statusTab === 'all' }" @click="statusTab = 'all'">الكل</button>
+      <button v-for="(s, key) in RSTATUS" :key="key" class="tabs__btn" :class="{ 'is-active': statusTab === key }" @click="statusTab = key">
+        {{ s.label }}
       </button>
     </div>
 
@@ -126,29 +126,22 @@ async function onDelete(r: RequestItem) {
           </span>
         </div>
         <span class="req__amount">{{ fmt(r.amount) }}</span>
-        <span class="req__status" :style="{ background: statusInfo(r.status).bg, color: statusInfo(r.status).c }">
-          {{ statusInfo(r.status).l }}
+        <span class="req__status" :style="{ background: RSTATUS[r.status].bg, color: RSTATUS[r.status].color }">
+          {{ RSTATUS[r.status].label }}
         </span>
         <div class="req__actions">
-          <template v-if="r.status === 'pending'">
+          <template v-if="canDecide(r)">
             <button class="mini-btn mini-btn--ok" @click="decide(r, 'approved')">اعتماد</button>
             <button class="mini-btn mini-btn--no" @click="decide(r, 'rejected')">رفض</button>
           </template>
+          <button v-if="canDecide(r)" class="icon-btn" title="تعديل" @click="onEdit(r)">✎</button>
           <button class="icon-btn icon-btn--danger" title="حذف" @click="onDelete(r)">🗑️</button>
         </div>
       </div>
     </div>
 
-    <RequestFormModal v-if="showForm" :project-id="activeProjectId" @close="showForm = false" />
-    <EntityDetailsModal
-      v-if="viewing"
-      :title="viewing.title"
-      :badge="{ label: statusInfo(viewing.status).l, color: statusInfo(viewing.status).c, bg: statusInfo(viewing.status).bg }"
-      :rows="viewRows"
-      :note="viewing.note"
-      :attachments="viewing.attachments"
-      @close="viewing = null"
-    />
+    <RequestFormModal v-if="showForm" :project-id="activeProjectId" :request="editing" @close="closeForm" />
+    <RequestDetailsModal v-if="viewing" :request="viewing" @edit="onEdit" @close="viewing = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
 </template>
@@ -338,6 +331,7 @@ async function onDelete(r: RequestItem) {
   color: var(--text-muted);
   font-size: 13px;
 
+  &:hover { border-color: var(--primary); color: var(--primary); }
   &--danger:hover { border-color: var(--error); color: var(--error); }
 }
 </style>

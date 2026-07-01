@@ -5,7 +5,7 @@
 
 export type TxType = 'income' | 'expense' | 'transfer'
 export type TrackingStatus = 'active' | 'expiring' | 'expired'
-export type RequestStatus = 'pending' | 'approved' | 'rejected'
+export type RequestStatus = 'pending' | 'under_review' | 'approved' | 'rejected' | 'cancelled'
 
 // مرفق موحّد (صورة/ملف) — المعاينة في الجلسة، الرفع الفعلي عبر backend لاحقاً
 export interface Attachment {
@@ -244,6 +244,9 @@ export interface RequestItem {
   projectId: string
   note?: string
   memberId?: string
+  specs?: Record<string, string>
+  decisionNote?: string
+  decidedBy?: string
   attachments?: Attachment[]
   createdBy?: string
 }

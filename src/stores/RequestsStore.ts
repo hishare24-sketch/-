@@ -34,11 +34,20 @@ export const useRequestsStore = defineStore('requests', {
     deleteRequest(id: string) {
       this.requests = this.requests.filter((r) => r.id !== id)
     },
-    // قرار الطلب: الاعتماد بمبلغ > 0 يُنشئ عملية مالية فعلية
-    decide(id: string, status: RequestStatus) {
+    // تغيير حالة بلا قرار مالي (قيد المراجعة / إلغاء / إعادة فتح)
+    setRequestStatus(id: string, status: RequestStatus) {
       const req = this.requests.find((r) => r.id === id)
       if (!req) return
       req.status = status
+      useAuditStore().log('تغيير حالة', 'طلب', `${req.title} → ${status}`)
+    },
+    // قرار الطلب: الاعتماد بمبلغ > 0 يُنشئ عملية مالية فعلية
+    decide(id: string, status: RequestStatus, note?: string) {
+      const req = this.requests.find((r) => r.id === id)
+      if (!req) return
+      req.status = status
+      req.decidedBy = CURRENT_USER
+      if (note) req.decisionNote = note.trim()
       useAuditStore().log(status === 'approved' ? 'اعتماد' : 'رفض', 'طلب', req.title)
 
       if (status === 'approved' && req.amount > 0) {

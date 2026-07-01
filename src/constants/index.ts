@@ -8,6 +8,7 @@ import type {
   Asset,
   MaintenanceType,
   ReceivableStatus,
+  RequestStatus,
   MemberTxnType,
   CommitmentFreq,
   CommitmentKind,
@@ -101,6 +102,27 @@ export const TRACKING_TYPES = [
 ]
 
 export const REQUEST_TYPES = ['مصروف', 'تحويل', 'عهدة', 'صيانة', 'شراء']
+
+// حالات الطلب (دورة الاعتماد: معلّق → مراجعة → اعتماد/رفض، + إلغاء)
+export const REQUEST_STATUS: Record<RequestStatus, { label: string; color: string; bg: string }> = {
+  pending: { label: 'معلّق', color: 'var(--warn-text)', bg: 'var(--warn-bg)' },
+  under_review: { label: 'قيد المراجعة', color: 'var(--info-text)', bg: 'var(--info-bg)' },
+  approved: { label: 'معتمد', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
+  rejected: { label: 'مرفوض', color: 'var(--danger-text)', bg: 'var(--danger-bg)' },
+  cancelled: { label: 'ملغى', color: 'var(--text-muted)', bg: 'var(--surface-2)' },
+}
+
+// حقول إضافية حسب نوع الطلب (تُخزَّن في request.specs)
+export const REQUEST_FIELD_SCHEMAS: Record<string, { key: string; label: string; placeholder?: string }[]> = {
+  تحويل: [{ key: 'toProject', label: 'الجهة/المشروع الوجهة' }],
+  شراء: [
+    { key: 'supplier', label: 'المورّد المقترح' },
+    { key: 'quantity', label: 'الكمية' },
+  ],
+  صيانة: [{ key: 'asset', label: 'الأصل/المعدّة المعنية' }],
+  عهدة: [{ key: 'purpose', label: 'الغرض من العهدة' }],
+  مصروف: [{ key: 'category', label: 'بند المصروف' }],
+}
 
 export const ASSET_CATEGORIES: { id: AssetCategory; label: string; icon: string }[] = [
   { id: 'vehicle', label: 'مركبة', icon: '🚗' },
