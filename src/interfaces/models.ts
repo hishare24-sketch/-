@@ -129,8 +129,10 @@ export interface Commitment {
   paidCount: number
   nextDue: string
   active: boolean
+  cancelled?: boolean
   payments: CommitmentPayment[]
   note?: string
+  specs?: Record<string, string>
   attachments?: Attachment[]
   createdBy?: string
 }

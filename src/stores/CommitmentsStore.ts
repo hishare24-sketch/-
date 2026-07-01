@@ -25,12 +25,27 @@ export const useCommitmentsStore = defineStore('commitments', {
       this.commitments.unshift({ ...payload, id: uid('cm') })
       useAuditStore().log('إنشاء', 'التزام دوري', `${payload.name} — ${fmt(payload.amount)} ${FREQ_LABEL[payload.freq]}`)
     },
+    // تعديل بيانات الالتزام (يحافظ على الدفعات والتقدّم)
+    updateCommitment(id: string, patch: Partial<Commitment>) {
+      const i = this.commitments.findIndex((c) => c.id === id)
+      if (i === -1) return
+      this.commitments[i] = { ...this.commitments[i], ...patch, id }
+      useAuditStore().log('تعديل', 'التزام دوري', this.commitments[i].name)
+    },
     deleteCommitment(id: string) {
       this.commitments = this.commitments.filter((c) => c.id !== id)
     },
     toggleCommitment(id: string) {
       const c = this.commitments.find((x) => x.id === id)
       if (c) c.active = !c.active
+    },
+    // إلغاء الالتزام (يوقفه ويعلّمه ملغى)
+    cancelCommitment(id: string) {
+      const c = this.commitments.find((x) => x.id === id)
+      if (!c) return
+      c.cancelled = true
+      c.active = false
+      useAuditStore().log('إلغاء', 'التزام دوري', c.name)
     },
     // تسجيل دفعة (مع تفاصيل اختيارية) → عملية مالية فعلية + تقديم تاريخ الاستحقاق
     payCommitment(id: string, opts?: { amount?: number; date?: string; note?: string }) {

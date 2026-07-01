@@ -1,19 +1,29 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useProjectsStore } from '@/stores/ProjectsStore'
+import { useCommitmentsStore } from '@/stores/CommitmentsStore'
 import { commitmentDone } from '@/helpers/calc'
 import { fmt } from '@/helpers/format'
-import { COMMITMENT_KINDS, FREQ_LABEL } from '@/constants'
+import { COMMITMENT_KINDS, COMMITMENT_FIELD_SCHEMAS, FREQ_LABEL } from '@/constants'
 import type { Commitment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
 const props = defineProps<{ commitment: Commitment }>()
-const emit = defineEmits<{ (e: 'pay', c: Commitment): void; (e: 'close'): void }>()
+const emit = defineEmits<{ (e: 'pay', c: Commitment): void; (e: 'edit', c: Commitment): void; (e: 'close'): void }>()
 
 const projectsStore = useProjectsStore()
+const commitmentsStore = useCommitmentsStore()
 const project = computed(() => projectsStore.projectById(props.commitment.projectId))
 const kindLabel = computed(() => COMMITMENT_KINDS.find((k) => k.id === props.commitment.kind)?.label)
+const done = computed(() => commitmentDone(props.commitment))
+const specFields = computed(() => COMMITMENT_FIELD_SCHEMAS[props.commitment.kind].filter((f) => props.commitment.specs?.[f.key]))
+const state = computed(() => {
+  const c = props.commitment
+  if (c.cancelled) return { label: 'ملغى', cls: 'is-neutral' }
+  if (done.value) return { label: 'مكتمل', cls: 'is-ok' }
+  return c.active ? { label: 'نشط', cls: 'is-ok' } : { label: 'موقوف', cls: 'is-warn' }
+})
 const progress = computed(() =>
   props.commitment.totalCount ? Math.round((props.commitment.paidCount / props.commitment.totalCount) * 100) : null,
 )
@@ -27,12 +37,23 @@ const totalPaid = computed(() => props.commitment.payments.reduce((s, p) => s + 
         {{ commitment.direction === 'out' ? '−' : '+' }}{{ fmt(commitment.amount) }}
       </span>
       <span class="head__freq">{{ FREQ_LABEL[commitment.freq] }}</span>
+      <span class="state-badge" :class="state.cls">{{ state.label }}</span>
+    </div>
+
+    <!-- مركز الإجراءات -->
+    <div class="hub">
+      <button class="hub__btn" @click="emit('edit', commitment)">✎ تعديل</button>
+      <button v-if="!commitment.cancelled && !done" class="hub__btn" @click="commitmentsStore.toggleCommitment(commitment.id)">
+        {{ commitment.active ? '⏸ إيقاف مؤقت' : '▶ استئناف' }}
+      </button>
+      <button v-if="!commitment.cancelled && !done" class="hub__btn" @click="commitmentsStore.cancelCommitment(commitment.id)">🚫 إلغاء</button>
     </div>
 
     <table class="rows">
       <tr><td class="rows__key">النوع</td><td>{{ kindLabel }}</td></tr>
       <tr><td class="rows__key">المشروع</td><td>{{ project?.name }}</td></tr>
       <tr v-if="commitment.party"><td class="rows__key">الطرف</td><td>{{ commitment.party }}</td></tr>
+      <tr v-for="f in specFields" :key="f.key"><td class="rows__key">{{ f.label }}</td><td>{{ commitment.specs?.[f.key] }}</td></tr>
       <tr><td class="rows__key">الاستحقاق القادم</td><td>{{ commitment.nextDue }}</td></tr>
       <tr><td class="rows__key">إجمالي المدفوع</td><td>{{ fmt(totalPaid) }}</td></tr>
     </table>
@@ -64,7 +85,7 @@ const totalPaid = computed(() => props.commitment.payments.reduce((s, p) => s + 
 
     <template #footer>
       <button class="app-btn app-btn--ghost" @click="emit('close')">إغلاق</button>
-      <button v-if="commitment.active && !commitmentDone(commitment)" class="app-btn" @click="emit('pay', commitment)">
+      <button v-if="commitment.active && !done && !commitment.cancelled" class="app-btn" @click="emit('pay', commitment)">
         {{ commitment.direction === 'out' ? 'دفع' : 'استلام' }} دفعة
       </button>
     </template>
@@ -74,9 +95,10 @@ const totalPaid = computed(() => props.commitment.payments.reduce((s, p) => s + 
 <style lang="scss" scoped>
 .head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
-  margin-block-end: 18px;
+  margin-block-end: 14px;
+  flex-wrap: wrap;
 
   &__amount {
     font-size: 22px;
@@ -87,6 +109,39 @@ const totalPaid = computed(() => props.commitment.payments.reduce((s, p) => s + 
   }
 
   &__freq { font-size: 13px; color: var(--text-muted); }
+}
+
+.state-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 12px;
+  border-radius: 20px;
+  margin-inline-start: auto;
+
+  &.is-ok { background: var(--ok-bg); color: var(--ok-text); }
+  &.is-warn { background: var(--warn-bg); color: var(--warn-text); }
+  &.is-neutral { background: var(--surface-2); color: var(--text-muted); }
+}
+
+.hub {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-block-end: 18px;
+}
+
+.hub__btn {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover { border-color: var(--primary); color: var(--primary); }
 }
 
 .rows {

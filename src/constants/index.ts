@@ -211,6 +211,24 @@ export const COMMITMENT_KINDS: { id: CommitmentKind; label: string; icon: string
   { id: 'subscription', label: 'اشتراك', icon: '💳' },
 ]
 
+// حقول إضافية حسب نوع الالتزام (تُخزَّن في commitment.specs)
+export const COMMITMENT_FIELD_SCHEMAS: Record<CommitmentKind, { key: string; label: string; placeholder?: string }[]> = {
+  installment: [
+    { key: 'lender', label: 'الجهة المموّلة', placeholder: 'بنك / شركة تمويل' },
+    { key: 'interestRate', label: 'نسبة الفائدة/الرسوم %' },
+    { key: 'contractNo', label: 'رقم العقد' },
+  ],
+  obligation: [
+    { key: 'authority', label: 'الجهة' },
+    { key: 'reference', label: 'المرجع' },
+  ],
+  subscription: [
+    { key: 'provider', label: 'مزوّد الخدمة', placeholder: 'Adobe / Google' },
+    { key: 'plan', label: 'الباقة' },
+    { key: 'autoRenew', label: 'تجديد تلقائي (نعم/لا)' },
+  ],
+}
+
 export const FREQ_DAYS: Record<CommitmentFreq, number> = {
   weekly: 7,
   monthly: 30,

@@ -3,41 +3,54 @@ import { reactive, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useCommitmentsStore } from '@/stores/CommitmentsStore'
-import { COMMITMENT_KINDS, FREQ_LABEL, CURRENT_USER } from '@/constants'
+import { COMMITMENT_KINDS, COMMITMENT_FIELD_SCHEMAS, FREQ_LABEL, CURRENT_USER } from '@/constants'
 import { today } from '@/helpers/date'
-import type { CommitmentKind, CommitmentFreq, CommitmentDir, Attachment } from '@/interfaces/models'
+import type { CommitmentKind, CommitmentFreq, CommitmentDir, Attachment, Commitment } from '@/interfaces/models'
 import type { FormPreset } from '@/interfaces/forms'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
-const props = defineProps<{ projectId: string; preset?: FormPreset }>()
+const props = defineProps<{ projectId: string; preset?: FormPreset; commitment?: Commitment | null }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const projectsStore = useProjectsStore()
 const commitmentsStore = useCommitmentsStore()
 const { projects } = storeToRefs(projectsStore)
 const ps = props.preset
+const c = props.commitment
+const editing = computed(() => !!props.commitment)
 
 const freqs = Object.keys(FREQ_LABEL) as CommitmentFreq[]
 
 const form = reactive({
-  kind: 'installment' as CommitmentKind,
-  direction: 'out' as CommitmentDir,
-  projectId: ps?.projectId ?? props.projectId,
-  name: ps?.name ?? '',
-  party: ps?.party ?? '',
-  amount: (ps?.amount ?? null) as number | null,
-  freq: 'monthly' as CommitmentFreq,
-  startDate: today(),
-  totalCount: null as number | null,
-  attachments: [] as Attachment[],
+  kind: (c?.kind ?? 'installment') as CommitmentKind,
+  direction: (c?.direction ?? 'out') as CommitmentDir,
+  projectId: c?.projectId ?? ps?.projectId ?? props.projectId,
+  name: c?.name ?? ps?.name ?? '',
+  party: c?.party ?? ps?.party ?? '',
+  amount: (c?.amount ?? ps?.amount ?? null) as number | null,
+  freq: (c?.freq ?? 'monthly') as CommitmentFreq,
+  startDate: c?.startDate ?? today(),
+  totalCount: (c?.totalCount ?? null) as number | null,
+  attachments: (c?.attachments ?? []) as Attachment[],
+  specs: { ...(c?.specs ?? {}) } as Record<string, string>,
 })
 
+const kindFields = computed(() => COMMITMENT_FIELD_SCHEMAS[form.kind])
 const valid = computed(() => form.name.trim() && form.amount != null && form.amount > 0)
+
+function cleanSpecs(): Record<string, string> | undefined {
+  const out: Record<string, string> = {}
+  kindFields.value.forEach((f) => {
+    const v = (form.specs[f.key] ?? '').trim()
+    if (v) out[f.key] = v
+  })
+  return Object.keys(out).length ? out : undefined
+}
 
 function save() {
   if (!valid.value) return
-  commitmentsStore.addCommitment({
+  const base = {
     kind: form.kind,
     direction: form.direction,
     projectId: form.projectId,
@@ -47,19 +60,20 @@ function save() {
     freq: form.freq,
     startDate: form.startDate,
     totalCount: form.kind === 'installment' && form.totalCount ? Number(form.totalCount) : undefined,
-    paidCount: 0,
-    nextDue: form.startDate,
-    active: true,
-    payments: [],
+    specs: cleanSpecs(),
     attachments: form.attachments,
-    createdBy: CURRENT_USER,
-  })
+  }
+  if (editing.value && props.commitment) {
+    commitmentsStore.updateCommitment(props.commitment.id, base)
+  } else {
+    commitmentsStore.addCommitment({ ...base, paidCount: 0, nextDue: form.startDate, active: true, payments: [], createdBy: CURRENT_USER })
+  }
   emit('close')
 }
 </script>
 
 <template>
-  <ModalShell title="التزام جديد" @close="emit('close')">
+  <ModalShell :title="editing ? `تعديل: ${form.name}` : 'التزام جديد'" @close="emit('close')">
     <div class="field">
       <label>النوع</label>
       <div class="seg">
@@ -111,6 +125,15 @@ function save() {
       <input v-model.number="form.totalCount" type="number" placeholder="مثال: 36" />
     </div>
 
+    <!-- حقول خاصة بنوع الالتزام -->
+    <div v-if="kindFields.length" class="specs">
+      <span class="specs__label">بيانات {{ COMMITMENT_KINDS.find((k) => k.id === form.kind)?.label }}</span>
+      <div v-for="f in kindFields" :key="f.key" class="field">
+        <label>{{ f.label }}</label>
+        <input v-model="form.specs[f.key]" type="text" :placeholder="f.placeholder ?? ''" />
+      </div>
+    </div>
+
     <div class="field">
       <label>المرفقات (عقد، صور)</label>
       <AttachmentsField v-model="form.attachments" />
@@ -118,7 +141,7 @@ function save() {
 
     <template #footer>
       <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button class="app-btn" :disabled="!valid" @click="save">إضافة الالتزام</button>
+      <button class="app-btn" :disabled="!valid" @click="save">{{ editing ? 'حفظ التعديلات' : 'إضافة الالتزام' }}</button>
     </template>
   </ModalShell>
 </template>
@@ -133,13 +156,27 @@ function save() {
   label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
 
   input, select {
+    inline-size: 100%;
+    max-inline-size: 100%;
     padding: 10px 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: 14px;
+    background: var(--surface);
+    color: var(--text);
     &:focus { outline: none; border-color: var(--primary); }
   }
+}
+
+.specs {
+  margin-block-end: 16px;
+  padding: 14px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+
+  &__label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-block-end: 10px; }
+  .field { margin-block-end: 12px; &:last-child { margin-block-end: 0; } }
 }
 
 .seg {

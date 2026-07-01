@@ -40,7 +40,9 @@ const filtered = computed(() =>
           ? c.active && !commitmentDone(c)
           : fStatus.value === 'done'
             ? commitmentDone(c)
-            : !c.active,
+            : fStatus.value === 'cancelled'
+              ? !!c.cancelled
+              : !c.active && !c.cancelled,
     )
     .filter((c) => (search.value.trim() === '' ? true : (c.name + (c.party ?? '')).includes(search.value.trim())))
     .slice()
@@ -63,17 +65,31 @@ const stats = computed(() => [
   { label: 'التزامات نشطة', value: String(commitments.value.filter((c) => c.active).length), icon: '📌', color: 'var(--info-text)', bg: 'var(--info-bg)' },
   { label: 'أثر شهري صادر', value: fmtNum(monthlyImpact.value.out), icon: '📤', color: 'var(--danger-text)', bg: 'var(--danger-bg)' },
   { label: 'أثر شهري وارد', value: fmtNum(monthlyImpact.value.inc), icon: '📥', color: 'var(--ok-text)', bg: 'var(--ok-bg)' },
-  { label: 'صافي شهري', value: fmtNum(monthlyImpact.value.inc - monthlyImpact.value.out), icon: '📊', color: '#7e22ce', bg: 'var(--purple-bg)' },
+  { label: 'صافي شهري', value: fmtNum(monthlyImpact.value.inc - monthlyImpact.value.out), icon: '📊', color: 'var(--purple-text)', bg: 'var(--purple-bg)' },
 ])
 
 const kindLabel = (k: CommitmentKind) => COMMITMENT_KINDS.find((x) => x.id === k)?.label ?? k
 
 // المودالات
 const showForm = ref(false)
+const editing = ref<Commitment | null>(null)
 const viewing = ref<Commitment | null>(null)
 const paying = ref<Commitment | null>(null)
 const confirmRef = ref<InstanceType<typeof ConfirmModal>>()
 
+function openCreate() {
+  editing.value = null
+  showForm.value = true
+}
+function onEdit(c: Commitment) {
+  viewing.value = null
+  editing.value = c
+  showForm.value = true
+}
+function closeForm() {
+  showForm.value = false
+  editing.value = null
+}
 function payFromView(c: Commitment) {
   viewing.value = null
   paying.value = c
@@ -98,7 +114,7 @@ function onPay(c: Commitment) {
         <h1>الالتزامات الدورية <HelpIcon section="commitments" /></h1>
         <p>الأقساط والالتزامات المتكررة والاشتراكات</p>
       </div>
-      <button class="app-btn" @click="showForm = true">＋ التزام جديد</button>
+      <button class="app-btn" @click="openCreate">＋ التزام جديد</button>
     </header>
 
 
@@ -130,6 +146,7 @@ function onPay(c: Commitment) {
         <option value="active">نشط</option>
         <option value="paused">موقوف</option>
         <option value="done">مكتمل</option>
+        <option value="cancelled">ملغى</option>
       </select>
       <select v-model="sort" class="filters__select">
         <option value="due">الأقرب استحقاقاً</option>
@@ -166,20 +183,22 @@ function onPay(c: Commitment) {
 
         <div class="cm__actions">
           <button
-            v-if="c.active && !commitmentDone(c)"
+            v-if="c.active && !commitmentDone(c) && !c.cancelled"
             class="app-btn app-btn--outlined pay-btn"
             @click="onPay(c)"
           >
             {{ c.direction === 'out' ? 'دفع' : 'استلام' }} دفعة
           </button>
+          <span v-else-if="c.cancelled" class="cm__done cm__done--cancel">🚫 ملغى</span>
           <span v-else-if="commitmentDone(c)" class="cm__done">✓ مكتمل</span>
+          <button class="icon-btn" title="تعديل" @click="onEdit(c)">✎</button>
           <button class="icon-btn icon-btn--danger" title="حذف" @click="onDelete(c)">🗑️</button>
         </div>
       </div>
     </div>
 
-    <CommitmentFormModal v-if="showForm" :project-id="activeProjectId" @close="showForm = false" />
-    <CommitmentDetailsModal v-if="viewing" :commitment="viewing" @pay="payFromView" @close="viewing = null" />
+    <CommitmentFormModal v-if="showForm" :project-id="activeProjectId" :commitment="editing" @close="closeForm" />
+    <CommitmentDetailsModal v-if="viewing" :commitment="viewing" @pay="payFromView" @edit="onEdit" @close="viewing = null" />
     <PayCommitmentModal v-if="paying" :commitment="paying" @close="paying = null" />
     <ConfirmModal ref="confirmRef" />
   </section>
@@ -343,6 +362,8 @@ function onPay(c: Commitment) {
     font-size: 13px;
     color: var(--ok-text);
     font-weight: 600;
+
+    &--cancel { color: var(--text-muted); }
   }
 }
 
@@ -357,6 +378,7 @@ function onPay(c: Commitment) {
   color: var(--text-muted);
   font-size: 13px;
 
+  &:hover { border-color: var(--primary); color: var(--primary); }
   &--danger:hover { border-color: var(--error); color: var(--error); }
 }
 </style>
