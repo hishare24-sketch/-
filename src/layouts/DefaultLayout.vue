@@ -50,6 +50,16 @@ const { totalCount: tasksCount } = useTasks()
 
 // عناصر القائمة الجانبية — كل قسم له مساره الخاص (الأقسام غير المبنية تذهب لصفحة "قيد الإنشاء")
 // show يعتمد على الصلاحيات (تُترك true حالياً لعدم تفعيل الدخول الإجباري)
+// عناصر الشريط السفلي (جوال): 4 وجهات أساسية + «المزيد» يفتح الدرج
+const bottomNavItems = computed(() =>
+  [
+    { title: 'الرئيسية', icon: '📊', to: { name: 'dashboard-page' }, show: true },
+    { title: 'المشاريع', icon: '🏢', to: { name: 'projects-page' }, show: true },
+    { title: 'المالية', icon: '💰', to: { name: 'finance-page' }, show: can('finance_view') },
+    { title: 'المهام', icon: '✅', to: { name: 'tasks-page' }, show: true, badge: tasksCount.value },
+  ].filter((i) => i.show),
+)
+
 const navItems = computed(() => [
   { title: t('nav.dashboard'), icon: '📊', to: { name: 'dashboard-page' }, show: true },
   { title: 'الإجراءات المطلوبة', icon: '✅', to: { name: 'tasks-page' }, show: true, badge: tasksCount.value },
@@ -154,6 +164,26 @@ const navItems = computed(() => [
       <main class="page-content">
         <slot />
       </main>
+
+      <!-- شريط تنقّل سفلي (جوال فقط) -->
+      <nav class="bottom-nav" aria-label="التنقّل السريع">
+        <RouterLink
+          v-for="(item, i) in bottomNavItems"
+          :key="i"
+          :to="item.to"
+          class="bottom-nav__item"
+        >
+          <span class="bottom-nav__icon" aria-hidden="true">
+            {{ item.icon }}
+            <span v-if="item.badge" class="bottom-nav__badge">{{ item.badge }}</span>
+          </span>
+          <span class="bottom-nav__label">{{ item.title }}</span>
+        </RouterLink>
+        <button class="bottom-nav__item" aria-label="كل الأقسام" @click="mobileOpen = true">
+          <span class="bottom-nav__icon" aria-hidden="true">☰</span>
+          <span class="bottom-nav__label">المزيد</span>
+        </button>
+      </nav>
     </div>
   </div>
 </template>
@@ -484,6 +514,11 @@ const navItems = computed(() => [
   z-index: 90;
 }
 
+// ── الشريط السفلي: مخفيّ على سطح المكتب ──
+.bottom-nav {
+  display: none;
+}
+
 // ── الجوال: الشريط الجانبي يصبح درجاً منزلقاً ──
 @media (max-width: 768px) {
   .sidebar {
@@ -507,11 +542,70 @@ const navItems = computed(() => [
   }
 
   .page-content {
-    padding: 16px;
+    // متّسع أسفل للشريط السفلي الثابت
+    padding: 16px 16px calc(76px + env(safe-area-inset-bottom, 0px));
   }
 
   .navbar {
     padding: 0 14px;
+  }
+
+  // ── الشريط السفلي (جوال) ──
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    inset-block-end: 0;
+    inset-inline: 0;
+    z-index: 95;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: saturate(1.4) blur(10px);
+    border-block-start: 1px solid var(--border);
+    padding-block-end: env(safe-area-inset-bottom, 0px);
+  }
+
+  .bottom-nav__item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 8px 4px 7px;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 11px;
+    min-block-size: 54px;
+
+    &.router-link-active {
+      color: var(--primary);
+      font-weight: 600;
+    }
+  }
+
+  .bottom-nav__icon {
+    position: relative;
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .bottom-nav__badge {
+    position: absolute;
+    inset-block-start: -4px;
+    inset-inline-end: -10px;
+    font-size: 9px;
+    font-weight: 700;
+    background: var(--error);
+    color: #fff;
+    border-radius: 99px;
+    padding: 1px 5px;
+    min-inline-size: 15px;
+    text-align: center;
+  }
+
+  .bottom-nav__label {
+    line-height: 1;
   }
 
   .navbar__user-info,
