@@ -1,6 +1,7 @@
 // مكوّنات النواة الموحّدة — نقطة استيراد واحدة
 export { default as BaseButton } from './BaseButton.vue'
 export { default as BaseField } from './BaseField.vue'
+export { default as BaseSkeleton } from './BaseSkeleton.vue'
 export { default as BaseInput } from './BaseInput.vue'
 export { default as BaseSelect } from './BaseSelect.vue'
 export { default as BaseTextarea } from './BaseTextarea.vue'
