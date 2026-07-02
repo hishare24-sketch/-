@@ -2,7 +2,7 @@
 import { ref, reactive, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSettingsStore, type CustomTheme } from '@/stores/SettingsStore'
-import { THEME_PRESETS, SCREENS, PRICING_PLANS, DEFAULT_HELP } from '@/constants'
+import { THEME_PRESETS, THEMES, SCREENS, PRICING_PLANS, DEFAULT_HELP } from '@/constants'
 import type { CustomLists, UserPrefs } from '@/interfaces/models'
 import { BaseButton } from '@/components/base'
 import ToggleActivationSwitch from '@/components/shared/ToggleActivationSwitch.vue'
@@ -20,7 +20,7 @@ async function doResetData() {
 }
 
 const settingsStore = useSettingsStore()
-const { prefs, lists, help, themeMode, customTheme, hasCustomTheme, currentPlan, billing } = storeToRefs(settingsStore)
+const { prefs, lists, help, themeMode, themeId, customTheme, hasCustomTheme, currentPlan, billing } = storeToRefs(settingsStore)
 
 // حقول الألوان الدقيقة
 const colorFields: { key: keyof CustomTheme; label: string; fallback: string }[] = [
@@ -214,6 +214,34 @@ function resetAllHelp() {
 
         <!-- الألوان والثيم -->
         <div v-else-if="tab === 'colors'" class="theme">
+          <!-- الثيمات: هويّة ألوان كاملة -->
+          <div class="app-card panel">
+            <h2>🎨 الثيم</h2>
+            <p class="muted">اختر هويّة ألوان المنصّة. تعمل مع الوضعين الفاتح والداكن.</p>
+            <div class="themes">
+              <button
+                v-for="t in THEMES"
+                :key="t.id"
+                class="themecard"
+                :class="{ 'is-active': themeId === t.id }"
+                @click="settingsStore.setTheme(t.id)"
+              >
+                <span class="themecard__preview" :style="{ background: (themeMode === 'dark' ? t.dark : t.light).bg }">
+                  <span class="themecard__side" :style="{ background: (themeMode === 'dark' ? t.dark : t.light).primary }" />
+                  <span class="themecard__card" :style="{ background: (themeMode === 'dark' ? t.dark : t.light).surface, borderColor: (themeMode === 'dark' ? t.dark : t.light).border }">
+                    <span class="themecard__dot" :style="{ background: (themeMode === 'dark' ? t.dark : t.light).primary }" />
+                    <span class="themecard__line" :style="{ background: (themeMode === 'dark' ? t.dark : t.light).border }" />
+                    <span class="themecard__line themecard__line--sm" :style="{ background: (themeMode === 'dark' ? t.dark : t.light).border }" />
+                  </span>
+                </span>
+                <span class="themecard__name">
+                  {{ t.icon }} {{ t.name }}
+                  <span v-if="themeId === t.id" class="themecard__check">✓</span>
+                </span>
+              </button>
+            </div>
+          </div>
+
           <!-- الوضع الفاتح/الداكن -->
           <div class="app-card panel">
             <div class="mode-row">
@@ -227,7 +255,7 @@ function resetAllHelp() {
 
           <!-- لوحات جاهزة -->
           <div class="app-card panel">
-            <h2>🎨 لوحات جاهزة</h2>
+            <h2>🖌️ لون أساسي مخصّص <span class="muted" style="font-size:12px">(اختياري — يتجاوز لون الثيم)</span></h2>
             <p class="muted">اختر لوناً أساسياً بنقرة واحدة.</p>
             <div class="presets">
               <button
@@ -592,6 +620,89 @@ function resetAllHelp() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+// ── بطاقات الثيمات ──
+.themes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-block-start: 8px;
+}
+
+@media (max-width: 560px) {
+  .themes { grid-template-columns: 1fr; }
+}
+
+.themecard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+
+  &:hover { border-color: var(--primary); }
+  &.is-active { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+
+  &__preview {
+    display: flex;
+    gap: 6px;
+    block-size: 66px;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  &__side {
+    inline-size: 22px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  &__card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid;
+    border-radius: 6px;
+  }
+
+  &__dot {
+    inline-size: 16px;
+    block-size: 16px;
+    border-radius: 50%;
+  }
+
+  &__line {
+    block-size: 6px;
+    border-radius: 3px;
+    inline-size: 100%;
+    opacity: 0.7;
+  }
+
+  &__line--sm { inline-size: 60%; }
+
+  &__name {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  &__check {
+    color: var(--primary);
+    font-weight: 700;
+  }
 }
 
 .presets {

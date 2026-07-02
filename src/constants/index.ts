@@ -35,6 +35,46 @@ export const THEME_PRESETS: { id: string; name: string; primary: string; swatch:
   { id: 'slate', name: 'الرمادي', primary: '#475569', swatch: ['#475569', '#334155'] },
 ]
 
+// ثيمات جاهزة بهويّة ألوان كاملة (لون أساسي + خلفية/بطاقات/حدود منسّقة) لكل وضع
+export interface ThemePalette {
+  primary: string
+  bg: string
+  surface: string
+  text: string
+  border: string
+  muted: string
+}
+export interface AppTheme {
+  id: string
+  name: string
+  icon: string
+  light: ThemePalette
+  dark: ThemePalette
+}
+export const THEMES: AppTheme[] = [
+  {
+    id: 'default',
+    name: 'الأزرق الاحترافي',
+    icon: '🔵',
+    light: { primary: '#2563eb', bg: '#f8f9fb', surface: '#ffffff', text: '#111827', border: '#e5e7eb', muted: '#6b7280' },
+    dark: { primary: '#3b82f6', bg: '#0b0f17', surface: '#1a2130', text: '#f1f5f9', border: '#313c52', muted: '#a3b0c2' },
+  },
+  {
+    id: 'emerald',
+    name: 'الأخضر الزمرّدي',
+    icon: '🟢',
+    light: { primary: '#0d9488', bg: '#f1faf8', surface: '#ffffff', text: '#0f1f1b', border: '#d9ece8', muted: '#5b7772' },
+    dark: { primary: '#2dd4bf', bg: '#08130f', surface: '#12201c', text: '#ecfdf5', border: '#20362f', muted: '#8bb3a8' },
+  },
+  {
+    id: 'violet',
+    name: 'البنفسجي الملكي',
+    icon: '🟣',
+    light: { primary: '#7c3aed', bg: '#faf7ff', surface: '#ffffff', text: '#1b1327', border: '#ece5f5', muted: '#6d6480' },
+    dark: { primary: '#a78bfa', bg: '#100c1b', surface: '#1b1729', text: '#f3effe', border: '#2f2743', muted: '#a99fc4' },
+  },
+]
+
 // الأدوار والصلاحيات
 export const ROLES: { id: MemberRole; label: string; desc: string; color: string }[] = [
   { id: 'owner', label: 'مالك المشروع', desc: 'تحكم كامل بكل شيء', color: '#7c3aed' },

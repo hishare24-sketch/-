@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type { UserPrefs, CustomLists, HelpTexts, HelpKey, HelpEntry } from '@/interfaces/models'
-import { DEFAULT_PREFS, DEFAULT_LISTS, DEFAULT_HELP } from '@/constants'
+import { DEFAULT_PREFS, DEFAULT_LISTS, DEFAULT_HELP, THEMES } from '@/constants'
 import { setDocBranding, getDefaultBranding, type DocBranding } from '@/helpers/export'
 
 export type ThemeMode = 'light' | 'dark'
@@ -12,10 +12,6 @@ export interface CustomTheme {
   border?: string
 }
 
-// القيم الافتراضية للوضعين الفاتح والداكن
-const LIGHT = { bg: '#f8f9fb', surface: '#ffffff', text: '#111827', border: '#e5e7eb', muted: '#6b7280' }
-const DARK = { bg: '#0b0f17', surface: '#1a2130', text: '#f1f5f9', border: '#313c52', muted: '#a3b0c2' }
-
 // تفضيلات المستخدم + القوائم + شروحات الأقسام + الثيم
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
@@ -23,6 +19,7 @@ export const useSettingsStore = defineStore('settings', {
     lists: JSON.parse(JSON.stringify(DEFAULT_LISTS)) as CustomLists,
     help: JSON.parse(JSON.stringify(DEFAULT_HELP)) as HelpTexts,
     themeMode: 'light' as ThemeMode,
+    themeId: 'default' as string,
     customTheme: {} as CustomTheme,
     docBranding: getDefaultBranding() as DocBranding,
     currentPlan: 'free' as string,
@@ -101,6 +98,12 @@ export const useSettingsStore = defineStore('settings', {
       this.themeMode = mode
       this.applyTheme()
     },
+    // اختيار ثيم بهويّة كاملة — يمسح التجاوزات اليدوية لتظهر هوية الثيم
+    setTheme(id: string) {
+      this.themeId = id
+      this.customTheme = {}
+      this.applyTheme()
+    },
     toggleThemeMode() {
       this.setThemeMode(this.themeMode === 'dark' ? 'light' : 'dark')
     },
@@ -119,10 +122,11 @@ export const useSettingsStore = defineStore('settings', {
     // تطبيق الوضع + الألوان المخصّصة على متغيّرات CSS في الجذر
     applyTheme() {
       const root = document.documentElement
-      const base = this.themeMode === 'dark' ? DARK : LIGHT
+      const theme = THEMES.find((t) => t.id === this.themeId) ?? THEMES[0]
+      const base = this.themeMode === 'dark' ? theme.dark : theme.light
       root.setAttribute('data-theme', this.themeMode)
 
-      const primary = this.customTheme.primary ?? '#2563eb'
+      const primary = this.customTheme.primary ?? base.primary
       const bg = this.customTheme.bg ?? base.bg
       const surface = this.customTheme.surface ?? base.surface
       const text = this.customTheme.text ?? base.text
