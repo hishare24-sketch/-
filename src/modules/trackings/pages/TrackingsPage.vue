@@ -4,7 +4,6 @@ import { storeToRefs } from 'pinia'
 import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useTrackingsStore } from '@/stores/TrackingsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
-import { useSettingsStore } from '@/stores/SettingsStore'
 import type { Tracking, TrackingStatus } from '@/interfaces/models'
 import { useFocusHighlight } from '@/composables/useFocusHighlight'
 import { BaseButton } from '@/components/base'
@@ -14,7 +13,6 @@ import TrackingFormModal from '../modals/TrackingFormModal.vue'
 
 const trackingsStore = useTrackingsStore()
 const projectsStore = useProjectsStore()
-const settingsStore = useSettingsStore()
 const { trackings } = storeToRefs(trackingsStore)
 const { activeProjectId } = storeToRefs(projectsStore)
 

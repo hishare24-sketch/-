@@ -93,7 +93,8 @@ function runAt(i: number) {
 function onGlobalKey(e: KeyboardEvent) {
   if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
     e.preventDefault()
-    open.value ? hide() : show()
+    if (open.value) hide()
+    else show()
   }
 }
 function onPanelKey(e: KeyboardEvent) {

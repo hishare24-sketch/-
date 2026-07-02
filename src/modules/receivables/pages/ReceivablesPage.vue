@@ -3,7 +3,6 @@ import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useReceivablesStore } from '@/stores/ReceivablesStore'
-import { useSettingsStore } from '@/stores/SettingsStore'
 import { recvPaid, recvRemaining } from '@/helpers/calc'
 import { fmt, fmtNum } from '@/helpers/format'
 import { today } from '@/helpers/date'
@@ -18,7 +17,6 @@ import ReceivableDetailsModal from '../modals/ReceivableDetailsModal.vue'
 import { BaseButton } from '@/components/base'
 
 const receivablesStore = useReceivablesStore()
-const settingsStore = useSettingsStore()
 const projectsStore = useProjectsStore()
 const { receivables } = storeToRefs(receivablesStore)
 const { activeProjectId } = storeToRefs(projectsStore)

@@ -81,6 +81,8 @@ const fields = [
       <!-- المعاينة الحيّة -->
       <div class="preview">
         <span class="preview__label">معاينة حيّة</span>
+        <!-- آمن: previewHtml من docHTML الذي يهرّب كل المدخلات (تحصين ج-3) -->
+        <!-- eslint-disable-next-line vue/no-v-html -->
         <div class="preview__paper" v-html="previewHtml" />
       </div>
     </div>

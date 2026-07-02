@@ -1,0 +1,3 @@
+# فحص ما قبل الالتزام: lint على الملفات المرحّلة + فحص الأنواع (الاختبارات في CI)
+npx lint-staged
+npm run typecheck

@@ -13,7 +13,6 @@ import {
   makeElement,
   makeSection,
   TEMPLATE_SECTION_KINDS,
-  TEMPLATE_ELEMENT_TYPES,
 } from '../constants'
 import ElementPickerModal from '../modals/ElementPickerModal.vue'
 import ElementProperties from '../components/ElementProperties.vue'

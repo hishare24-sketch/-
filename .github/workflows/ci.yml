@@ -24,6 +24,9 @@ jobs:
       - name: فحص الأنواع
         run: npm run typecheck
 
+      - name: Lint
+        run: npm run lint
+
       - name: الاختبارات
         run: npm run test
 

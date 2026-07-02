@@ -5,7 +5,6 @@ import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { BaseButton } from '@/components/base'
 import { useDocumentsStore } from '@/stores/DocumentsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
-import { useSettingsStore } from '@/stores/SettingsStore'
 import type { DocItem } from '@/interfaces/models'
 import type { FormPreset } from '@/interfaces/forms'
 import type { DocActionKind } from '../docAI'
@@ -21,7 +20,6 @@ import ReceivableFormModal from '@/modules/receivables/modals/ReceivableFormModa
 
 const documentsStore = useDocumentsStore()
 const projectsStore = useProjectsStore()
-const settingsStore = useSettingsStore()
 const { documents } = storeToRefs(documentsStore)
 const { activeProjectId } = storeToRefs(projectsStore)
 

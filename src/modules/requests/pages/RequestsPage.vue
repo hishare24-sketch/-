@@ -4,7 +4,6 @@ import { storeToRefs } from 'pinia'
 import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useRequestsStore } from '@/stores/RequestsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
-import { useSettingsStore } from '@/stores/SettingsStore'
 import { fmt } from '@/helpers/format'
 import { REQUEST_STATUS, REQUEST_TYPE_META } from '@/constants'
 import { useFocusHighlight } from '@/composables/useFocusHighlight'
@@ -16,7 +15,6 @@ import { BaseButton } from '@/components/base'
 
 const requestsStore = useRequestsStore()
 const projectsStore = useProjectsStore()
-const settingsStore = useSettingsStore()
 const { requests } = storeToRefs(requestsStore)
 const { activeProjectId } = storeToRefs(projectsStore)
 

@@ -195,6 +195,8 @@ function saveToDocuments() {
 
     <!-- المعاينة -->
     <div v-else class="preview">
+      <!-- آمن: previewHtml من renderTemplateBody الذي يهرّب كل المدخلات (تحصين ج-3) -->
+      <!-- eslint-disable-next-line vue/no-v-html -->
       <div class="preview__page" v-html="previewHtml" />
     </div>
 

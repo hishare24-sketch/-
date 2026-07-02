@@ -173,7 +173,7 @@ function exportReport() {
 
       <div class="share__block">
         <span class="share__label">🧩 كود التضمين (Embed)</span>
-        <textarea readonly rows="2" class="share__embed">&lt;iframe src="{{ shareLink }}" width="100%" height="600"&gt;&lt;/iframe&gt;</textarea>
+        <textarea readonly rows="2" class="share__embed" :value="`<iframe src=&quot;${shareLink}&quot; width=&quot;100%&quot; height=&quot;600&quot;></iframe>`" />
       </div>
 
       <div class="share__block">

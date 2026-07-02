@@ -5,7 +5,6 @@ import { storeToRefs } from 'pinia'
 import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useFinanceStore } from '@/stores/FinanceStore'
-import { useSettingsStore } from '@/stores/SettingsStore'
 import { fmt, fmtNum } from '@/helpers/format'
 import type { Project } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
@@ -15,7 +14,6 @@ import { BaseButton } from '@/components/base'
 const router = useRouter()
 const projectsStore = useProjectsStore()
 const financeStore = useFinanceStore()
-const settingsStore = useSettingsStore()
 const { projects } = storeToRefs(projectsStore)
 
 

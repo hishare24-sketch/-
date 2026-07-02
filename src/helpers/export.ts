@@ -2,8 +2,6 @@
 //  تصدير Excel و PDF (تُحمّل المكتبات عند الطلب من CDN) — منقولة من legacy/App.tsx
 // ═══════════════════════════════════════════
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { escapeHTML } from '@/helpers/html'
 
 // ── Excel (ملفات .xlsx حقيقية عبر SheetJS) ──

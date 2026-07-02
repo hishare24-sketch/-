@@ -4,7 +4,6 @@ import { storeToRefs } from 'pinia'
 import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useCommitmentsStore } from '@/stores/CommitmentsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
-import { useSettingsStore } from '@/stores/SettingsStore'
 import { commitmentDone } from '@/helpers/calc'
 import { fmt, fmtNum } from '@/helpers/format'
 import { COMMITMENT_KINDS, FREQ_LABEL, FREQ_DAYS } from '@/constants'
@@ -19,7 +18,6 @@ import { BaseButton } from '@/components/base'
 
 const commitmentsStore = useCommitmentsStore()
 const projectsStore = useProjectsStore()
-const settingsStore = useSettingsStore()
 const { commitments } = storeToRefs(commitmentsStore)
 const { activeProjectId } = storeToRefs(projectsStore)
 
