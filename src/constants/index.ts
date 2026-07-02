@@ -73,6 +73,20 @@ export const THEMES: AppTheme[] = [
     light: { primary: '#7c3aed', bg: '#faf7ff', surface: '#ffffff', text: '#1b1327', border: '#ece5f5', muted: '#6d6480' },
     dark: { primary: '#a78bfa', bg: '#100c1b', surface: '#1b1729', text: '#f3effe', border: '#2f2743', muted: '#a99fc4' },
   },
+  {
+    id: 'rose',
+    name: 'الوردي الدافئ',
+    icon: '🌸',
+    light: { primary: '#e11d48', bg: '#fdf6f8', surface: '#ffffff', text: '#251318', border: '#f5e1e7', muted: '#83616b' },
+    dark: { primary: '#fb7185', bg: '#170b0f', surface: '#26161c', text: '#fdf0f3', border: '#43262f', muted: '#c59aa6' },
+  },
+  {
+    id: 'amber',
+    name: 'الكهرماني الذهبي',
+    icon: '🟠',
+    light: { primary: '#b45309', bg: '#fdf9f0', surface: '#ffffff', text: '#231a0e', border: '#f0e6d4', muted: '#7d6f57' },
+    dark: { primary: '#fbbf24', bg: '#151007', surface: '#241c10', text: '#fdf7ea', border: '#40331d', muted: '#c4b391' },
+  },
 ]
 
 // الأدوار والصلاحيات
