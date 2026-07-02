@@ -1,0 +1,31 @@
+# فحص الجودة على كل دفعة: أنواع + اختبارات + بناء
+name: CI
+
+on:
+  push:
+    branches: [vue-test, main]
+  pull_request:
+    branches: [vue-test, main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: تثبيت الاعتماديات
+        run: npm ci
+
+      - name: فحص الأنواع
+        run: npm run typecheck
+
+      - name: الاختبارات
+        run: npm run test
+
+      - name: البناء
+        run: npx vite build
