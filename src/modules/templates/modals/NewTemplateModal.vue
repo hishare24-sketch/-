@@ -4,6 +4,7 @@ import type { TemplateDocType } from '@/interfaces/models'
 import { TEMPLATE_DOC_TYPES } from '../constants'
 import { generateTemplateFromDescription } from '../templatesAI'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import { BaseButton } from '@/components/base'
 
 const emit = defineEmits<{
   (e: 'create', payload: { name: string; docType: TemplateDocType }): void
@@ -81,9 +82,9 @@ function create() {
     </template>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button v-if="mode === 'ai'" class="app-btn" :disabled="!aiDesc.trim()" @click="generate">✨ توليد بالذكاء</button>
-      <button v-else class="app-btn" :disabled="!valid" @click="create">إنشاء والانتقال للمحرّر</button>
+      <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
+      <BaseButton v-if="mode === 'ai'" :disabled="!aiDesc.trim()" @click="generate">✨ توليد بالذكاء</BaseButton>
+      <BaseButton v-else :disabled="!valid" @click="create">إنشاء والانتقال للمحرّر</BaseButton>
     </template>
   </ModalShell>
 </template>

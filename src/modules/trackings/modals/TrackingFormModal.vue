@@ -7,6 +7,7 @@ import { TRACKING_TYPES, TRACKING_FIELD_SCHEMAS } from '@/constants'
 import { daysBetween, statusFromDays } from '@/helpers/date'
 import type { Tracking, Attachment } from '@/interfaces/models'
 import type { FormPreset } from '@/interfaces/forms'
+import { BaseButton } from '@/components/base'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
@@ -130,8 +131,8 @@ function save() {
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button class="app-btn" :disabled="!valid" @click="save">{{ tracking ? 'حفظ التعديلات' : 'إضافة المتابعة' }}</button>
+      <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
+      <BaseButton :disabled="!valid" @click="save">{{ tracking ? 'حفظ التعديلات' : 'إضافة المتابعة' }}</BaseButton>
     </template>
   </ModalShell>
 </template>

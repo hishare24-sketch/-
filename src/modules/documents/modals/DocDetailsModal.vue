@@ -8,6 +8,7 @@ import type { DocItem } from '@/interfaces/models'
 import type { FormPreset } from '@/interfaces/forms'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
+import { BaseButton } from '@/components/base'
 
 // autoAnalyze: يُشغّل التحليل تلقائياً عند الفتح (يُمرَّر عند إنشاء مستند جديد بخيار التحليل)
 const props = defineProps<{ doc: DocItem; autoAnalyze?: boolean }>()
@@ -160,7 +161,7 @@ onMounted(() => {
     </div>
 
     <template #footer>
-      <button class="app-btn" @click="emit('close')">إغلاق</button>
+      <BaseButton @click="emit('close')">إغلاق</BaseButton>
     </template>
   </ModalShell>
 </template>

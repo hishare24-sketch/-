@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { BaseButton } from '@/components/base'
 
 interface ActionButton {
   label: string
@@ -39,17 +40,16 @@ const visibleButtons = computed(() => props.buttons.filter((b) => b.show !== fal
 
     <div class="page-actions__spacer" />
 
-    <button class="app-btn app-btn--ghost" title="تحديث" @click="emit('reload')">⟳</button>
+    <BaseButton variant="ghost" title="تحديث" @click="emit('reload')">⟳</BaseButton>
 
-    <button
+    <BaseButton
       v-for="(btn, i) in visibleButtons"
       :key="i"
-      class="app-btn"
       @click="btn.onClick"
     >
       <span v-if="btn.icon">{{ btn.icon }}</span>
       {{ btn.label }}
-    </button>
+    </BaseButton>
   </div>
 </template>
 

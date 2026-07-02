@@ -5,6 +5,7 @@ import { uid } from '@/helpers/id'
 import { today } from '@/helpers/date'
 import type { Survey, SurveyQuestion } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ survey: Survey; publicMode?: boolean }>()
 const emit = defineEmits<{ (e: 'submitted'): void; (e: 'close'): void }>()
@@ -118,10 +119,10 @@ function submit() {
     </template>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">{{ submitted ? 'إغلاق' : 'إلغاء' }}</button>
-      <button v-if="!submitted" class="app-btn" :disabled="missing.length > 0" @click="submit">
+      <BaseButton variant="ghost" @click="emit('close')">{{ submitted ? 'إغلاق' : 'إلغاء' }}</BaseButton>
+      <BaseButton v-if="!submitted" :disabled="missing.length > 0" @click="submit">
         {{ missing.length ? `أكمل ${missing.length} سؤال إلزامي` : 'إرسال' }}
-      </button>
+      </BaseButton>
     </template>
   </ModalShell>
 </template>

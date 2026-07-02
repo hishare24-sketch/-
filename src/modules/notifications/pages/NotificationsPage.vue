@@ -6,6 +6,7 @@ import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useNotificationsStore } from '@/stores/NotificationsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import type { Notif, Page } from '@/interfaces/models'
+import { BaseButton } from '@/components/base'
 
 const router = useRouter()
 const notificationsStore = useNotificationsStore()
@@ -78,9 +79,9 @@ function openNotif(n: Notif) {
         <h1>الإشعارات <HelpIcon section="notifications" /></h1>
         <p>{{ notificationsStore.unreadCount }} غير مقروء من أصل {{ notifs.length }}</p>
       </div>
-      <button class="app-btn app-btn--outlined" @click="notificationsStore.markAllRead()">
+      <BaseButton variant="outlined" @click="notificationsStore.markAllRead()">
         ✓ تعليم الكل كمقروء
-      </button>
+      </BaseButton>
     </header>
 
     <div class="tabs">
@@ -99,7 +100,7 @@ function openNotif(n: Notif) {
         <option value="newest">الأحدث أولاً</option>
         <option value="oldest">الأقدم أولاً</option>
       </select>
-      <button v-if="hasFilter" class="app-btn app-btn--ghost" @click="clearFilters">مسح</button>
+      <BaseButton v-if="hasFilter" variant="ghost" @click="clearFilters">مسح</BaseButton>
     </div>
 
     <div class="list">

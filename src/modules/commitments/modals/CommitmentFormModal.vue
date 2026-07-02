@@ -10,6 +10,7 @@ import type { CommitmentKind, CommitmentFreq, CommitmentDir, Attachment, Commitm
 import type { FormPreset } from '@/interfaces/forms'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ projectId: string; preset?: FormPreset; commitment?: Commitment | null }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'saved'): void }>()
@@ -142,8 +143,8 @@ function save() {
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button class="app-btn" :disabled="!valid" @click="save">{{ editing ? 'حفظ التعديلات' : 'إضافة الالتزام' }}</button>
+      <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
+      <BaseButton :disabled="!valid" @click="save">{{ editing ? 'حفظ التعديلات' : 'إضافة الالتزام' }}</BaseButton>
     </template>
   </ModalShell>
 </template>

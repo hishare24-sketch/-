@@ -11,6 +11,7 @@ import SurveyBuilderModal from '../modals/SurveyBuilderModal.vue'
 import SurveyResultsModal from '../modals/SurveyResultsModal.vue'
 import RespondentsModal from '../modals/RespondentsModal.vue'
 import FillSurveyModal from '../modals/FillSurveyModal.vue'
+import { BaseButton } from '@/components/base'
 
 const surveysStore = useSurveysStore()
 const projectsStore = useProjectsStore()
@@ -83,7 +84,7 @@ async function onDelete(s: Survey) {
         <h1>الاستبيانات <HelpIcon section="surveys" /></h1>
         <p>إنشاء الاستبيانات وجمع الردود وتحليلها</p>
       </div>
-      <button class="app-btn" @click="openCreate">＋ استبيان جديد</button>
+      <BaseButton @click="openCreate">＋ استبيان جديد</BaseButton>
     </header>
 
     <div class="surveys__stats">
@@ -108,7 +109,7 @@ async function onDelete(s: Survey) {
         <option value="newest">الأحدث</option>
         <option value="responses">الأكثر ردوداً</option>
       </select>
-      <button v-if="hasFilter" class="app-btn app-btn--ghost" @click="clearFilters">مسح</button>
+      <BaseButton v-if="hasFilter" variant="ghost" @click="clearFilters">مسح</BaseButton>
     </div>
 
     <div class="grid">
@@ -127,7 +128,7 @@ async function onDelete(s: Survey) {
           <template v-if="s.projectId"> · {{ projectsStore.projectById(s.projectId)?.name }}</template>
         </span>
         <div class="survey__actions">
-          <button class="app-btn app-btn--outlined view-btn" @click="viewing = s">📊 النتائج</button>
+          <BaseButton variant="outlined" class="view-btn" @click="viewing = s">📊 النتائج</BaseButton>
           <button class="icon-btn" title="المستبينون" @click="managing = s">👥</button>
           <button class="icon-btn" title="تعبئة" :disabled="s.status !== 'active'" @click="filling = s">✍️</button>
           <button class="icon-btn" title="تعديل" @click="openEdit(s)">✎</button>

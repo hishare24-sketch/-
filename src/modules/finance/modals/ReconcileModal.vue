@@ -7,6 +7,7 @@ import { importXLSX } from '@/helpers/export'
 import { fmtNum } from '@/helpers/format'
 import { currentUserName } from '@/helpers/currentUser'
 import type { Transaction } from '@/interfaces/models'
+import { BaseButton } from '@/components/base'
 import ModalShell from '@/components/shared/ModalShell.vue'
 
 const props = defineProps<{ projectId: string }>()
@@ -171,7 +172,7 @@ function reset() {
             <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.icon }} {{ p.name }}</option>
           </select>
         </div>
-        <button class="app-btn app-btn--ghost" @click="reset">↺ ملف آخر</button>
+        <BaseButton variant="ghost" @click="reset">↺ ملف آخر</BaseButton>
       </div>
 
       <!-- ربط الأعمدة -->
@@ -196,7 +197,7 @@ function reset() {
         <span class="pill pill--ok">مطابقة: {{ summary.matched }}</span>
         <span class="pill pill--warn">متعدد: {{ summary.multiple }}</span>
         <span class="pill pill--danger">غير مطابقة: {{ summary.unmatched }}</span>
-        <button v-if="summary.unmatched" class="app-btn app-btn--sm" @click="createAllUnmatched">＋ إنشاء كل الناقصة ({{ summary.unmatched }})</button>
+        <BaseButton v-if="summary.unmatched" size="sm" @click="createAllUnmatched">＋ إنشاء كل الناقصة ({{ summary.unmatched }})</BaseButton>
       </div>
       <p v-else class="hint-line">اختر عمود المبلغ لبدء المطابقة.</p>
 
@@ -233,7 +234,7 @@ function reset() {
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إغلاق</button>
+      <BaseButton variant="ghost" @click="emit('close')">إغلاق</BaseButton>
     </template>
   </ModalShell>
 </template>

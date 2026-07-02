@@ -7,6 +7,7 @@ import { useToast } from '@/composables/useToast'
 import { TX_TYPES } from '@/constants'
 import { currentUserName } from '@/helpers/currentUser'
 import type { Transaction } from '@/interfaces/models'
+import { BaseButton } from '@/components/base'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
@@ -62,9 +63,9 @@ function exportInvoice() {
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إغلاق</button>
-      <button class="app-btn app-btn--outlined" @click="exportInvoice">⬇ تصدير PDF</button>
-      <button class="app-btn" @click="emit('edit', tx)">✎ تعديل</button>
+      <BaseButton variant="ghost" @click="emit('close')">إغلاق</BaseButton>
+      <BaseButton variant="outlined" @click="exportInvoice">⬇ تصدير PDF</BaseButton>
+      <BaseButton @click="emit('edit', tx)">✎ تعديل</BaseButton>
     </template>
   </ModalShell>
 </template>

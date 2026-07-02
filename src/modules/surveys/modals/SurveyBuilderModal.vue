@@ -8,6 +8,7 @@ import { uid } from '@/helpers/id'
 import { today } from '@/helpers/date'
 import type { Survey, SurveyQuestion, SurveyQuestionKind } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ survey: Survey | null }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -144,7 +145,7 @@ function save() {
       <!-- الأسئلة -->
       <div class="qhead">
         <span>الأسئلة ({{ draft.questions.length }})</span>
-        <button class="app-btn app-btn--outlined add-q" @click="addQuestion">＋ سؤال</button>
+        <BaseButton variant="outlined" class="add-q" @click="addQuestion">＋ سؤال</BaseButton>
       </div>
 
       <div v-for="(q, i) in draft.questions" :key="q.id" class="qcard">
@@ -180,10 +181,10 @@ function save() {
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button v-if="step === 'build'" class="app-btn" :disabled="!valid" @click="save">
+      <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
+      <BaseButton v-if="step === 'build'" :disabled="!valid" @click="save">
         {{ isEdit ? 'حفظ التعديلات' : 'إنشاء الاستبيان' }}
-      </button>
+      </BaseButton>
     </template>
   </ModalShell>
 </template>

@@ -13,6 +13,7 @@ import type { Asset, AssetCategory } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import AssetFormModal from '../modals/AssetFormModal.vue'
 import AssetDetailsModal from '../modals/AssetDetailsModal.vue'
+import { BaseButton } from '@/components/base'
 
 const assetsStore = useAssetsStore()
 const projectsStore = useProjectsStore()
@@ -98,7 +99,7 @@ async function onDelete(a: Asset) {
         <h1>الأصول <HelpIcon section="assets" /></h1>
         <p>الأصول الملموسة وسجل الصيانة والضمانات</p>
       </div>
-      <button class="app-btn" @click="openCreate">＋ أصل جديد</button>
+      <BaseButton @click="openCreate">＋ أصل جديد</BaseButton>
     </header>
 
     <div class="assets__stats">
@@ -167,7 +168,7 @@ async function onDelete(a: Asset) {
 
         <!-- مدخل واحد واضح لإدارة الأصل (صيانة وكل الإجراءات بالداخل) + اختصارات -->
         <div class="asset__actions">
-          <button class="app-btn act-btn" @click="viewing = a">⚙️ استعراض وإدارة</button>
+          <BaseButton class="act-btn" @click="viewing = a">⚙️ استعراض وإدارة</BaseButton>
           <button class="icon-btn" title="تعديل" @click="onEdit(a)">✎</button>
           <button class="icon-btn icon-btn--danger" title="حذف" @click="onDelete(a)">🗑️</button>
         </div>

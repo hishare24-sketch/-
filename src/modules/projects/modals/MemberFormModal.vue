@@ -5,6 +5,7 @@ import { ROLES, PERMISSIONS, ROLE_PERMS } from '@/constants'
 import { uid } from '@/helpers/id'
 import type { Member, MemberRole } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ projectId: string; member: Member | null }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -102,10 +103,10 @@ function save() {
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button class="app-btn" :disabled="!form.name.trim() || !form.email.trim()" @click="save">
+      <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
+      <BaseButton :disabled="!form.name.trim() || !form.email.trim()" @click="save">
         {{ member ? 'حفظ التعديلات' : 'إضافة العضو' }}
-      </button>
+      </BaseButton>
     </template>
   </ModalShell>
 </template>

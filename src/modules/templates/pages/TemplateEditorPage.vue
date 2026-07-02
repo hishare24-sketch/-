@@ -18,6 +18,7 @@ import {
 import ElementPickerModal from '../modals/ElementPickerModal.vue'
 import ElementProperties from '../components/ElementProperties.vue'
 import { suggestPalettes, validateTemplate, type Palette, type TemplateIssue } from '../templatesAI'
+import { BaseButton } from '@/components/base'
 
 const route = useRoute()
 const router = useRouter()
@@ -178,9 +179,9 @@ function save() {
           <button :class="{ 'is-on': view === 'build' }" @click="view = 'build'">🛠️ بناء</button>
           <button :class="{ 'is-on': view === 'preview' }" @click="view = 'preview'">👁️ معاينة</button>
         </div>
-        <button class="app-btn app-btn--outlined" :class="{ 'is-on': showIdentity }" @click="showIdentity = !showIdentity">🎨 الهوية</button>
-        <button class="app-btn app-btn--outlined" @click="runValidate">🔍 تدقيق</button>
-        <button class="app-btn" :disabled="!dirty" @click="save">💾 حفظ</button>
+        <BaseButton variant="outlined" :class="{ 'is-on': showIdentity }" @click="showIdentity = !showIdentity">🎨 الهوية</BaseButton>
+        <BaseButton variant="outlined" @click="runValidate">🔍 تدقيق</BaseButton>
+        <BaseButton :disabled="!dirty" @click="save">💾 حفظ</BaseButton>
       </header>
 
       <!-- نتائج المدقّق الذكي -->
@@ -203,14 +204,14 @@ function save() {
         <span class="identity__label">🎨 لون هوية القالب</span>
         <input v-model="draft.accent" type="color" class="identity__color" @input="touch" />
         <input v-model="draft.accent" type="text" class="identity__hex" placeholder="#2563eb" @input="touch" />
-        <button class="app-btn app-btn--outlined identity__btn" @click="useSystemAccent">استخدام لون النظام</button>
-        <button class="app-btn identity__btn" :disabled="!draft.accent" @click="applyAccentToHeadings">تطبيق على كل العناوين</button>
+        <BaseButton variant="outlined" class="identity__btn" @click="useSystemAccent">استخدام لون النظام</BaseButton>
+        <BaseButton class="identity__btn" :disabled="!draft.accent" @click="applyAccentToHeadings">تطبيق على كل العناوين</BaseButton>
         <span class="identity__hint">يُطبَّق اللون على العناوين وترويسة المستند عند التوليد.</span>
 
         <!-- مصمّم الألوان الذكي -->
         <div class="palette">
           <input v-model="paletteDesc" type="text" class="palette__desc" placeholder="صف الطابع: هادئ مؤسسي / فاخر / حيوي…" />
-          <button class="app-btn app-btn--outlined identity__btn" @click="runPalettes">✨ اقتراح ألوان</button>
+          <BaseButton variant="outlined" class="identity__btn" @click="runPalettes">✨ اقتراح ألوان</BaseButton>
           <span class="palette__tag">🧪 محاكاة</span>
           <div v-if="palettes.length" class="palette__list">
             <button v-for="p in palettes" :key="p.name" class="pal" :title="p.name" @click="applyPalette(p)">

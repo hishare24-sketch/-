@@ -7,6 +7,7 @@ import { today } from '@/helpers/date'
 import type { Asset, AssetWarranty, Attachment, WarrantyContext } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{
   asset: Asset
@@ -158,8 +159,8 @@ function save() {
     </p>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button class="app-btn" :disabled="!valid" @click="save">{{ isEdit ? 'حفظ' : 'إضافة' }}</button>
+      <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
+      <BaseButton :disabled="!valid" @click="save">{{ isEdit ? 'حفظ' : 'إضافة' }}</BaseButton>
     </template>
   </ModalShell>
 </template>

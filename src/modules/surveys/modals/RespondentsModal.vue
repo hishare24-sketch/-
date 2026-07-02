@@ -5,6 +5,7 @@ import { useSurveysStore } from '@/stores/SurveysStore'
 import { importXLSX } from '@/helpers/export'
 import type { Survey } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ survey: Survey }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -91,7 +92,7 @@ const sourceLabel: Record<string, string> = { member: 'عضو', manual: 'يدو�
         <span class="mrow__name">{{ m.name }}</span>
         <span class="mrow__email">{{ m.email }}</span>
         <button v-if="addedNames.has(m.name)" class="mrow__added" disabled>✓ مُضاف</button>
-        <button v-else class="app-btn app-btn--outlined mrow__add" @click="addMember(m.name, m.email)">＋ إضافة</button>
+        <BaseButton v-else variant="outlined" class="mrow__add" @click="addMember(m.name, m.email)">＋ إضافة</BaseButton>
       </div>
     </div>
 
@@ -99,7 +100,7 @@ const sourceLabel: Record<string, string> = { member: 'عضو', manual: 'يدو�
     <div v-else-if="tab === 'manual'" class="manual">
       <div class="field"><label>الاسم</label><input v-model="manual.name" type="text" placeholder="اسم المستبين" /></div>
       <div class="field"><label>البريد (اختياري)</label><input v-model="manual.email" type="email" placeholder="name@example.com" /></div>
-      <button class="app-btn" :disabled="!manual.name.trim()" @click="addManual">＋ إضافة المستبين</button>
+      <BaseButton :disabled="!manual.name.trim()" @click="addManual">＋ إضافة المستبين</BaseButton>
     </div>
 
     <!-- Excel -->
@@ -129,7 +130,7 @@ const sourceLabel: Record<string, string> = { member: 'عضو', manual: 'يدو�
     </div>
 
     <template #footer>
-      <button class="app-btn" @click="emit('close')">إغلاق</button>
+      <BaseButton @click="emit('close')">إغلاق</BaseButton>
     </template>
   </ModalShell>
 </template>

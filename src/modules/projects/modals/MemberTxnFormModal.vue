@@ -9,6 +9,7 @@ import { fmtNum } from '@/helpers/format'
 import type { MemberTxnType, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ projectId: string }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -106,8 +107,8 @@ function save() {
     </template>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button v-if="projMembers.length" class="app-btn" :disabled="!valid" @click="save">حفظ الحركة</button>
+      <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
+      <BaseButton v-if="projMembers.length" :disabled="!valid" @click="save">حفظ الحركة</BaseButton>
     </template>
   </ModalShell>
 </template>

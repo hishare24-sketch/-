@@ -2,6 +2,7 @@
 import type { DocTemplate } from '@/interfaces/models'
 import { docTypeMeta, sectionKindMeta, elementTypeMeta } from '../constants'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ template: DocTemplate }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -35,7 +36,7 @@ const meta = docTypeMeta(props.template.docType)
     </div>
 
     <template #footer>
-      <button class="app-btn" @click="emit('close')">إغلاق</button>
+      <BaseButton @click="emit('close')">إغلاق</BaseButton>
     </template>
   </ModalShell>
 </template>

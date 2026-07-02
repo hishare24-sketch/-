@@ -5,6 +5,7 @@ import { fmt, fmtNum } from '@/helpers/format'
 import { ROLES, MEMBER_TXN_TYPES, PERMISSIONS } from '@/constants'
 import type { Member, MemberTxn } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ member: Member }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -66,7 +67,7 @@ function statusInfo(s: MemberTxn['status']) {
     </div>
 
     <template #footer>
-      <button class="app-btn" @click="emit('close')">إغلاق</button>
+      <BaseButton @click="emit('close')">إغلاق</BaseButton>
     </template>
   </ModalShell>
 </template>

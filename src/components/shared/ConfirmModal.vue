@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { BaseButton } from '@/components/base'
 
 // نافذة تأكيد عامة (للحذف وغيره) — تُستدعى عبر ref
 const isOpen = ref(false)
@@ -32,8 +33,8 @@ defineExpose({ open })
         <h3 class="cm-title">{{ title }}</h3>
         <p class="cm-message">{{ message }}</p>
         <div class="cm-actions">
-          <button class="app-btn app-btn--ghost" @click="close(false)">إلغاء</button>
-          <button class="app-btn cm-danger" @click="close(true)">تأكيد</button>
+          <BaseButton variant="ghost" @click="close(false)">إلغاء</BaseButton>
+          <BaseButton variant="danger" @click="close(true)">تأكيد</BaseButton>
         </div>
       </div>
     </div>
@@ -74,9 +75,5 @@ defineExpose({ open })
   display: flex;
   justify-content: flex-start;
   gap: 10px;
-}
-
-.cm-danger {
-  background: var(--error);
 }
 </style>

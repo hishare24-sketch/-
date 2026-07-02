@@ -13,6 +13,7 @@ import MaintenanceModal from './MaintenanceModal.vue'
 import AssetActionModal, { type AssetActionKind } from './AssetActionModal.vue'
 import AssetWarrantyModal from './AssetWarrantyModal.vue'
 import { useToast } from '@/composables/useToast'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ asset: Asset }>()
 const emit = defineEmits<{ (e: 'edit', a: Asset): void; (e: 'close'): void }>()
@@ -227,8 +228,8 @@ function linkWarranty() {
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إغلاق</button>
-      <button class="app-btn" @click="showMaint = true">🔧 تسجيل صيانة</button>
+      <BaseButton variant="ghost" @click="emit('close')">إغلاق</BaseButton>
+      <BaseButton @click="showMaint = true">🔧 تسجيل صيانة</BaseButton>
     </template>
 
     <!-- مودالات فرعية -->

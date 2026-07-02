@@ -8,6 +8,7 @@ import { COMMITMENT_KINDS, COMMITMENT_FIELD_SCHEMAS, FREQ_LABEL } from '@/consta
 import type { Commitment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ commitment: Commitment }>()
 const emit = defineEmits<{ (e: 'pay', c: Commitment): void; (e: 'edit', c: Commitment): void; (e: 'close'): void }>()
@@ -84,10 +85,10 @@ const totalPaid = computed(() => props.commitment.payments.reduce((s, p) => s + 
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إغلاق</button>
-      <button v-if="commitment.active && !done && !commitment.cancelled" class="app-btn" @click="emit('pay', commitment)">
+      <BaseButton variant="ghost" @click="emit('close')">إغلاق</BaseButton>
+      <BaseButton v-if="commitment.active && !done && !commitment.cancelled" @click="emit('pay', commitment)">
         {{ commitment.direction === 'out' ? 'دفع' : 'استلام' }} دفعة
-      </button>
+      </BaseButton>
     </template>
   </ModalShell>
 </template>

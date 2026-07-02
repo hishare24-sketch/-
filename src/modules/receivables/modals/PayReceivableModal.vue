@@ -6,6 +6,7 @@ import { fmt } from '@/helpers/format'
 import type { Attachment, Receivable } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ receivable: Receivable }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -75,8 +76,8 @@ function pay() {
     <p class="hint">ℹ️ تسجيل الدفعة يُنشئ عملية {{ isRecv ? 'إيراد' : 'مصروف' }} فعلية في الإدارة المالية ويُحدّث الرصيد.</p>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button class="app-btn" :disabled="!valid" @click="pay">{{ isRecv ? 'تسجيل التحصيل' : 'تسجيل السداد' }}</button>
+      <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
+      <BaseButton :disabled="!valid" @click="pay">{{ isRecv ? 'تسجيل التحصيل' : 'تسجيل السداد' }}</BaseButton>
     </template>
   </ModalShell>
 </template>

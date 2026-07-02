@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useSettingsStore, type CustomTheme } from '@/stores/SettingsStore'
 import { THEME_PRESETS, SCREENS, PRICING_PLANS, DEFAULT_HELP } from '@/constants'
 import type { CustomLists, UserPrefs } from '@/interfaces/models'
+import { BaseButton } from '@/components/base'
 import ToggleActivationSwitch from '@/components/shared/ToggleActivationSwitch.vue'
 import IntegrationsPanel from '../components/IntegrationsPanel.vue'
 import TemplateEditor from '../components/TemplateEditor.vue'
@@ -177,12 +178,12 @@ function resetAllHelp() {
           </p>
           <div class="data-actions">
             <template v-if="!confirmingReset">
-              <button class="app-btn app-btn--outlined" @click="confirmingReset = true">↺ استعادة البيانات التجريبية</button>
+              <BaseButton variant="outlined" @click="confirmingReset = true">↺ استعادة البيانات التجريبية</BaseButton>
             </template>
             <template v-else>
               <span class="data-confirm">هل أنت متأكد؟ ستُمسح تعديلاتك المحفوظة.</span>
-              <button class="app-btn app-btn--danger" :disabled="resetting" @click="doResetData">نعم، استعادة</button>
-              <button class="app-btn app-btn--ghost" :disabled="resetting" @click="confirmingReset = false">إلغاء</button>
+              <BaseButton variant="danger" :disabled="resetting" @click="doResetData">نعم، استعادة</BaseButton>
+              <BaseButton variant="ghost" :disabled="resetting" @click="confirmingReset = false">إلغاء</BaseButton>
             </template>
           </div>
         </div>
@@ -199,7 +200,7 @@ function resetAllHelp() {
             </div>
             <div class="add-row">
               <input v-model="newItem[lm.key]" type="text" placeholder="إضافة عنصر..." @keyup.enter="addItem(lm.key)" />
-              <button class="app-btn" @click="addItem(lm.key)">＋</button>
+              <BaseButton @click="addItem(lm.key)">＋</BaseButton>
             </div>
           </div>
         </div>
@@ -261,9 +262,9 @@ function resetAllHelp() {
             </div>
           </div>
 
-          <button class="app-btn app-btn--outlined reset-all" :disabled="!hasCustomTheme" @click="settingsStore.resetTheme()">
+          <BaseButton variant="outlined" class="reset-all" :disabled="!hasCustomTheme" @click="settingsStore.resetTheme()">
             ↺ العودة للألوان الافتراضية
-          </button>
+          </BaseButton>
         </div>
 
         <!-- شروحات الأقسام — كل الشاشات قابلة للتحرير -->
@@ -290,14 +291,14 @@ function resetAllHelp() {
                 <button v-if="helpSearch" class="help-search__x" @click="helpSearch = ''">✕</button>
               </div>
               <template v-if="!confirmingHelpReset">
-                <button class="app-btn app-btn--outlined" :disabled="!helpStats.customized" @click="confirmingHelpReset = true">
+                <BaseButton variant="outlined" :disabled="!helpStats.customized" @click="confirmingHelpReset = true">
                   ↺ استعادة كل الشروحات
-                </button>
+                </BaseButton>
               </template>
               <template v-else>
                 <span class="data-confirm">سيُستبدل كل شرح بالنص الأصلي.</span>
-                <button class="app-btn app-btn--danger" @click="resetAllHelp">نعم</button>
-                <button class="app-btn app-btn--ghost" @click="confirmingHelpReset = false">إلغاء</button>
+                <BaseButton variant="danger" @click="resetAllHelp">نعم</BaseButton>
+                <BaseButton variant="ghost" @click="confirmingHelpReset = false">إلغاء</BaseButton>
               </template>
             </div>
           </div>
@@ -395,21 +396,22 @@ function resetAllHelp() {
                 <li v-for="f in plan.features" :key="f">✓ {{ f }}</li>
               </ul>
 
-              <button
+              <BaseButton
                 v-if="plan.id === currentPlan"
-                class="app-btn app-btn--outlined plan__btn"
+                variant="outlined"
+                class="plan__btn"
                 disabled
               >
                 ✓ باقتك الحالية
-              </button>
-              <button
+              </BaseButton>
+              <BaseButton
                 v-else
-                class="app-btn plan__btn"
+                class="plan__btn"
                 :style="{ background: plan.color }"
                 @click="settingsStore.setPlan(plan.id)"
               >
                 {{ plan.monthly === 0 ? 'التحويل للمجانية' : 'الترقية' }}
-              </button>
+              </BaseButton>
             </div>
           </div>
 

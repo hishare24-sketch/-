@@ -6,6 +6,7 @@ import { PROJECT_ICONS, PROJECT_COLORS } from '@/constants'
 import { uid } from '@/helpers/id'
 import type { Project } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ show: boolean; project: Project | null }>()
 const emit = defineEmits<{ (e: 'update:show', v: boolean): void }>()
@@ -98,10 +99,10 @@ function save() {
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="close">إلغاء</button>
-      <button class="app-btn" :disabled="!form.name.trim()" @click="save">
+      <BaseButton variant="ghost" @click="close">إلغاء</BaseButton>
+      <BaseButton :disabled="!form.name.trim()" @click="save">
         {{ project ? 'حفظ التعديلات' : 'إضافة المشروع' }}
-      </button>
+      </BaseButton>
     </template>
   </ModalShell>
 </template>

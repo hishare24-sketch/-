@@ -15,6 +15,7 @@ import ToggleActivationSwitch from '@/components/shared/ToggleActivationSwitch.v
 import CommitmentFormModal from '../modals/CommitmentFormModal.vue'
 import CommitmentDetailsModal from '../modals/CommitmentDetailsModal.vue'
 import PayCommitmentModal from '../modals/PayCommitmentModal.vue'
+import { BaseButton } from '@/components/base'
 
 const commitmentsStore = useCommitmentsStore()
 const projectsStore = useProjectsStore()
@@ -116,7 +117,7 @@ function onPay(c: Commitment) {
         <h1>الالتزامات الدورية <HelpIcon section="commitments" /></h1>
         <p>الأقساط والالتزامات المتكررة والاشتراكات</p>
       </div>
-      <button class="app-btn" @click="openCreate">＋ التزام جديد</button>
+      <BaseButton @click="openCreate">＋ التزام جديد</BaseButton>
     </header>
 
 
@@ -184,13 +185,14 @@ function onPay(c: Commitment) {
         </div>
 
         <div class="cm__actions">
-          <button
+          <BaseButton
             v-if="c.active && !commitmentDone(c) && !c.cancelled"
-            class="app-btn app-btn--outlined pay-btn"
+            variant="outlined"
+            class="pay-btn"
             @click="onPay(c)"
           >
             {{ c.direction === 'out' ? 'دفع' : 'استلام' }} دفعة
-          </button>
+          </BaseButton>
           <span v-else-if="c.cancelled" class="cm__done cm__done--cancel">🚫 ملغى</span>
           <span v-else-if="commitmentDone(c)" class="cm__done">✓ مكتمل</span>
           <button class="icon-btn" title="تعديل" @click="onEdit(c)">✎</button>

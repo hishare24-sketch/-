@@ -23,6 +23,7 @@ import TxFormModal from '@/modules/finance/modals/TxFormModal.vue'
 import TrackingFormModal from '@/modules/trackings/modals/TrackingFormModal.vue'
 import RequestFormModal from '@/modules/requests/modals/RequestFormModal.vue'
 import DocFormModal from '@/modules/documents/modals/DocFormModal.vue'
+import { BaseButton } from '@/components/base'
 
 const route = useRoute()
 const router = useRouter()
@@ -339,8 +340,8 @@ const memberSummary = computed(() => {
       <div class="bar">
         <span class="bar__title">أعضاء المشروع ({{ filteredMembers.length }})</span>
         <div class="bar__actions">
-          <button class="app-btn app-btn--outlined" @click="showTxnForm = true">＋ حركة رصيد</button>
-          <button class="app-btn" @click="addMember">＋ عضو</button>
+          <BaseButton variant="outlined" @click="showTxnForm = true">＋ حركة رصيد</BaseButton>
+          <BaseButton @click="addMember">＋ عضو</BaseButton>
         </div>
       </div>
 
@@ -380,7 +381,7 @@ const memberSummary = computed(() => {
         <span class="empty__icon">👥</span>
         <span class="empty__title">{{ projMembers.length ? 'لا يوجد أعضاء مطابقون للبحث' : 'لا يوجد أعضاء بعد' }}</span>
         <span class="empty__sub">{{ projMembers.length ? 'جرّب تغيير الفلتر أو كلمة البحث.' : 'أضف أول طرف للمشروع لبدء إدارة الصلاحيات والعهد.' }}</span>
-        <button v-if="!projMembers.length" class="app-btn" @click="addMember">＋ إضافة عضو</button>
+        <BaseButton v-if="!projMembers.length" @click="addMember">＋ إضافة عضو</BaseButton>
       </div>
 
       <!-- بطاقات الأعضاء -->
@@ -419,7 +420,7 @@ const memberSummary = computed(() => {
           <div v-if="memberIssue(m) && expandedIssue === m.id" class="issue">
             <div class="issue__head"><span>⚠️</span><strong>عدم تطابق في رصيد العهدة</strong></div>
             <p class="issue__body">{{ memberIssue(m) }}</p>
-            <button class="app-btn app-btn--outlined app-btn--sm" @click="viewingMember = m">↗ فتح ملف العضو لتسجيل تسوية</button>
+            <BaseButton variant="outlined" size="sm" @click="viewingMember = m">↗ فتح ملف العضو لتسجيل تسوية</BaseButton>
           </div>
 
           <!-- رصيد العهدة -->
@@ -549,7 +550,7 @@ const memberSummary = computed(() => {
 
   <section v-else class="detail">
     <p class="not-found">المشروع غير موجود.</p>
-    <button class="app-btn app-btn--outlined" @click="router.push({ name: 'projects-page' })">رجوع للمشاريع</button>
+    <BaseButton variant="outlined" @click="router.push({ name: 'projects-page' })">رجوع للمشاريع</BaseButton>
   </section>
 </template>
 

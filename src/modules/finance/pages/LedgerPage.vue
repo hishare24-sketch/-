@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import HelpIcon from '@/components/shared/HelpIcon.vue'
+import { BaseButton } from '@/components/base'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import DonutChart from '@/components/charts/DonutChart.vue'
 import { useProjectsStore } from '@/stores/ProjectsStore'
@@ -190,7 +191,7 @@ function exportExcel() {
         <h1>السجل المالي <HelpIcon section="ledger" /></h1>
         <p>سجل موحّد لكل العمليات والتدفقات عبر المشاريع والأعضاء</p>
       </div>
-      <button class="app-btn app-btn--outlined" @click="exportExcel">⬇ تصدير Excel</button>
+      <BaseButton variant="outlined" @click="exportExcel">⬇ تصدير Excel</BaseButton>
     </header>
 
     <!-- مبدّل العرض -->
@@ -234,7 +235,7 @@ function exportExcel() {
         <option value="half">آخر نصف سنة</option>
         <option value="year">آخر سنة</option>
       </select>
-      <button v-if="hasFilter" class="app-btn app-btn--ghost" @click="clearFilters">مسح الفلترة</button>
+      <BaseButton v-if="hasFilter" variant="ghost" @click="clearFilters">مسح الفلترة</BaseButton>
     </div>
 
     <!-- عرض العمليات -->
@@ -341,8 +342,8 @@ function exportExcel() {
         </div>
       </div>
       <template #footer>
-        <button v-if="detailIsTx" class="app-btn app-btn--outlined" @click="viewInFinance">↗ عرض العملية في الإدارة المالية</button>
-        <button class="app-btn" @click="detail = null">إغلاق</button>
+        <BaseButton v-if="detailIsTx" variant="outlined" @click="viewInFinance">↗ عرض العملية في الإدارة المالية</BaseButton>
+        <BaseButton @click="detail = null">إغلاق</BaseButton>
       </template>
     </ModalShell>
   </section>

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { BaseButton } from '@/components/base'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -16,9 +17,9 @@ const code = computed(() => (messageKey.includes('not_authorized') ? '403' : '40
   <div class="error-page">
     <div class="error-page__code">{{ code }}</div>
     <p class="error-page__msg">{{ t(messageKey) }}</p>
-    <button class="app-btn" @click="router.push({ name: 'dashboard-page' })">
+    <BaseButton @click="router.push({ name: 'dashboard-page' })">
       {{ t('common.back') }}
-    </button>
+    </BaseButton>
   </div>
 </template>
 

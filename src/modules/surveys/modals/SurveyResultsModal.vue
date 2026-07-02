@@ -6,6 +6,7 @@ import { useSurveysStore } from '@/stores/SurveysStore'
 import { useSurveyStats } from '../composables/useSurveyStats'
 import type { Survey } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ survey: Survey }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -166,7 +167,7 @@ function exportReport() {
         <p class="share__hint">شارك هذا الرابط مع أي شخص لتعبئة الاستبيان (يفتح بدون تسجيل دخول).</p>
         <div class="share__row">
           <input :value="shareLink" readonly />
-          <button class="app-btn" @click="copyLink">{{ copied ? '✓ نُسخ' : 'نسخ' }}</button>
+          <BaseButton @click="copyLink">{{ copied ? '✓ نُسخ' : 'نسخ' }}</BaseButton>
         </div>
       </div>
 
@@ -180,15 +181,15 @@ function exportReport() {
         <p class="share__hint">عند كل رد جديد، يُرسل النظام البيانات إلى هذا الرابط (عند توفّر backend).</p>
         <div class="share__row">
           <input v-model="webhook" type="url" placeholder="https://example.com/webhook" @blur="saveWebhook" />
-          <button class="app-btn app-btn--outlined" @click="saveWebhook">حفظ</button>
+          <BaseButton variant="outlined" @click="saveWebhook">حفظ</BaseButton>
         </div>
       </div>
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إغلاق</button>
-      <button class="app-btn app-btn--outlined" @click="exportExcel">⬇ Excel</button>
-      <button class="app-btn app-btn--outlined" @click="exportReport">⬇ PDF</button>
+      <BaseButton variant="ghost" @click="emit('close')">إغلاق</BaseButton>
+      <BaseButton variant="outlined" @click="exportExcel">⬇ Excel</BaseButton>
+      <BaseButton variant="outlined" @click="exportReport">⬇ PDF</BaseButton>
     </template>
   </ModalShell>
 </template>

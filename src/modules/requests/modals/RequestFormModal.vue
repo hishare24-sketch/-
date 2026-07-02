@@ -9,6 +9,7 @@ import { today } from '@/helpers/date'
 import type { Attachment, RequestItem } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ projectId: string; request?: RequestItem | null }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -127,8 +128,8 @@ function save() {
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button class="app-btn" :disabled="!valid" @click="save">{{ editing ? 'حفظ التعديلات' : 'إرسال الطلب' }}</button>
+      <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
+      <BaseButton :disabled="!valid" @click="save">{{ editing ? 'حفظ التعديلات' : 'إرسال الطلب' }}</BaseButton>
     </template>
   </ModalShell>
 </template>

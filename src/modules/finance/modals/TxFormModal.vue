@@ -10,6 +10,7 @@ import { today } from '@/helpers/date'
 import { analyzeTx } from '@/helpers/txAnalysis'
 import type { Transaction, TxType } from '@/interfaces/models'
 import type { FormPreset } from '@/interfaces/forms'
+import { BaseButton } from '@/components/base'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
@@ -170,10 +171,10 @@ function save() {
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button class="app-btn" :disabled="!valid || hasError" @click="save">
+      <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
+      <BaseButton :disabled="!valid || hasError" @click="save">
         {{ hasError ? 'صحّح الأخطاء أولاً' : tx ? 'حفظ التعديلات' : 'إضافة العملية' }}
-      </button>
+      </BaseButton>
     </template>
   </ModalShell>
 </template>

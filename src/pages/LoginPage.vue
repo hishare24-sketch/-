@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/AuthStore'
+import { BaseButton } from '@/components/base'
 import { DEMO_USERS, ROLES } from '@/constants'
 import themeConfig from '@themeConfig'
 
@@ -72,9 +73,9 @@ function roleLabel(role: string) {
 
       <p v-if="error" class="login-error">⚠️ {{ error }}</p>
 
-      <button class="app-btn" type="submit" :disabled="isLoading">
+      <BaseButton type="submit" block :disabled="isLoading">
         {{ isLoading ? '...' : t('auth.enter') }}
-      </button>
+      </BaseButton>
     </form>
 
     <div class="login-demo">

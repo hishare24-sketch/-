@@ -3,6 +3,7 @@
 import type { Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
+import { BaseButton } from '@/components/base'
 
 defineProps<{
   title: string
@@ -36,7 +37,7 @@ const emit = defineEmits<{ (e: 'close'): void }>()
     </div>
 
     <template #footer>
-      <button class="app-btn" @click="emit('close')">إغلاق</button>
+      <BaseButton @click="emit('close')">إغلاق</BaseButton>
       <slot name="actions" />
     </template>
   </ModalShell>

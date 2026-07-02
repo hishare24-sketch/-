@@ -7,6 +7,7 @@ import { REQUEST_STATUS, REQUEST_FIELD_SCHEMAS, REQUEST_TYPE_META } from '@/cons
 import type { RequestItem } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ request: RequestItem }>()
 const emit = defineEmits<{ (e: 'edit', r: RequestItem): void; (e: 'close'): void }>()
@@ -70,7 +71,7 @@ function cancel() {
     <!-- إدخال سبب الرفض -->
     <div v-if="rejecting" class="reject">
       <textarea v-model="reason" rows="2" placeholder="سبب الرفض (اختياري)..." />
-      <button class="app-btn app-btn--sm" @click="confirmReject">تأكيد الرفض</button>
+      <BaseButton size="sm" @click="confirmReject">تأكيد الرفض</BaseButton>
     </div>
 
     <table class="rows">
@@ -91,7 +92,7 @@ function cancel() {
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إغلاق</button>
+      <BaseButton variant="ghost" @click="emit('close')">إغلاق</BaseButton>
     </template>
   </ModalShell>
 </template>

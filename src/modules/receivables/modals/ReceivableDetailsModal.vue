@@ -10,6 +10,7 @@ import { RECEIVABLE_STATUS } from '@/constants'
 import type { Receivable, ReceivableStatus } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ receivable: Receivable }>()
 const emit = defineEmits<{ (e: 'pay', r: Receivable): void; (e: 'edit', r: Receivable): void; (e: 'close'): void }>()
@@ -114,11 +115,11 @@ function exportStatement() {
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إغلاق</button>
-      <button class="app-btn app-btn--outlined" @click="exportStatement">⬇ كشف حساب PDF</button>
-      <button v-if="canPay" class="app-btn" @click="emit('pay', receivable)">
+      <BaseButton variant="ghost" @click="emit('close')">إغلاق</BaseButton>
+      <BaseButton variant="outlined" @click="exportStatement">⬇ كشف حساب PDF</BaseButton>
+      <BaseButton v-if="canPay" @click="emit('pay', receivable)">
         {{ isRecv ? 'تحصيل' : 'سداد' }}
-      </button>
+      </BaseButton>
     </template>
   </ModalShell>
 </template>

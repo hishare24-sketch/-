@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { runHealthCheck, type HealthIssue, type HealthLevel, type HealthTarget } from '@/composables/useHealthCheck'
+import { BaseButton } from '@/components/base'
 
 const router = useRouter()
 const projectsStore = useProjectsStore()
@@ -51,7 +52,7 @@ function goTo(t: HealthTarget) {
           <span class="hc__sub">تدقيق منطقي للتأكد من سلامة الأرصدة والروابط عبر كل الأقسام</span>
         </div>
       </div>
-      <button class="app-btn" :disabled="running" @click="run">{{ running ? 'جارٍ الفحص…' : '▶ تشغيل الفحص' }}</button>
+      <BaseButton :disabled="running" @click="run">{{ running ? 'جارٍ الفحص…' : '▶ تشغيل الفحص' }}</BaseButton>
     </div>
 
     <template v-if="issues">

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import type { TemplateElement } from '@/interfaces/models'
 import { elementTypeMeta } from '../constants'
 import { improveText, TEXT_TONES, type TextTone } from '../templatesAI'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ element: TemplateElement }>()
 const emit = defineEmits<{ (e: 'update', patch: Partial<TemplateElement>): void }>()
@@ -82,7 +83,7 @@ function onImage(e: Event) {
         <select v-model="tone">
           <option v-for="t in TEXT_TONES" :key="t" :value="t">{{ t }}</option>
         </select>
-        <button class="app-btn ai-text__btn" @click="enhance">✨ تحسين</button>
+        <BaseButton class="ai-text__btn" @click="enhance">✨ تحسين</BaseButton>
       </div>
     </div>
 

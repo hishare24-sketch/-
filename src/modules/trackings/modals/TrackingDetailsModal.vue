@@ -9,6 +9,7 @@ import { today } from '@/helpers/date'
 import { TRACKING_FIELD_SCHEMAS } from '@/constants'
 import type { Tracking, CommitmentKind } from '@/interfaces/models'
 import { analyzeTracking, type TrackingActionKind } from '../trackingsAI'
+import { BaseButton } from '@/components/base'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
@@ -141,7 +142,7 @@ onMounted(() => {
     <div v-if="renewing" class="renew">
       <div class="renew__row">
         <input v-model="newExpiry" type="date" />
-        <button class="app-btn app-btn--sm" @click="confirmRenew">تأكيد التجديد</button>
+        <BaseButton size="sm" @click="confirmRenew">تأكيد التجديد</BaseButton>
       </div>
       <label v-if="hasFee" class="renew__fee">
         <input v-model="logFee" type="checkbox" />
@@ -166,7 +167,7 @@ onMounted(() => {
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إغلاق</button>
+      <BaseButton variant="ghost" @click="emit('close')">إغلاق</BaseButton>
     </template>
   </ModalShell>
 </template>

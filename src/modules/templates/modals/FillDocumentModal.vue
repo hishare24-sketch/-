@@ -10,6 +10,7 @@ import type { DocTemplate, TemplateElement } from '@/interfaces/models'
 import { docTypeMeta, elementTypeMeta } from '../constants'
 import { INPUT_TYPES, TABLE_TYPES, renderTemplateBody, type FieldValues, type TableRows } from '../templateRender'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ template: DocTemplate }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -201,9 +202,9 @@ function saveToDocuments() {
     <div v-if="msg" class="msg">{{ msg }}</div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إغلاق</button>
-      <button class="app-btn app-btn--outlined" :disabled="!canGenerate" @click="saveToDocuments">💾 حفظ في المستندات</button>
-      <button class="app-btn" :disabled="!canGenerate || busy" @click="exportPdf">{{ busy ? 'جارٍ التصدير…' : '⬇ تصدير PDF' }}</button>
+      <BaseButton variant="ghost" @click="emit('close')">إغلاق</BaseButton>
+      <BaseButton variant="outlined" :disabled="!canGenerate" @click="saveToDocuments">💾 حفظ في المستندات</BaseButton>
+      <BaseButton :disabled="!canGenerate || busy" @click="exportPdf">{{ busy ? 'جارٍ التصدير…' : '⬇ تصدير PDF' }}</BaseButton>
     </template>
   </ModalShell>
 </template>

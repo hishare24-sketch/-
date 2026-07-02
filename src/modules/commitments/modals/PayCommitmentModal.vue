@@ -7,6 +7,7 @@ import { today } from '@/helpers/date'
 import type { Commitment, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ commitment: Commitment }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -82,8 +83,8 @@ function pay() {
     </p>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button class="app-btn" :disabled="!valid" @click="pay">{{ isOut ? 'تأكيد الدفع' : 'تأكيد الاستلام' }}</button>
+      <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
+      <BaseButton :disabled="!valid" @click="pay">{{ isOut ? 'تأكيد الدفع' : 'تأكيد الاستلام' }}</BaseButton>
     </template>
   </ModalShell>
 </template>

@@ -7,6 +7,7 @@ import { useToast } from '@/composables/useToast'
 import type { DocTemplate, TemplateDocType } from '@/interfaces/models'
 import { TEMPLATE_DOC_TYPES, docTypeMeta } from '../constants'
 import { generateTemplateFromDescription } from '../templatesAI'
+import { BaseButton } from '@/components/base'
 import HelpIcon from '@/components/shared/HelpIcon.vue'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import NewTemplateModal from '../modals/NewTemplateModal.vue'
@@ -93,7 +94,7 @@ async function remove(t: DocTemplate) {
         <h1>مولّد القوالب <HelpIcon section="templates" /></h1>
         <p>أنشئ قوالب مستندات ديناميكية وأعد استخدامها</p>
       </div>
-      <button class="app-btn" @click="showNew = true">＋ قالب جديد</button>
+      <BaseButton @click="showNew = true">＋ قالب جديد</BaseButton>
     </header>
 
     <div class="templates__stats">
@@ -138,8 +139,8 @@ async function remove(t: DocTemplate) {
         <span class="tpl__date">آخر تعديل: {{ t.updatedAt }}</span>
 
         <div class="tpl__actions">
-          <button class="app-btn act" @click="using = t">🧾 توليد</button>
-          <button class="app-btn app-btn--outlined act" @click="edit(t)">✎ تعديل</button>
+          <BaseButton class="act" @click="using = t">🧾 توليد</BaseButton>
+          <BaseButton variant="outlined" class="act" @click="edit(t)">✎ تعديل</BaseButton>
           <button class="icon-btn" title="نسخ" @click="duplicate(t)">📋</button>
           <button class="icon-btn" :title="t.status === 'active' ? 'أرشفة' : 'استعادة'" @click="toggleArchive(t)">
             {{ t.status === 'active' ? '🗄️' : '↩️' }}

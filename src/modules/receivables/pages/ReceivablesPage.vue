@@ -15,6 +15,7 @@ import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import ReceivableFormModal from '../modals/ReceivableFormModal.vue'
 import PayReceivableModal from '../modals/PayReceivableModal.vue'
 import ReceivableDetailsModal from '../modals/ReceivableDetailsModal.vue'
+import { BaseButton } from '@/components/base'
 
 const receivablesStore = useReceivablesStore()
 const settingsStore = useSettingsStore()
@@ -107,7 +108,7 @@ async function onDelete(r: Receivable) {
         <h1>الذمم <HelpIcon section="receivables" /></h1>
         <p>المبالغ المستحقة لك أو عليك</p>
       </div>
-      <button class="app-btn" @click="openCreate">＋ ذمة جديدة</button>
+      <BaseButton @click="openCreate">＋ ذمة جديدة</BaseButton>
     </header>
 
 
@@ -142,7 +143,7 @@ async function onDelete(r: Receivable) {
         <option value="amount">الأعلى متبقّياً</option>
         <option value="newest">الأحدث</option>
       </select>
-      <button v-if="hasFilter" class="app-btn app-btn--ghost" @click="clearFilters">مسح</button>
+      <BaseButton v-if="hasFilter" variant="ghost" @click="clearFilters">مسح</BaseButton>
     </div>
 
     <div class="list">
@@ -168,9 +169,9 @@ async function onDelete(r: Receivable) {
           {{ RSTATUS[r.status].label }}
         </span>
         <div class="rec__actions">
-          <button v-if="canPay(r)" class="app-btn app-btn--outlined pay-btn" @click="paying = r">
+          <BaseButton v-if="canPay(r)" variant="outlined" class="pay-btn" @click="paying = r">
             {{ r.kind === 'receivable' ? 'تحصيل' : 'سداد' }}
-          </button>
+          </BaseButton>
           <button class="icon-btn" title="تعديل" @click="onEdit(r)">✎</button>
           <button class="icon-btn icon-btn--danger" title="حذف" @click="onDelete(r)">🗑️</button>
         </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useSettingsStore } from '@/stores/SettingsStore'
+import { BaseButton } from '@/components/base'
 
 // أيقونة شرح (ⓘ) بجانب عنوان الشاشة — تفتح نافذة منبثقة بنص الشرح
 const props = defineProps<{ section: string }>()
@@ -24,7 +25,7 @@ const open = ref(false)
             <button class="help-pop__close" @click="open = false">✕</button>
           </div>
           <p class="help-pop__body">{{ entry?.body }}</p>
-          <button class="app-btn help-pop__ok" @click="open = false">فهمت</button>
+          <BaseButton block @click="open = false">فهمت</BaseButton>
         </div>
       </div>
     </Teleport>
@@ -99,10 +100,6 @@ const open = ref(false)
     color: var(--text);
     white-space: pre-line;
     margin-block-end: 20px;
-  }
-
-  &__ok {
-    inline-size: 100%;
   }
 }
 </style>

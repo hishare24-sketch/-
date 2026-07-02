@@ -12,6 +12,7 @@ import type { RequestItem, RequestStatus } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import RequestDetailsModal from '../modals/RequestDetailsModal.vue'
 import RequestFormModal from '../modals/RequestFormModal.vue'
+import { BaseButton } from '@/components/base'
 
 const requestsStore = useRequestsStore()
 const projectsStore = useProjectsStore()
@@ -82,7 +83,7 @@ async function onDelete(r: RequestItem) {
         <h1>الطلبات والموافقات <HelpIcon section="requests" /></h1>
         <p>دورة الاعتماد: إنشاء ← مراجعة ← اعتماد/رفض</p>
       </div>
-      <button class="app-btn" @click="openCreate">＋ طلب جديد</button>
+      <BaseButton @click="openCreate">＋ طلب جديد</BaseButton>
     </header>
 
 

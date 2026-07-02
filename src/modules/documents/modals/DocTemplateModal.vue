@@ -7,6 +7,7 @@ import { today } from '@/helpers/date'
 import { uid } from '@/helpers/id'
 import { fmtNum } from '@/helpers/format'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import { BaseButton } from '@/components/base'
 import {
   DOC_TEMPLATES,
   exportTemplatePDF,
@@ -221,10 +222,10 @@ async function doExport() {
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إغلاق</button>
-      <button v-if="step === 'form'" class="app-btn" :disabled="!canExport || busy" @click="doExport">
+      <BaseButton variant="ghost" @click="emit('close')">إغلاق</BaseButton>
+      <BaseButton v-if="step === 'form'" :disabled="!canExport || busy" @click="doExport">
         {{ busy ? 'جارٍ التصدير…' : '⬇ تصدير PDF' }}
-      </button>
+      </BaseButton>
     </template>
   </ModalShell>
 </template>

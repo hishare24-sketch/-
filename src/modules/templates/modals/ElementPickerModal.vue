@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { TemplateElementType } from '@/interfaces/models'
 import { TEMPLATE_ELEMENT_TYPES, type ElementCategory } from '../constants'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import { BaseButton } from '@/components/base'
 
 const emit = defineEmits<{ (e: 'pick', type: TemplateElementType): void; (e: 'close'): void }>()
 
@@ -36,7 +37,7 @@ const grouped = computed(() =>
     </div>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إغلاق</button>
+      <BaseButton variant="ghost" @click="emit('close')">إغلاق</BaseButton>
     </template>
   </ModalShell>
 </template>

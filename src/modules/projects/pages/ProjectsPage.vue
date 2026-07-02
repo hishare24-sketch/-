@@ -10,6 +10,7 @@ import { fmt, fmtNum } from '@/helpers/format'
 import type { Project } from '@/interfaces/models'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import ProjectFormModal from '../modals/ProjectFormModal.vue'
+import { BaseButton } from '@/components/base'
 
 const router = useRouter()
 const projectsStore = useProjectsStore()
@@ -100,7 +101,7 @@ async function onDelete(p: Project) {
         <h1>المشاريع <HelpIcon section="projects" /></h1>
         <p>الوحدة التنظيمية الأساسية — كل عملية ومستند يرتبط بمشروع</p>
       </div>
-      <button class="app-btn" @click="openCreate">＋ مشروع جديد</button>
+      <BaseButton @click="openCreate">＋ مشروع جديد</BaseButton>
     </header>
 
 
@@ -124,7 +125,7 @@ async function onDelete(p: Project) {
         <option value="balanceHigh">الأعلى رصيداً</option>
         <option value="balanceLow">الأقل رصيداً</option>
       </select>
-      <button v-if="hasFilter" class="app-btn app-btn--ghost" @click="clearFilters">مسح</button>
+      <BaseButton v-if="hasFilter" variant="ghost" @click="clearFilters">مسح</BaseButton>
     </div>
 
     <div class="projects__grid">
@@ -158,9 +159,9 @@ async function onDelete(p: Project) {
 
         <div class="project-card__footer">
           <span class="project-card__members">👥 {{ projectStats(p).members }} عضو</span>
-          <button class="app-btn app-btn--outlined project-card__open" @click="openProject(p)">
+          <BaseButton variant="outlined" class="project-card__open" @click="openProject(p)">
             عرض المشروع
-          </button>
+          </BaseButton>
         </div>
       </div>
 

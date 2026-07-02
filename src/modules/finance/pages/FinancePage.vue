@@ -11,6 +11,7 @@ import { useToast } from '@/composables/useToast'
 import { txErrors } from '@/helpers/txAnalysis'
 import { currentUserName } from '@/helpers/currentUser'
 import type { Transaction, TxType } from '@/interfaces/models'
+import { BaseButton } from '@/components/base'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import ChartCard from '@/components/charts/ChartCard.vue'
 import DonutChart from '@/components/charts/DonutChart.vue'
@@ -148,9 +149,9 @@ function clearFilters() {
         <select v-model="activeProjectId" class="select">
           <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.icon }} {{ p.name }}</option>
         </select>
-        <button class="app-btn app-btn--outlined" @click="exportExcel">⬇ Excel</button>
-        <button class="app-btn app-btn--outlined" @click="showReconcile = true">📥 مطابقة Excel</button>
-        <button class="app-btn" @click="openCreate">＋ عملية جديدة</button>
+        <BaseButton variant="outlined" @click="exportExcel">⬇ Excel</BaseButton>
+        <BaseButton variant="outlined" @click="showReconcile = true">📥 مطابقة Excel</BaseButton>
+        <BaseButton @click="openCreate">＋ عملية جديدة</BaseButton>
       </div>
     </header>
 
@@ -213,13 +214,13 @@ function clearFilters() {
           <option value="oldest">الأقدم أولاً</option>
           <option value="amount">الأعلى مبلغاً</option>
         </select>
-        <button
+        <BaseButton
           v-if="search || catFilter !== 'all' || sort !== 'newest'"
-          class="app-btn app-btn--ghost"
+          variant="ghost"
           @click="clearFilters"
         >
           مسح الفلترة
-        </button>
+        </BaseButton>
       </div>
 
       <div class="table-wrap">

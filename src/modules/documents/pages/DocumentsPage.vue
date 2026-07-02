@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import HelpIcon from '@/components/shared/HelpIcon.vue'
+import { BaseButton } from '@/components/base'
 import { useDocumentsStore } from '@/stores/DocumentsStore'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
@@ -119,8 +120,8 @@ async function onDelete(d: DocItem) {
         <p>الفواتير والعقود والوثائق ومعالجتها</p>
       </div>
       <div class="documents__actions">
-        <button class="app-btn app-btn--outlined" @click="showTemplates = true">🧾 توليد مستند</button>
-        <button class="app-btn" @click="showForm = true">＋ مستند جديد</button>
+        <BaseButton variant="outlined" @click="showTemplates = true">🧾 توليد مستند</BaseButton>
+        <BaseButton @click="showForm = true">＋ مستند جديد</BaseButton>
       </div>
     </header>
 
@@ -182,9 +183,9 @@ async function onDelete(d: DocItem) {
           <span v-for="(ic, i) in doneChips(d)" :key="i" class="doc__done-chip">{{ ic }}</span>
         </div>
         <div class="doc__actions" @click.stop>
-          <button class="app-btn app-btn--outlined proc-btn" @click="openDoc(d)">
+          <BaseButton variant="outlined" class="proc-btn" @click="openDoc(d)">
             ⚡ الإجراءات
-          </button>
+          </BaseButton>
           <button class="icon-btn icon-btn--danger" title="حذف" @click="onDelete(d)">🗑️</button>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { useSettingsStore } from '@/stores/SettingsStore'
 import { docHTML } from '@/helpers/export'
 import { quoteBody, type QuoteData } from '@/helpers/documents'
 import { today } from '@/helpers/date'
+import { BaseButton } from '@/components/base'
 
 const settingsStore = useSettingsStore()
 const { docBranding } = storeToRefs(settingsStore)
@@ -76,7 +77,7 @@ const fields = [
           </div>
         </div>
 
-        <button class="app-btn app-btn--ghost" @click="settingsStore.resetBranding()">↺ استعادة الافتراضي</button>
+        <BaseButton variant="ghost" @click="settingsStore.resetBranding()">↺ استعادة الافتراضي</BaseButton>
       </div>
 
       <!-- المعاينة الحيّة -->

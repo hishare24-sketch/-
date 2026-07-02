@@ -9,6 +9,7 @@ import { uid } from '@/helpers/id'
 import type { Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ projectId: string }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'created', docId: string, autoAnalyze: boolean): void }>()
@@ -115,8 +116,8 @@ function save() {
     </label>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button class="app-btn" :disabled="!valid" @click="save">إضافة المستند</button>
+      <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
+      <BaseButton :disabled="!valid" @click="save">إضافة المستند</BaseButton>
     </template>
   </ModalShell>
 </template>

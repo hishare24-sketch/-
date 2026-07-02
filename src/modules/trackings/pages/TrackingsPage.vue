@@ -7,6 +7,7 @@ import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useSettingsStore } from '@/stores/SettingsStore'
 import type { Tracking, TrackingStatus } from '@/interfaces/models'
 import { useFocusHighlight } from '@/composables/useFocusHighlight'
+import { BaseButton } from '@/components/base'
 import ConfirmModal from '@/components/shared/ConfirmModal.vue'
 import TrackingDetailsModal from '../modals/TrackingDetailsModal.vue'
 import TrackingFormModal from '../modals/TrackingFormModal.vue'
@@ -101,7 +102,7 @@ async function onDelete(t: Tracking) {
         <h1>المتابعات والضمانات <HelpIcon section="trackings" /></h1>
         <p>الضمانات والعقود والتراخيص ومواعيد انتهائها</p>
       </div>
-      <button class="app-btn" @click="openCreate">＋ متابعة جديدة</button>
+      <BaseButton @click="openCreate">＋ متابعة جديدة</BaseButton>
     </header>
 
 

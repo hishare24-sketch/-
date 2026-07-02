@@ -7,6 +7,7 @@ import { today } from '@/helpers/date'
 import type { Asset, MaintenanceEntry, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ asset: Asset; initialType?: MaintenanceEntry['type'] }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -126,8 +127,8 @@ function save() {
     <p class="hint">ℹ️ ستُسجّل التكلفة كمصروف فعلي في الإدارة المالية للمشروع.</p>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button class="app-btn" :disabled="!valid" @click="save">تسجيل</button>
+      <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
+      <BaseButton :disabled="!valid" @click="save">تسجيل</BaseButton>
     </template>
   </ModalShell>
 </template>

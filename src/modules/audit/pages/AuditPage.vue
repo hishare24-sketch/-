@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import HelpIcon from '@/components/shared/HelpIcon.vue'
 import { useAuditStore } from '@/stores/AuditStore'
+import { BaseButton } from '@/components/base'
 
 const auditStore = useAuditStore()
 const { entries } = storeToRefs(auditStore)
@@ -71,7 +72,7 @@ const colorOf = (a: string) => actionColor[a] ?? '#6b7280'
         <option value="newest">الأحدث أولاً</option>
         <option value="oldest">الأقدم أولاً</option>
       </select>
-      <button v-if="hasFilter" class="app-btn app-btn--ghost" @click="clearFilters">مسح</button>
+      <BaseButton v-if="hasFilter" variant="ghost" @click="clearFilters">مسح</BaseButton>
     </div>
 
     <div class="app-card timeline">

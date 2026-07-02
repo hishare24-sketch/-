@@ -10,6 +10,7 @@ import { ASSET_STATUS } from '@/constants'
 import { today } from '@/helpers/date'
 import type { Asset, AssetStatus, AssetPeriodic } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
+import { BaseButton } from '@/components/base'
 
 const props = defineProps<{ asset: Asset; kind: AssetActionKind }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -136,8 +137,8 @@ function submit() {
     </template>
 
     <template #footer>
-      <button class="app-btn app-btn--ghost" @click="emit('close')">إلغاء</button>
-      <button class="app-btn" :disabled="!valid" @click="submit">تأكيد</button>
+      <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
+      <BaseButton :disabled="!valid" @click="submit">تأكيد</BaseButton>
     </template>
   </ModalShell>
 </template>
