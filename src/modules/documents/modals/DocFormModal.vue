@@ -9,7 +9,7 @@ import { uid } from '@/helpers/id'
 import type { Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput, BaseSelect } from '@/components/base'
 
 const props = defineProps<{ projectId: string }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'created', docId: string, autoAnalyze: boolean): void }>()
@@ -80,19 +80,17 @@ function save() {
       <AttachmentsField v-model="form.attachments" />
     </div>
 
-    <div class="field">
-      <label>نوع المستند</label>
-      <select v-model="form.type">
+    <BaseField label="نوع المستند">
+      <BaseSelect v-model="form.type">
         <option v-for="t in docTypes" :key="t" :value="t">{{ t }}</option>
-      </select>
-    </div>
+      </BaseSelect>
+    </BaseField>
 
-    <div class="field">
-      <label>المشروع</label>
-      <select v-model="form.projectId">
+    <BaseField label="المشروع">
+      <BaseSelect v-model="form.projectId">
         <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.icon }} {{ p.name }}</option>
-      </select>
-    </div>
+      </BaseSelect>
+    </BaseField>
 
     <!-- اقتراح التوجيه الذكي -->
     <div v-if="suggestedProject" class="suggest">
@@ -100,15 +98,13 @@ function save() {
       <button @click="form.projectId = suggestedProject.id">توجيه</button>
     </div>
 
-    <div class="field">
-      <label>اسم المستند</label>
-      <input v-model="form.name" type="text" placeholder="مثال: فاتورة مورد يونيو" />
-    </div>
+    <BaseField label="اسم المستند">
+      <BaseInput v-model="form.name" placeholder="مثال: فاتورة مورد يونيو" />
+    </BaseField>
 
-    <div class="field">
-      <label>تاريخ المستند</label>
-      <input v-model="form.date" type="date" />
-    </div>
+    <BaseField label="تاريخ المستند">
+      <BaseInput v-model="form.date" type="date" />
+    </BaseField>
 
     <label class="auto">
       <input v-model="form.autoAnalyze" type="checkbox" />
@@ -137,24 +133,6 @@ function save() {
 
   &__icon { font-size: 28px; }
   &__hint { font-size: 13px; color: var(--text-muted); }
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-block-end: 16px;
-
-  label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
-
-  input, select {
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-    &:focus { outline: none; border-color: var(--primary); }
-  }
 }
 
 .auto {

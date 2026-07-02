@@ -7,7 +7,7 @@ import { today } from '@/helpers/date'
 import { uid } from '@/helpers/id'
 import { fmtNum } from '@/helpers/format'
 import ModalShell from '@/components/shared/ModalShell.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput, BaseSelect, BaseTextarea } from '@/components/base'
 import {
   DOC_TEMPLATES,
   exportTemplatePDF,
@@ -144,10 +144,10 @@ async function doExport() {
       <!-- عرض سعر -->
       <template v-if="selected === 'quote'">
         <div class="grid2">
-          <div class="field"><label>رقم العرض</label><input v-model="quote.ref" type="text" /></div>
-          <div class="field"><label>التاريخ</label><input v-model="quote.date" type="date" /></div>
+          <BaseField label="رقم العرض"><BaseInput v-model="quote.ref" /></BaseField>
+          <BaseField label="التاريخ"><BaseInput v-model="quote.date" type="date" /></BaseField>
         </div>
-        <div class="field"><label>العميل / الجهة</label><input v-model="quote.client" type="text" placeholder="اسم العميل" /></div>
+        <BaseField label="العميل / الجهة"><BaseInput v-model="quote.client" placeholder="اسم العميل" /></BaseField>
 
         <div class="items">
           <div class="items__head"><span>البنود</span><button class="mini" @click="addItem">＋ بند</button></div>
@@ -161,10 +161,10 @@ async function doExport() {
         </div>
 
         <div class="grid2">
-          <div class="field"><label>الضريبة %</label><input v-model.number="quote.vatPercent" type="number" min="0" /></div>
-          <div class="field"><label>صلاحية العرض</label><input v-model="quote.validity" type="text" /></div>
+          <BaseField label="الضريبة %"><BaseInput v-model.number="quote.vatPercent" type="number" min="0" /></BaseField>
+          <BaseField label="صلاحية العرض"><BaseInput v-model="quote.validity" /></BaseField>
         </div>
-        <div class="field"><label>ملاحظات وشروط</label><textarea v-model="quote.notes" rows="3" placeholder="شروط الدفع، التسليم..." /></div>
+        <BaseField label="ملاحظات وشروط"><BaseTextarea v-model="quote.notes" :rows="3" placeholder="شروط الدفع، التسليم..." /></BaseField>
 
         <div class="totals">
           <span>المجموع الفرعي: <b>{{ fmtNum(quoteTotal.sub) }}</b></span>
@@ -176,42 +176,40 @@ async function doExport() {
       <!-- أمر دفع -->
       <template v-else-if="selected === 'payment_order'">
         <div class="grid2">
-          <div class="field"><label>رقم الأمر</label><input v-model="payment.ref" type="text" /></div>
-          <div class="field"><label>التاريخ</label><input v-model="payment.date" type="date" /></div>
+          <BaseField label="رقم الأمر"><BaseInput v-model="payment.ref" /></BaseField>
+          <BaseField label="التاريخ"><BaseInput v-model="payment.date" type="date" /></BaseField>
         </div>
-        <div class="field"><label>المستفيد</label><input v-model="payment.payee" type="text" placeholder="اسم المستفيد" /></div>
+        <BaseField label="المستفيد"><BaseInput v-model="payment.payee" placeholder="اسم المستفيد" /></BaseField>
         <div class="grid2">
-          <div class="field"><label>المبلغ (ر.س)</label><input v-model.number="payment.amount" type="number" min="0" /></div>
-          <div class="field">
-            <label>طريقة الدفع</label>
-            <select v-model="payment.method"><option>تحويل بنكي</option><option>شيك</option><option>نقد</option></select>
-          </div>
+          <BaseField label="المبلغ (ر.س)"><BaseInput v-model.number="payment.amount" type="number" min="0" /></BaseField>
+          <BaseField label="طريقة الدفع">
+            <BaseSelect v-model="payment.method"><option>تحويل بنكي</option><option>شيك</option><option>نقد</option></BaseSelect>
+          </BaseField>
         </div>
-        <div class="field">
-          <label>المشروع</label>
-          <select v-model="payment.project"><option v-for="p in projects" :key="p.id" :value="p.name">{{ p.icon }} {{ p.name }}</option></select>
-        </div>
-        <div class="field"><label>بيان الدفع</label><input v-model="payment.purpose" type="text" placeholder="سبب الصرف" /></div>
-        <div class="field"><label>المُعتمِد</label><input v-model="payment.approver" type="text" placeholder="اسم المعتمِد" /></div>
+        <BaseField label="المشروع">
+          <BaseSelect v-model="payment.project"><option v-for="p in projects" :key="p.id" :value="p.name">{{ p.icon }} {{ p.name }}</option></BaseSelect>
+        </BaseField>
+        <BaseField label="بيان الدفع"><BaseInput v-model="payment.purpose" placeholder="سبب الصرف" /></BaseField>
+        <BaseField label="المُعتمِد"><BaseInput v-model="payment.approver" placeholder="اسم المعتمِد" /></BaseField>
       </template>
 
       <!-- اتفاقية -->
       <template v-else>
         <div class="grid2">
-          <div class="field"><label>رقم الاتفاقية</label><input v-model="agreement.ref" type="text" /></div>
-          <div class="field"><label>التاريخ</label><input v-model="agreement.date" type="date" /></div>
+          <BaseField label="رقم الاتفاقية"><BaseInput v-model="agreement.ref" /></BaseField>
+          <BaseField label="التاريخ"><BaseInput v-model="agreement.date" type="date" /></BaseField>
         </div>
-        <div class="field"><label>الموضوع / العنوان</label><input v-model="agreement.subject" type="text" placeholder="موضوع الاتفاقية" /></div>
+        <BaseField label="الموضوع / العنوان"><BaseInput v-model="agreement.subject" placeholder="موضوع الاتفاقية" /></BaseField>
         <div class="grid2">
-          <div class="field"><label>الطرف الأول</label><input v-model="agreement.party1" type="text" /></div>
-          <div class="field"><label>الطرف الثاني</label><input v-model="agreement.party2" type="text" /></div>
+          <BaseField label="الطرف الأول"><BaseInput v-model="agreement.party1" /></BaseField>
+          <BaseField label="الطرف الثاني"><BaseInput v-model="agreement.party2" /></BaseField>
         </div>
         <div class="grid2">
-          <div class="field"><label>القيمة (ر.س)</label><input v-model.number="agreement.value" type="number" min="0" /></div>
-          <div class="field"><label>من تاريخ</label><input v-model="agreement.startDate" type="date" /></div>
+          <BaseField label="القيمة (ر.س)"><BaseInput v-model.number="agreement.value" type="number" min="0" /></BaseField>
+          <BaseField label="من تاريخ"><BaseInput v-model="agreement.startDate" type="date" /></BaseField>
         </div>
-        <div class="field"><label>إلى تاريخ</label><input v-model="agreement.endDate" type="date" /></div>
-        <div class="field"><label>البنود (بند في كل سطر)</label><textarea v-model="agreement.clauses" rows="5" placeholder="يلتزم الطرف الأول بـ...&#10;يلتزم الطرف الثاني بـ..." /></div>
+        <BaseField label="إلى تاريخ"><BaseInput v-model="agreement.endDate" type="date" /></BaseField>
+        <BaseField label="البنود (بند في كل سطر)"><BaseTextarea v-model="agreement.clauses" :rows="5" placeholder="يلتزم الطرف الأول بـ...&#10;يلتزم الطرف الثاني بـ..." /></BaseField>
       </template>
 
       <label class="save-toggle">
@@ -276,29 +274,8 @@ async function doExport() {
   @media (max-width: 520px) { grid-template-columns: 1fr; }
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-block-end: 14px;
-
-  label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
-
-  input,
-  select,
-  textarea {
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-    background: var(--surface);
-    color: var(--text);
-    &:focus { outline: none; border-color: var(--primary); }
-  }
-
-  textarea { resize: vertical; }
-}
+// حفاظ على التباعد السابق للحقول (14px بدل 16px الافتراضي)
+:deep(.field) { margin-block-end: 14px; }
 
 // بنود عرض السعر
 .items {

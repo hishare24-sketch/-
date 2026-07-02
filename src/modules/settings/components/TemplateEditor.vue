@@ -5,7 +5,7 @@ import { useSettingsStore } from '@/stores/SettingsStore'
 import { docHTML } from '@/helpers/export'
 import { quoteBody, type QuoteData } from '@/helpers/documents'
 import { today } from '@/helpers/date'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField } from '@/components/base'
 
 const settingsStore = useSettingsStore()
 const { docBranding } = storeToRefs(settingsStore)
@@ -55,18 +55,16 @@ const fields = [
     <div class="editor__grid">
       <!-- الحقول -->
       <div class="app-card controls">
-        <div v-for="f in fields" :key="f.key" class="field">
-          <label>{{ f.label }}</label>
+        <BaseField v-for="f in fields" :key="f.key" tag="div" :label="f.label">
           <input
             :value="docBranding[f.key]"
             type="text"
             :placeholder="f.placeholder"
             @input="settingsStore.setBrandingField(f.key, ($event.target as HTMLInputElement).value)"
           />
-        </div>
+        </BaseField>
 
-        <div class="field">
-          <label>اللون الأساسي</label>
+        <BaseField tag="div" label="اللون الأساسي">
           <div class="color-row">
             <input
               type="color"
@@ -75,7 +73,7 @@ const fields = [
             />
             <span class="color-row__val">{{ docBranding.accent }}</span>
           </div>
-        </div>
+        </BaseField>
 
         <BaseButton variant="ghost" @click="settingsStore.resetBranding()">↺ استعادة الافتراضي</BaseButton>
       </div>
@@ -122,11 +120,9 @@ const fields = [
 }
 
 .field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  margin-block-end: 0; // المسافة بين الحقول عبر gap في .controls
 
-  label { font-size: 12.5px; font-weight: 500; color: var(--text-muted); }
+  :deep(.field__label) { font-size: 12.5px; }
 
   input[type='text'] {
     padding: 10px 12px;

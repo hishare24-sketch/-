@@ -6,7 +6,7 @@ import { PROJECT_ICONS, PROJECT_COLORS } from '@/constants'
 import { uid } from '@/helpers/id'
 import type { Project } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput, BaseSelect, BaseTextarea } from '@/components/base'
 
 const props = defineProps<{ show: boolean; project: Project | null }>()
 const emit = defineEmits<{ (e: 'update:show', v: boolean): void }>()
@@ -45,20 +45,17 @@ function save() {
 
 <template>
   <ModalShell :title="project ? 'تعديل المشروع' : 'مشروع جديد'" @close="close">
-    <div class="field">
-      <label>اسم المشروع</label>
-      <input v-model="form.name" type="text" placeholder="مثال: شركة النخيل" />
-    </div>
+    <BaseField label="اسم المشروع">
+      <BaseInput v-model="form.name" placeholder="مثال: شركة النخيل" />
+    </BaseField>
 
-    <div class="field">
-      <label>النوع</label>
-      <select v-model="form.type">
+    <BaseField label="النوع">
+      <BaseSelect v-model="form.type">
         <option v-for="t in settingsStore.lists.projectTypes" :key="t" :value="t">{{ t }}</option>
-      </select>
-    </div>
+      </BaseSelect>
+    </BaseField>
 
-    <div class="field">
-      <label>الأيقونة</label>
+    <BaseField tag="div" label="الأيقونة">
       <div class="picker">
         <button
           v-for="ic in PROJECT_ICONS"
@@ -71,10 +68,9 @@ function save() {
           {{ ic }}
         </button>
       </div>
-    </div>
+    </BaseField>
 
-    <div class="field">
-      <label>اللون</label>
+    <BaseField tag="div" label="اللون">
       <div class="picker">
         <button
           v-for="c in PROJECT_COLORS"
@@ -86,17 +82,15 @@ function save() {
           @click="form.color = c"
         />
       </div>
-    </div>
+    </BaseField>
 
-    <div class="field">
-      <label>الرصيد الافتتاحي (ر.س)</label>
-      <input v-model.number="form.balance" type="number" placeholder="0" />
-    </div>
+    <BaseField label="الرصيد الافتتاحي (ر.س)">
+      <BaseInput v-model.number="form.balance" type="number" placeholder="0" />
+    </BaseField>
 
-    <div class="field">
-      <label>الوصف (اختياري)</label>
-      <textarea v-model="form.description" rows="2" placeholder="وصف موجز للمشروع"></textarea>
-    </div>
+    <BaseField label="الوصف (اختياري)">
+      <BaseTextarea v-model="form.description" :rows="2" placeholder="وصف موجز للمشروع" />
+    </BaseField>
 
     <template #footer>
       <BaseButton variant="ghost" @click="close">إلغاء</BaseButton>
@@ -108,35 +102,6 @@ function save() {
 </template>
 
 <style lang="scss" scoped>
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-block-end: 16px;
-
-  label {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-muted);
-  }
-
-  input,
-  select,
-  textarea {
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-    color: var(--text);
-
-    &:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-  }
-}
-
 .picker {
   display: flex;
   flex-wrap: wrap;

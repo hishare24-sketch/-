@@ -6,7 +6,7 @@ import { fmt } from '@/helpers/format'
 import type { Attachment, Receivable } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput, BaseSelect } from '@/components/base'
 
 const props = defineProps<{ receivable: Receivable }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -48,30 +48,25 @@ function pay() {
       <span class="summary__remaining">المتبقّي: {{ fmt(remaining) }}</span>
     </div>
 
-    <div class="field">
-      <label>{{ isRecv ? 'المبلغ المُحصَّل' : 'المبلغ المُسدَّد' }} (ر.س)</label>
-      <input v-model.number="form.amount" type="number" :max="remaining" placeholder="0" />
-    </div>
-    <div class="field">
-      <label>مصدر السداد</label>
-      <select v-model="form.source">
+    <BaseField :label="`${isRecv ? 'المبلغ المُحصَّل' : 'المبلغ المُسدَّد'} (ر.س)`">
+      <BaseInput v-model.number="form.amount" type="number" :max="remaining" placeholder="0" />
+    </BaseField>
+    <BaseField label="مصدر السداد">
+      <BaseSelect v-model="form.source">
         <option v-for="s in SOURCES" :key="s" :value="s">{{ s }}</option>
-      </select>
-    </div>
-    <div v-if="form.source === 'أخرى'" class="field">
-      <label>حدّد المصدر</label>
-      <input v-model="form.sourceOther" type="text" placeholder="مثال: محفظة إلكترونية" />
-    </div>
+      </BaseSelect>
+    </BaseField>
+    <BaseField v-if="form.source === 'أخرى'" label="حدّد المصدر">
+      <BaseInput v-model="form.sourceOther" placeholder="مثال: محفظة إلكترونية" />
+    </BaseField>
 
-    <div class="field">
-      <label>ملاحظة (اختياري)</label>
-      <input v-model="form.note" type="text" placeholder="مثال: دفعة أولى" />
-    </div>
+    <BaseField label="ملاحظة (اختياري)">
+      <BaseInput v-model="form.note" placeholder="مثال: دفعة أولى" />
+    </BaseField>
 
-    <div class="field">
-      <label>مرفق (اختياري)</label>
+    <BaseField tag="div" label="مرفق (اختياري)">
       <AttachmentsField v-model="form.attachments" />
-    </div>
+    </BaseField>
 
     <p class="hint">ℹ️ تسجيل الدفعة يُنشئ عملية {{ isRecv ? 'إيراد' : 'مصروف' }} فعلية في الإدارة المالية ويُحدّث الرصيد.</p>
 
@@ -96,37 +91,6 @@ function pay() {
   &__remaining {
     color: var(--primary);
     font-size: 14px;
-  }
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-block-end: 16px;
-
-  label {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-muted);
-  }
-
-  input,
-  select {
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-    inline-size: 100%;
-    max-inline-size: 100%;
-    background: var(--surface);
-    color: var(--text);
-
-    &:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
   }
 }
 

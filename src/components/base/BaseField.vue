@@ -1,35 +1,43 @@
 <script setup lang="ts">
 // غلاف حقل: تسمية + تلميح + خطأ حول أي إدخال (slot)
-defineProps<{
-  label?: string
-  hint?: string
-  error?: string
-  required?: boolean
-}>()
+// tag='label' للحقول ذات إدخال واحد (النقر يركّز الإدخال)،
+// tag='div' للمحتوى التفاعلي المخصّص (أزرار/مرفقات) تفاديًا لاختطاف النقر.
+withDefaults(
+  defineProps<{
+    label?: string
+    hint?: string
+    error?: string
+    required?: boolean
+    tag?: 'label' | 'div'
+  }>(),
+  { tag: 'label' },
+)
 </script>
 
 <template>
-  <label class="field" :class="{ 'has-error': !!error }">
-    <span v-if="label" class="field__label">
-      {{ label }}
+  <component :is="tag" class="field" :class="{ 'has-error': !!error }">
+    <span v-if="label || $slots.label" class="field__label">
+      <slot name="label">{{ label }}</slot>
       <span v-if="required" class="field__req" aria-hidden="true">*</span>
     </span>
     <slot />
     <span v-if="error" class="field__error">{{ error }}</span>
     <span v-else-if="hint" class="field__hint">{{ hint }}</span>
-  </label>
+  </component>
 </template>
 
 <style lang="scss" scoped>
+// مطابق للنمط السائد في النماذج (توحيد بلا تغيير بصري)
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 6px;
+  margin-block-end: 16px;
 
   &__label {
-    font-size: var(--fs-sm);
-    font-weight: var(--fw-semibold);
-    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
   }
 
   &__req { color: var(--error); }

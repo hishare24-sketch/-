@@ -7,7 +7,7 @@ import { today } from '@/helpers/date'
 import type { Asset, AssetWarranty, Attachment, WarrantyContext } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput, BaseSelect, BaseTextarea } from '@/components/base'
 
 const props = defineProps<{
   asset: Asset
@@ -80,13 +80,11 @@ function save() {
 
 <template>
   <ModalShell :title="isEdit ? 'تعديل ضمان فرعي' : `ضمان فرعي: ${asset.name}`" @close="emit('close')">
-    <div class="field">
-      <label>اسم الضمان / المكوّن</label>
-      <input v-model="form.name" type="text" placeholder="مثال: ضمان المحرك، بطارية، إطارات..." />
-    </div>
+    <BaseField label="اسم الضمان / المكوّن">
+      <BaseInput v-model="form.name" placeholder="مثال: ضمان المحرك، بطارية، إطارات..." />
+    </BaseField>
 
-    <div class="field">
-      <label>السياق</label>
+    <BaseField tag="div" label="السياق">
       <div class="types">
         <button
           v-for="c in CONTEXTS"
@@ -99,55 +97,47 @@ function save() {
           {{ c.icon }} {{ c.l }}
         </button>
       </div>
+    </BaseField>
+
+    <div class="row">
+      <BaseField label="الجهة الضامنة (اختياري)">
+        <BaseInput v-model="form.provider" placeholder="المورّد / الوكيل" />
+      </BaseField>
+      <BaseField label="رقم الفاتورة (اختياري)">
+        <BaseInput v-model="form.invoiceNo" placeholder="—" />
+      </BaseField>
     </div>
 
     <div class="row">
-      <div class="field">
-        <label>الجهة الضامنة (اختياري)</label>
-        <input v-model="form.provider" type="text" placeholder="المورّد / الوكيل" />
-      </div>
-      <div class="field">
-        <label>رقم الفاتورة (اختياري)</label>
-        <input v-model="form.invoiceNo" type="text" placeholder="—" />
-      </div>
+      <BaseField label="تاريخ البداية (اختياري)">
+        <BaseInput v-model="form.startDate" type="date" />
+      </BaseField>
+      <BaseField label="تاريخ انتهاء الضمان">
+        <BaseInput v-model="form.endDate" type="date" />
+      </BaseField>
     </div>
 
     <div class="row">
-      <div class="field">
-        <label>تاريخ البداية (اختياري)</label>
-        <input v-model="form.startDate" type="date" />
-      </div>
-      <div class="field">
-        <label>تاريخ انتهاء الضمان</label>
-        <input v-model="form.endDate" type="date" />
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="field">
-        <label>التكلفة (اختياري)</label>
-        <input v-model.number="form.cost" type="number" placeholder="0" />
-      </div>
-      <div v-if="asset.maintenance.length" class="field">
-        <label>ربط بعملية صيانة/إصلاح (اختياري)</label>
-        <select v-model="form.linkedMaintenanceId" class="control">
+      <BaseField label="التكلفة (اختياري)">
+        <BaseInput v-model.number="form.cost" type="number" placeholder="0" />
+      </BaseField>
+      <BaseField v-if="asset.maintenance.length" label="ربط بعملية صيانة/إصلاح (اختياري)">
+        <BaseSelect v-model="form.linkedMaintenanceId">
           <option value="">— بدون —</option>
           <option v-for="m in asset.maintenance" :key="m.id" :value="m.id">
             {{ MAINT_ICON[m.type] ?? '🔧' }} {{ m.type }} · {{ m.date }}
           </option>
-        </select>
-      </div>
+        </BaseSelect>
+      </BaseField>
     </div>
 
-    <div class="field">
-      <label>ملاحظة (اختياري)</label>
-      <textarea v-model="form.note" rows="2" placeholder="تفاصيل التغطية أو شروط الضمان..."></textarea>
-    </div>
+    <BaseField label="ملاحظة (اختياري)">
+      <BaseTextarea v-model="form.note" :rows="2" placeholder="تفاصيل التغطية أو شروط الضمان..." />
+    </BaseField>
 
-    <div class="field">
-      <label>المرفقات (فاتورة، بطاقة ضمان، صور)</label>
+    <BaseField tag="div" label="المرفقات (فاتورة، بطاقة ضمان، صور)">
       <AttachmentsField v-model="form.attachments" />
-    </div>
+    </BaseField>
 
     <label class="check">
       <input v-model="form.linkToReminders" type="checkbox" />
@@ -166,32 +156,6 @@ function save() {
 </template>
 
 <style lang="scss" scoped>
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-block-end: 16px;
-  flex: 1;
-  min-inline-size: 0;
-
-  label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
-
-  input,
-  textarea,
-  .control {
-    inline-size: 100%;
-    max-inline-size: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-    background: var(--surface);
-    color: var(--text);
-    &:focus { outline: none; border-color: var(--primary); }
-  }
-}
-
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
 
 .types {

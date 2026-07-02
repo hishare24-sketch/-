@@ -7,7 +7,7 @@ import { importXLSX } from '@/helpers/export'
 import { fmtNum } from '@/helpers/format'
 import { currentUserName } from '@/helpers/currentUser'
 import type { Transaction } from '@/interfaces/models'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseSelect } from '@/components/base'
 import ModalShell from '@/components/shared/ModalShell.vue'
 
 const props = defineProps<{ projectId: string }>()
@@ -166,29 +166,25 @@ function reset() {
     <!-- الخطوة الثانية: الربط والنتائج -->
     <div v-else class="recon">
       <div class="recon__bar">
-        <div class="field">
-          <label>المشروع الهدف</label>
-          <select v-model="targetProject">
+        <BaseField label="المشروع الهدف">
+          <BaseSelect v-model="targetProject">
             <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.icon }} {{ p.name }}</option>
-          </select>
-        </div>
+          </BaseSelect>
+        </BaseField>
         <BaseButton variant="ghost" @click="reset">↺ ملف آخر</BaseButton>
       </div>
 
       <!-- ربط الأعمدة -->
       <div class="maprow">
-        <div class="field">
-          <label>عمود التاريخ</label>
-          <select v-model="map.date"><option value="">—</option><option v-for="c in columns" :key="c" :value="c">{{ c }}</option></select>
-        </div>
-        <div class="field">
-          <label>عمود المبلغ *</label>
-          <select v-model="map.amount"><option value="">—</option><option v-for="c in columns" :key="c" :value="c">{{ c }}</option></select>
-        </div>
-        <div class="field">
-          <label>عمود الوصف</label>
-          <select v-model="map.desc"><option value="">—</option><option v-for="c in columns" :key="c" :value="c">{{ c }}</option></select>
-        </div>
+        <BaseField label="عمود التاريخ">
+          <BaseSelect v-model="map.date"><option value="">—</option><option v-for="c in columns" :key="c" :value="c">{{ c }}</option></BaseSelect>
+        </BaseField>
+        <BaseField label="عمود المبلغ *">
+          <BaseSelect v-model="map.amount"><option value="">—</option><option v-for="c in columns" :key="c" :value="c">{{ c }}</option></BaseSelect>
+        </BaseField>
+        <BaseField label="عمود الوصف">
+          <BaseSelect v-model="map.desc"><option value="">—</option><option v-for="c in columns" :key="c" :value="c">{{ c }}</option></BaseSelect>
+        </BaseField>
       </div>
 
       <!-- ملخّص -->
@@ -275,25 +271,6 @@ function reset() {
   gap: 12px;
   margin-block-end: 14px;
   flex-wrap: wrap;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  label { font-size: 12.5px; font-weight: 500; color: var(--text-muted); }
-
-  select {
-    padding: 9px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 13px;
-    background: var(--surface);
-    color: var(--text);
-    &:focus { outline: none; border-color: var(--primary); }
-  }
 }
 
 .maprow {

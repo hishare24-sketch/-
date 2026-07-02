@@ -9,7 +9,7 @@ import { fmtNum } from '@/helpers/format'
 import type { MemberTxnType, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput, BaseSelect, BaseTextarea } from '@/components/base'
 
 const props = defineProps<{ projectId: string }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -58,17 +58,15 @@ function save() {
     </div>
 
     <template v-else>
-      <div class="field">
-        <label>العضو</label>
-        <select v-model="form.memberId">
+      <BaseField label="العضو">
+        <BaseSelect v-model="form.memberId">
           <option v-for="m in projMembers" :key="m.id" :value="m.id">
             {{ m.name }} (رصيد: {{ fmtNum(m.balance ?? 0) }})
           </option>
-        </select>
-      </div>
+        </BaseSelect>
+      </BaseField>
 
-      <div class="field">
-        <label>نوع الحركة</label>
+      <BaseField tag="div" label="نوع الحركة">
         <div class="types">
           <button
             v-for="t in MEMBER_TXN_TYPES"
@@ -88,22 +86,19 @@ function save() {
             </span>
           </button>
         </div>
-      </div>
+      </BaseField>
 
-      <div class="field">
-        <label>المبلغ (ر.س)</label>
-        <input v-model.number="form.amount" type="number" placeholder="0" />
-      </div>
+      <BaseField label="المبلغ (ر.س)">
+        <BaseInput v-model.number="form.amount" type="number" placeholder="0" />
+      </BaseField>
 
-      <div class="field">
-        <label>ملاحظات (اختياري)</label>
-        <textarea v-model="form.note" rows="2"></textarea>
-      </div>
+      <BaseField label="ملاحظات (اختياري)">
+        <BaseTextarea v-model="form.note" :rows="2" />
+      </BaseField>
 
-      <div class="field">
-        <label>المرفقات (صور / ملفات)</label>
+      <BaseField tag="div" label="المرفقات (صور / ملفات)">
         <AttachmentsField v-model="form.attachments" />
-      </div>
+      </BaseField>
     </template>
 
     <template #footer>
@@ -114,34 +109,6 @@ function save() {
 </template>
 
 <style lang="scss" scoped>
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-block-end: 16px;
-
-  label {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-muted);
-  }
-
-  input,
-  select,
-  textarea {
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-
-    &:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-  }
-}
-
 .empty {
   padding: 20px;
   text-align: center;

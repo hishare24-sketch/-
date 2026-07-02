@@ -10,7 +10,7 @@ import type { CommitmentKind, CommitmentFreq, CommitmentDir, Attachment, Commitm
 import type { FormPreset } from '@/interfaces/forms'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput, BaseSelect } from '@/components/base'
 
 const props = defineProps<{ projectId: string; preset?: FormPreset; commitment?: Commitment | null }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'saved'): void }>()
@@ -77,70 +77,59 @@ function save() {
 
 <template>
   <ModalShell :title="editing ? `تعديل: ${form.name}` : 'التزام جديد'" @close="emit('close')">
-    <div class="field">
-      <label>النوع</label>
+    <BaseField tag="div" label="النوع">
       <div class="seg">
         <button v-for="k in COMMITMENT_KINDS" :key="k.id" type="button" :class="{ 'is-active': form.kind === k.id }" @click="form.kind = k.id">
           {{ k.icon }} {{ k.label }}
         </button>
       </div>
-    </div>
+    </BaseField>
 
-    <div class="field">
-      <label>الاتجاه</label>
+    <BaseField tag="div" label="الاتجاه">
       <div class="seg">
         <button type="button" :class="{ 'is-active': form.direction === 'out' }" @click="form.direction = 'out'">📤 صادر (ندفع)</button>
         <button type="button" :class="{ 'is-active': form.direction === 'in' }" @click="form.direction = 'in'">📥 وارد (نستلم)</button>
       </div>
-    </div>
+    </BaseField>
 
-    <div class="field">
-      <label>المشروع</label>
-      <select v-model="form.projectId">
+    <BaseField label="المشروع">
+      <BaseSelect v-model="form.projectId">
         <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.icon }} {{ p.name }}</option>
-      </select>
-    </div>
+      </BaseSelect>
+    </BaseField>
 
-    <div class="field">
-      <label>الاسم</label>
-      <input v-model="form.name" type="text" placeholder="مثال: قسط السيارة" />
-    </div>
-    <div class="field">
-      <label>الطرف (اختياري)</label>
-      <input v-model="form.party" type="text" placeholder="مثال: بنك التمويل" />
-    </div>
-    <div class="field">
-      <label>مبلغ الدفعة (ر.س)</label>
-      <input v-model.number="form.amount" type="number" placeholder="0" />
-    </div>
-    <div class="field">
-      <label>التكرار</label>
-      <select v-model="form.freq">
+    <BaseField label="الاسم">
+      <BaseInput v-model="form.name" placeholder="مثال: قسط السيارة" />
+    </BaseField>
+    <BaseField label="الطرف (اختياري)">
+      <BaseInput v-model="form.party" placeholder="مثال: بنك التمويل" />
+    </BaseField>
+    <BaseField label="مبلغ الدفعة (ر.س)">
+      <BaseInput v-model.number="form.amount" type="number" placeholder="0" />
+    </BaseField>
+    <BaseField label="التكرار">
+      <BaseSelect v-model="form.freq">
         <option v-for="f in freqs" :key="f" :value="f">{{ FREQ_LABEL[f] }}</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>تاريخ البداية / أول استحقاق</label>
-      <input v-model="form.startDate" type="date" />
-    </div>
-    <div v-if="form.kind === 'installment'" class="field">
-      <label>عدد الدفعات الكلي (اختياري للأقساط)</label>
-      <input v-model.number="form.totalCount" type="number" placeholder="مثال: 36" />
-    </div>
+      </BaseSelect>
+    </BaseField>
+    <BaseField label="تاريخ البداية / أول استحقاق">
+      <BaseInput v-model="form.startDate" type="date" />
+    </BaseField>
+    <BaseField v-if="form.kind === 'installment'" label="عدد الدفعات الكلي (اختياري للأقساط)">
+      <BaseInput v-model.number="form.totalCount" type="number" placeholder="مثال: 36" />
+    </BaseField>
 
     <!-- حقول خاصة بنوع الالتزام -->
     <div v-if="kindFields.length" class="specs">
       <span class="specs__label">بيانات {{ COMMITMENT_KINDS.find((k) => k.id === form.kind)?.label }}</span>
-      <div v-for="f in kindFields" :key="f.key" class="field">
-        <label>{{ f.label }}</label>
-        <input v-model="form.specs[f.key]" type="text" :placeholder="f.placeholder ?? ''" />
-      </div>
+      <BaseField v-for="f in kindFields" :key="f.key" :label="f.label">
+        <BaseInput v-model="form.specs[f.key]" :placeholder="f.placeholder ?? ''" />
+      </BaseField>
     </div>
 
-    <div class="field">
-      <label>المرفقات (عقد، صور)</label>
+    <BaseField tag="div" label="المرفقات (عقد، صور)">
       <AttachmentsField v-model="form.attachments" />
-    </div>
+    </BaseField>
 
     <template #footer>
       <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
@@ -150,28 +139,6 @@ function save() {
 </template>
 
 <style lang="scss" scoped>
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-block-end: 16px;
-
-  label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
-
-  input, select {
-    inline-size: 100%;
-    max-inline-size: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-    background: var(--surface);
-    color: var(--text);
-    &:focus { outline: none; border-color: var(--primary); }
-  }
-}
-
 .specs {
   margin-block-end: 16px;
   padding: 14px;
@@ -179,7 +146,7 @@ function save() {
   border-radius: var(--radius-sm);
 
   &__label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-block-end: 10px; }
-  .field { margin-block-end: 12px; &:last-child { margin-block-end: 0; } }
+  :deep(.field) { margin-block-end: 12px; &:last-child { margin-block-end: 0; } }
 }
 
 .seg {

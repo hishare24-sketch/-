@@ -10,7 +10,7 @@ import { today } from '@/helpers/date'
 import { analyzeTx } from '@/helpers/txAnalysis'
 import type { Transaction, TxType } from '@/interfaces/models'
 import type { FormPreset } from '@/interfaces/forms'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput, BaseSelect, BaseTextarea } from '@/components/base'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
@@ -89,8 +89,7 @@ function save() {
 
 <template>
   <ModalShell :title="tx ? 'تعديل العملية' : 'عملية جديدة'" @close="emit('close')">
-    <div class="field">
-      <label>نوع العملية</label>
+    <BaseField tag="div" label="نوع العملية">
       <div class="types">
         <button
           v-for="t in TX_TYPES"
@@ -103,59 +102,50 @@ function save() {
           <span>{{ t.icon }}</span>{{ t.label }}
         </button>
       </div>
-    </div>
+    </BaseField>
 
-    <div class="field">
-      <label>المشروع</label>
-      <select v-model="form.projectId">
+    <BaseField label="المشروع">
+      <BaseSelect v-model="form.projectId">
         <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.icon }} {{ p.name }}</option>
-      </select>
-    </div>
+      </BaseSelect>
+    </BaseField>
 
-    <div class="field">
-      <label>الوصف</label>
-      <input v-model="form.description" type="text" placeholder="مثال: فاتورة كهرباء" />
-    </div>
+    <BaseField label="الوصف">
+      <BaseInput v-model="form.description" placeholder="مثال: فاتورة كهرباء" />
+    </BaseField>
 
-    <div class="field">
-      <label>المبلغ (ر.س)</label>
-      <input v-model.number="form.amount" type="number" placeholder="0" />
-    </div>
+    <BaseField label="المبلغ (ر.س)">
+      <BaseInput v-model.number="form.amount" type="number" placeholder="0" />
+    </BaseField>
 
-    <div v-if="form.type === 'transfer'" class="field">
-      <label>إلى مشروع</label>
-      <select v-model="form.toProject">
+    <BaseField v-if="form.type === 'transfer'" label="إلى مشروع">
+      <BaseSelect v-model="form.toProject">
         <option v-for="p in projects.filter((x) => x.id !== form.projectId)" :key="p.id" :value="p.id">
           {{ p.name }}
         </option>
-      </select>
-    </div>
-    <div v-else class="field">
-      <label>التصنيف</label>
-      <select v-model="form.category">
+      </BaseSelect>
+    </BaseField>
+    <BaseField v-else label="التصنيف">
+      <BaseSelect v-model="form.category">
         <option v-for="c in cats" :key="c" :value="c">{{ c }}</option>
-      </select>
-    </div>
+      </BaseSelect>
+    </BaseField>
 
-    <div class="field">
-      <label>المصدر / الجهة (اختياري)</label>
-      <input v-model="form.source" type="text" placeholder="مثال: مورد، عميل، بنك..." />
-    </div>
+    <BaseField label="المصدر / الجهة (اختياري)">
+      <BaseInput v-model="form.source" placeholder="مثال: مورد، عميل، بنك..." />
+    </BaseField>
 
-    <div class="field">
-      <label>التاريخ</label>
-      <input v-model="form.date" type="date" />
-    </div>
+    <BaseField label="التاريخ">
+      <BaseInput v-model="form.date" type="date" />
+    </BaseField>
 
-    <div class="field">
-      <label>ملاحظات (اختياري)</label>
-      <textarea v-model="form.note" rows="2"></textarea>
-    </div>
+    <BaseField label="ملاحظات (اختياري)">
+      <BaseTextarea v-model="form.note" :rows="2" />
+    </BaseField>
 
-    <div class="field">
-      <label>المرفقات</label>
+    <BaseField tag="div" label="المرفقات">
       <AttachmentsField v-model="form.attachments" />
-    </div>
+    </BaseField>
 
     <!-- تنبيهات التحقق الذكي الحيّة -->
     <div v-if="warnings.length" class="warnings">
@@ -180,34 +170,6 @@ function save() {
 </template>
 
 <style lang="scss" scoped>
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-block-end: 16px;
-
-  label {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-muted);
-  }
-
-  input,
-  select,
-  textarea {
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-
-    &:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-  }
-}
-
 .types {
   display: flex;
   gap: 8px;

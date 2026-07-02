@@ -7,7 +7,7 @@ import { today } from '@/helpers/date'
 import type { Asset, MaintenanceEntry, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput, BaseTextarea } from '@/components/base'
 
 const props = defineProps<{ asset: Asset; initialType?: MaintenanceEntry['type'] }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -69,37 +69,31 @@ function save() {
 
 <template>
   <ModalShell :title="`صيانة: ${asset.name}`" @close="emit('close')">
-    <div class="field">
-      <label>النوع</label>
+    <BaseField tag="div" label="النوع">
       <div class="types">
         <button v-for="t in MAINT_TYPES" :key="t.v" type="button" class="type" :class="{ 'is-active': form.type === t.v }" @click="form.type = t.v">
           {{ t.icon }} {{ t.v }}
         </button>
       </div>
-    </div>
+    </BaseField>
     <div class="row">
-      <div class="field">
-        <label>التاريخ</label>
-        <input v-model="form.date" type="date" />
-      </div>
-      <div class="field">
-        <label>التكلفة (ر.س)</label>
-        <input v-model.number="form.cost" type="number" placeholder="0" />
-      </div>
+      <BaseField label="التاريخ">
+        <BaseInput v-model="form.date" type="date" />
+      </BaseField>
+      <BaseField label="التكلفة (ر.س)">
+        <BaseInput v-model.number="form.cost" type="number" placeholder="0" />
+      </BaseField>
     </div>
-    <div v-if="showMeter" class="field">
-      <label>قراءة العداد ({{ asset.usageUnit }}) — اختياري</label>
-      <input v-model.number="form.meter" type="number" placeholder="0" />
-    </div>
-    <div class="field">
-      <label>الوصف</label>
-      <textarea v-model="form.note" rows="2" placeholder="تفاصيل الصيانة أو العطل..."></textarea>
-    </div>
+    <BaseField v-if="showMeter" :label="`قراءة العداد (${asset.usageUnit}) — اختياري`">
+      <BaseInput v-model.number="form.meter" type="number" placeholder="0" />
+    </BaseField>
+    <BaseField label="الوصف">
+      <BaseTextarea v-model="form.note" :rows="2" placeholder="تفاصيل الصيانة أو العطل..." />
+    </BaseField>
 
-    <div class="field">
-      <label>المرفقات (فاتورة، تقرير فحص، صور)</label>
+    <BaseField tag="div" label="المرفقات (فاتورة، تقرير فحص، صور)">
       <AttachmentsField v-model="form.attachments" />
-    </div>
+    </BaseField>
 
     <!-- ضمان فرعي اختياري لهذا الإصلاح/المكوّن -->
     <label class="check">
@@ -107,19 +101,16 @@ function save() {
       🛡️ لهذا الإصلاح/المكوّن ضمان — أضِفه وتتبّعه
     </label>
     <div v-if="form.addWarranty" class="warr-box">
-      <div class="field">
-        <label>اسم الضمان / المكوّن</label>
-        <input v-model="form.warrantyName" type="text" placeholder="مثال: ضمان قطعة الغيار، بطارية..." />
-      </div>
+      <BaseField label="اسم الضمان / المكوّن">
+        <BaseInput v-model="form.warrantyName" placeholder="مثال: ضمان قطعة الغيار، بطارية..." />
+      </BaseField>
       <div class="row">
-        <div class="field">
-          <label>الجهة الضامنة (اختياري)</label>
-          <input v-model="form.warrantyProvider" type="text" placeholder="الورشة / المورّد" />
-        </div>
-        <div class="field">
-          <label>تاريخ انتهاء الضمان</label>
-          <input v-model="form.warrantyEnd" type="date" />
-        </div>
+        <BaseField label="الجهة الضامنة (اختياري)">
+          <BaseInput v-model="form.warrantyProvider" placeholder="الورشة / المورّد" />
+        </BaseField>
+        <BaseField label="تاريخ انتهاء الضمان">
+          <BaseInput v-model="form.warrantyEnd" type="date" />
+        </BaseField>
       </div>
       <p class="warr-note">سيُربط الضمان بهذه العملية ويرث مرفقاتها، ويظهر في التذكيرات قبل انتهائه.</p>
     </div>
@@ -134,30 +125,6 @@ function save() {
 </template>
 
 <style lang="scss" scoped>
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-block-end: 16px;
-  flex: 1;
-  min-inline-size: 0;
-
-  label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
-
-  input, textarea {
-    inline-size: 100%;
-    max-inline-size: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-    background: var(--surface);
-    color: var(--text);
-    &:focus { outline: none; border-color: var(--primary); }
-  }
-}
-
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
 
 .types {

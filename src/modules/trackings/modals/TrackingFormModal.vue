@@ -7,7 +7,7 @@ import { TRACKING_TYPES, TRACKING_FIELD_SCHEMAS } from '@/constants'
 import { daysBetween, statusFromDays } from '@/helpers/date'
 import type { Tracking, Attachment } from '@/interfaces/models'
 import type { FormPreset } from '@/interfaces/forms'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput, BaseSelect, BaseTextarea } from '@/components/base'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
 
@@ -70,8 +70,7 @@ function save() {
 
 <template>
   <ModalShell :title="tracking ? 'تعديل المتابعة' : 'متابعة جديدة'" @close="emit('close')">
-    <div class="field">
-      <label>نوع المتابعة</label>
+    <BaseField tag="div" label="نوع المتابعة">
       <div class="types">
         <button
           v-for="t in TRACKING_TYPES"
@@ -84,51 +83,43 @@ function save() {
           {{ t.icon }} {{ t.id }}
         </button>
       </div>
-    </div>
-    <div class="field">
-      <label>المشروع</label>
-      <select v-model="form.projectId" @change="form.memberId = ''">
+    </BaseField>
+    <BaseField label="المشروع">
+      <BaseSelect v-model="form.projectId" @change="form.memberId = ''">
         <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.icon }} {{ p.name }}</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>الاسم</label>
-      <input v-model="form.name" type="text" placeholder="مثال: ضمان الثلاجة" />
-    </div>
-    <div class="field">
-      <label>تاريخ الانتهاء</label>
-      <input v-model="form.expiryDate" type="date" />
-    </div>
+      </BaseSelect>
+    </BaseField>
+    <BaseField label="الاسم">
+      <BaseInput v-model="form.name" placeholder="مثال: ضمان الثلاجة" />
+    </BaseField>
+    <BaseField label="تاريخ الانتهاء">
+      <BaseInput v-model="form.expiryDate" type="date" />
+    </BaseField>
 
     <!-- حقول خاصة بنوع المتابعة -->
     <div v-if="typeFields.length" class="specs">
       <span class="specs__label">بيانات {{ form.type }}</span>
-      <div v-for="f in typeFields" :key="f.key" class="field">
-        <label>{{ f.label }}</label>
-        <input v-model="form.specs[f.key]" type="text" :placeholder="f.placeholder ?? ''" />
-      </div>
+      <BaseField v-for="f in typeFields" :key="f.key" :label="f.label">
+        <BaseInput v-model="form.specs[f.key]" :placeholder="f.placeholder ?? ''" />
+      </BaseField>
     </div>
 
-    <div class="field">
-      <label>تكلفة التجديد (اختياري)</label>
-      <input v-model.number="form.cost" type="number" placeholder="0" />
-    </div>
-    <div class="field">
-      <label>إسناد لعضو (اختياري)</label>
-      <select v-model="form.memberId">
+    <BaseField label="تكلفة التجديد (اختياري)">
+      <BaseInput v-model.number="form.cost" type="number" placeholder="0" />
+    </BaseField>
+    <BaseField label="إسناد لعضو (اختياري)">
+      <BaseSelect v-model="form.memberId">
         <option value="">بدون إسناد</option>
         <option v-for="m in projMembers" :key="m.id" :value="m.id">{{ m.name }}</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>ملاحظات (اختياري)</label>
-      <textarea v-model="form.note" rows="2" placeholder="رقم الضمان، الجهة، تفاصيل..."></textarea>
-    </div>
+      </BaseSelect>
+    </BaseField>
+    <BaseField label="ملاحظات (اختياري)">
+      <BaseTextarea v-model="form.note" :rows="2" placeholder="رقم الضمان، الجهة، تفاصيل..." />
+    </BaseField>
 
-    <div class="field">
-      <label>المرفقات (صور / ملفات)</label>
+    <BaseField tag="div" label="المرفقات (صور / ملفات)">
       <AttachmentsField v-model="form.attachments" />
-    </div>
+    </BaseField>
 
     <template #footer>
       <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
@@ -138,28 +129,6 @@ function save() {
 </template>
 
 <style lang="scss" scoped>
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-block-end: 16px;
-
-  label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
-
-  input, select, textarea {
-    inline-size: 100%;
-    max-inline-size: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-    background: var(--surface);
-    color: var(--text);
-    &:focus { outline: none; border-color: var(--primary); }
-  }
-}
-
 .specs {
   margin-block-end: 16px;
   padding: 14px;

@@ -7,7 +7,7 @@ import { today } from '@/helpers/date'
 import type { Commitment, Attachment } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput } from '@/components/base'
 
 const props = defineProps<{ commitment: Commitment }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -60,23 +60,19 @@ function pay() {
     </div>
 
     <!-- بيانات الدفعة -->
-    <div class="field">
-      <label>{{ isOut ? 'المبلغ المدفوع' : 'المبلغ المُستلم' }} (ر.س)</label>
-      <input v-model.number="form.amount" type="number" placeholder="0" />
+    <BaseField :label="`${isOut ? 'المبلغ المدفوع' : 'المبلغ المُستلم'} (ر.س)`">
+      <BaseInput v-model.number="form.amount" type="number" placeholder="0" />
       <span class="hint-line">القيمة المعتادة: {{ fmt(commitment.amount) }}</span>
-    </div>
-    <div class="field">
-      <label>تاريخ الدفعة</label>
-      <input v-model="form.date" type="date" />
-    </div>
-    <div class="field">
-      <label>ملاحظة (اختياري)</label>
-      <input v-model="form.note" type="text" placeholder="مثال: دفعت عبر تحويل بنكي" />
-    </div>
-    <div class="field">
-      <label>المرفقات (إيصال، سند تحويل) — اختياري</label>
+    </BaseField>
+    <BaseField label="تاريخ الدفعة">
+      <BaseInput v-model="form.date" type="date" />
+    </BaseField>
+    <BaseField label="ملاحظة (اختياري)">
+      <BaseInput v-model="form.note" placeholder="مثال: دفعت عبر تحويل بنكي" />
+    </BaseField>
+    <BaseField tag="div" label="المرفقات (إيصال، سند تحويل) — اختياري">
       <AttachmentsField v-model="form.attachments" />
-    </div>
+    </BaseField>
 
     <p class="hint">
       ℹ️ تسجيل الدفعة يُنشئ عملية {{ isOut ? 'مصروف' : 'إيراد' }} فعلية في المالية، ويقدّم تاريخ الاستحقاق للموعد التالي تلقائياً.
@@ -106,24 +102,6 @@ function pay() {
     font-size: 13px;
 
     span { color: var(--text-muted); }
-  }
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-block-end: 16px;
-
-  label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
-
-  input {
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-    &:focus { outline: none; border-color: var(--primary); }
   }
 }
 

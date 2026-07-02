@@ -2,7 +2,7 @@
 // منطقة نصّ موحّدة (v-model)
 withDefaults(
   defineProps<{
-    modelValue?: string
+    modelValue?: string | null
     placeholder?: string
     rows?: number
     disabled?: boolean

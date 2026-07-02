@@ -10,7 +10,7 @@ import type { AssetCategory, Attachment, Asset } from '@/interfaces/models'
 import type { FormPreset } from '@/interfaces/forms'
 import ModalShell from '@/components/shared/ModalShell.vue'
 import AttachmentsField from '@/components/shared/AttachmentsField.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput, BaseSelect, BaseTextarea } from '@/components/base'
 
 const props = defineProps<{ projectId: string; preset?: FormPreset; asset?: Asset | null }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'saved'): void }>()
@@ -92,8 +92,7 @@ function save() {
 
 <template>
   <ModalShell :title="editing ? `تعديل: ${form.name}` : 'أصل جديد'" @close="emit('close')">
-    <div class="field">
-      <label>نوع الأصل</label>
+    <BaseField tag="div" label="نوع الأصل">
       <div class="types">
         <button
           v-for="c in ASSET_CATEGORIES"
@@ -106,77 +105,64 @@ function save() {
           {{ c.icon }} {{ c.label }}
         </button>
       </div>
-    </div>
-    <div class="field">
-      <label>اسم الأصل</label>
-      <input v-model="form.name" type="text" placeholder="مثال: سيارة هايلكس، خادم Dell" />
-    </div>
-    <div class="field">
-      <label>المشروع</label>
-      <select v-model="form.projectId" @change="form.memberId = ''">
+    </BaseField>
+    <BaseField label="اسم الأصل">
+      <BaseInput v-model="form.name" placeholder="مثال: سيارة هايلكس، خادم Dell" />
+    </BaseField>
+    <BaseField label="المشروع">
+      <BaseSelect v-model="form.projectId" @change="form.memberId = ''">
         <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.icon }} {{ p.name }}</option>
-      </select>
-    </div>
+      </BaseSelect>
+    </BaseField>
     <div class="row">
-      <div class="field">
-        <label>تاريخ الشراء</label>
-        <input v-model="form.purchaseDate" type="date" />
-      </div>
-      <div class="field">
-        <label>قيمة الشراء (ر.س)</label>
-        <input v-model.number="form.purchaseValue" type="number" placeholder="0" />
-      </div>
+      <BaseField label="تاريخ الشراء">
+        <BaseInput v-model="form.purchaseDate" type="date" />
+      </BaseField>
+      <BaseField label="قيمة الشراء (ر.س)">
+        <BaseInput v-model.number="form.purchaseValue" type="number" placeholder="0" />
+      </BaseField>
     </div>
 
     <!-- حقول خاصة بطبيعة الأصل -->
     <div v-if="categoryFields.length" class="specs">
       <span class="specs__label">بيانات {{ ASSET_CATEGORIES.find((c) => c.id === form.category)?.label }}</span>
       <div class="specs__grid">
-        <div v-for="f in categoryFields" :key="f.key" class="field">
-          <label>{{ f.label }}</label>
-          <input v-model="form.specs[f.key]" type="text" :placeholder="f.placeholder ?? ''" />
-        </div>
+        <BaseField v-for="f in categoryFields" :key="f.key" :label="f.label">
+          <BaseInput v-model="form.specs[f.key]" :placeholder="f.placeholder ?? ''" />
+        </BaseField>
       </div>
     </div>
 
-    <div class="field">
-      <label>المورّد (اختياري)</label>
-      <input v-model="form.supplier" type="text" placeholder="مثال: الوكالة" />
-    </div>
-    <div class="field">
-      <label>انتهاء الضمان (اختياري)</label>
-      <input v-model="form.warrantyEnd" type="date" />
-    </div>
-    <div class="field">
-      <label>الرقم التسلسلي (اختياري)</label>
-      <input v-model="form.serial" type="text" placeholder="مثال: SN-12345" />
-    </div>
+    <BaseField label="المورّد (اختياري)">
+      <BaseInput v-model="form.supplier" placeholder="مثال: الوكالة" />
+    </BaseField>
+    <BaseField label="انتهاء الضمان (اختياري)">
+      <BaseInput v-model="form.warrantyEnd" type="date" />
+    </BaseField>
+    <BaseField label="الرقم التسلسلي (اختياري)">
+      <BaseInput v-model="form.serial" placeholder="مثال: SN-12345" />
+    </BaseField>
     <div class="row">
-      <div class="field">
-        <label>عداد الاستخدام (اختياري)</label>
-        <input v-model.number="form.usageMeter" type="number" placeholder="0" />
-      </div>
-      <div class="field">
-        <label>وحدة العداد</label>
-        <input v-model="form.usageUnit" type="text" placeholder="كم / ساعة" />
-      </div>
+      <BaseField label="عداد الاستخدام (اختياري)">
+        <BaseInput v-model.number="form.usageMeter" type="number" placeholder="0" />
+      </BaseField>
+      <BaseField label="وحدة العداد">
+        <BaseInput v-model="form.usageUnit" placeholder="كم / ساعة" />
+      </BaseField>
     </div>
-    <div class="field">
-      <label>المسؤول / الحائز (اختياري)</label>
-      <select v-model="form.memberId">
+    <BaseField label="المسؤول / الحائز (اختياري)">
+      <BaseSelect v-model="form.memberId">
         <option value="">بدون</option>
         <option v-for="m in projMembers" :key="m.id" :value="m.id">{{ m.name }}</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>ملاحظات (اختياري)</label>
-      <textarea v-model="form.note" rows="2"></textarea>
-    </div>
+      </BaseSelect>
+    </BaseField>
+    <BaseField label="ملاحظات (اختياري)">
+      <BaseTextarea v-model="form.note" :rows="2" />
+    </BaseField>
 
-    <div class="field">
-      <label>المرفقات (فاتورة الشراء، صور، وثائق)</label>
+    <BaseField tag="div" label="المرفقات (فاتورة الشراء، صور، وثائق)">
       <AttachmentsField v-model="form.attachments" />
-    </div>
+    </BaseField>
 
     <template #footer>
       <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
@@ -186,30 +172,6 @@ function save() {
 </template>
 
 <style lang="scss" scoped>
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-block-end: 16px;
-  flex: 1;
-  min-inline-size: 0; // يسمح للحقل بالانكماش داخل الصفوف المرنة (يمنع تجاوز الإطار)
-
-  label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
-
-  input, select, textarea {
-    inline-size: 100%;
-    max-inline-size: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-    background: var(--surface);
-    color: var(--text);
-    &:focus { outline: none; border-color: var(--primary); }
-  }
-}
-
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
 
 .specs {

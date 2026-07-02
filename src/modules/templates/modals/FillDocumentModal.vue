@@ -10,7 +10,7 @@ import type { DocTemplate, TemplateElement } from '@/interfaces/models'
 import { docTypeMeta, elementTypeMeta } from '../constants'
 import { INPUT_TYPES, TABLE_TYPES, renderTemplateBody, type FieldValues, type TableRows } from '../templateRender'
 import ModalShell from '@/components/shared/ModalShell.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseSelect } from '@/components/base'
 
 const props = defineProps<{ template: DocTemplate }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -124,12 +124,11 @@ function saveToDocuments() {
 
     <!-- التعبئة -->
     <div v-if="view === 'fill'" class="fill">
-      <div class="field">
-        <label>المشروع</label>
-        <select v-model="projectId">
+      <BaseField label="المشروع">
+        <BaseSelect v-model="projectId">
           <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.icon }} {{ p.name }}</option>
-        </select>
-      </div>
+        </BaseSelect>
+      </BaseField>
 
       <div v-for="(g, gi) in groups" :key="gi" class="group">
         <span class="group__title">{{ g.title }}</span>

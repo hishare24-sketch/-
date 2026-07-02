@@ -5,7 +5,7 @@ import { useSurveysStore } from '@/stores/SurveysStore'
 import { importXLSX } from '@/helpers/export'
 import type { Survey } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput } from '@/components/base'
 
 const props = defineProps<{ survey: Survey }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -98,8 +98,8 @@ const sourceLabel: Record<string, string> = { member: 'عضو', manual: 'يدو�
 
     <!-- يدوي -->
     <div v-else-if="tab === 'manual'" class="manual">
-      <div class="field"><label>الاسم</label><input v-model="manual.name" type="text" placeholder="اسم المستبين" /></div>
-      <div class="field"><label>البريد (اختياري)</label><input v-model="manual.email" type="email" placeholder="name@example.com" /></div>
+      <BaseField label="الاسم"><BaseInput v-model="manual.name" placeholder="اسم المستبين" /></BaseField>
+      <BaseField label="البريد (اختياري)"><BaseInput v-model="manual.email" type="email" placeholder="name@example.com" /></BaseField>
       <BaseButton :disabled="!manual.name.trim()" @click="addManual">＋ إضافة المستبين</BaseButton>
     </div>
 
@@ -185,12 +185,6 @@ const sourceLabel: Record<string, string> = { member: 'عضو', manual: 'يدو�
   display: flex;
   flex-direction: column;
   gap: 14px;
-
-  .field { display: flex; flex-direction: column; gap: 6px;
-    label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
-    input { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; font-size: 14px;
-      &:focus { outline: none; border-color: var(--primary); } }
-  }
 }
 
 .excel {

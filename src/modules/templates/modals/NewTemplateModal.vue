@@ -4,7 +4,7 @@ import type { TemplateDocType } from '@/interfaces/models'
 import { TEMPLATE_DOC_TYPES } from '../constants'
 import { generateTemplateFromDescription } from '../templatesAI'
 import ModalShell from '@/components/shared/ModalShell.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput, BaseTextarea } from '@/components/base'
 
 const emit = defineEmits<{
   (e: 'create', payload: { name: string; docType: TemplateDocType }): void
@@ -48,10 +48,9 @@ function create() {
 
     <!-- التوليد بالذكاء (محاكاة) -->
     <div v-if="mode === 'ai'" class="ai">
-      <div class="field">
-        <label>صف القالب الذي تريده</label>
-        <textarea v-model="aiDesc" rows="3" placeholder="مثال: قالب عرض سعر لمشروع تقني يشمل جدول منتجات وإجمالي وضريبة" />
-      </div>
+      <BaseField label="صف القالب الذي تريده">
+        <BaseTextarea v-model="aiDesc" :rows="3" placeholder="مثال: قالب عرض سعر لمشروع تقني يشمل جدول منتجات وإجمالي وضريبة" />
+      </BaseField>
       <div v-if="aiPreview" class="ai__preview">
         🤖 سيُنشأ: <b>{{ aiPreview.name }}</b> · {{ aiPreview.sections.length }} قسم
       </div>
@@ -75,10 +74,9 @@ function create() {
       </button>
     </div>
 
-    <div class="field">
-      <label>اسم القالب</label>
-      <input v-model="name" type="text" placeholder="مثال: عرض سعر لمشاريع التقنية" />
-    </div>
+    <BaseField label="اسم القالب">
+      <BaseInput v-model="name" placeholder="مثال: عرض سعر لمشاريع التقنية" />
+    </BaseField>
     </template>
 
     <template #footer>
@@ -146,26 +144,4 @@ function create() {
   &__desc { font-size: 11.5px; color: var(--text-muted); line-height: 1.6; }
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
-
-  input,
-  textarea {
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-    inline-size: 100%;
-    max-inline-size: 100%;
-    background: var(--surface);
-    color: var(--text);
-    &:focus { outline: none; border-color: var(--primary); }
-  }
-  textarea { resize: vertical; }
-}
 </style>

@@ -5,7 +5,7 @@ import { ROLES, PERMISSIONS, ROLE_PERMS } from '@/constants'
 import { uid } from '@/helpers/id'
 import type { Member, MemberRole } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput } from '@/components/base'
 
 const props = defineProps<{ projectId: string; member: Member | null }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -53,17 +53,14 @@ function save() {
 
 <template>
   <ModalShell :title="member ? 'تعديل العضو' : 'إضافة عضو'" @close="emit('close')">
-    <div class="field">
-      <label>اسم العضو</label>
-      <input v-model="form.name" type="text" placeholder="مثال: أحمد العلي" />
-    </div>
-    <div class="field">
-      <label>البريد الإلكتروني</label>
-      <input v-model="form.email" type="email" placeholder="name@example.com" />
-    </div>
+    <BaseField label="اسم العضو">
+      <BaseInput v-model="form.name" placeholder="مثال: أحمد العلي" />
+    </BaseField>
+    <BaseField label="البريد الإلكتروني">
+      <BaseInput v-model="form.email" type="email" placeholder="name@example.com" />
+    </BaseField>
 
-    <div class="field">
-      <label>نوع التمكين (الدور)</label>
+    <BaseField tag="div" label="نوع التمكين (الدور)">
       <div class="roles">
         <button
           v-for="r in ROLES"
@@ -82,10 +79,9 @@ function save() {
           <span v-if="form.role === r.id" class="role__check" :style="{ color: r.color }">✓</span>
         </button>
       </div>
-    </div>
+    </BaseField>
 
-    <div class="field">
-      <label>الصلاحيات التفصيلية</label>
+    <BaseField tag="div" label="الصلاحيات التفصيلية">
       <div class="perms">
         <button
           v-for="p in PERMISSIONS"
@@ -100,7 +96,7 @@ function save() {
         </button>
       </div>
       <p v-if="form.role === 'owner'" class="hint">المالك يملك جميع الصلاحيات تلقائياً.</p>
-    </div>
+    </BaseField>
 
     <template #footer>
       <BaseButton variant="ghost" @click="emit('close')">إلغاء</BaseButton>
@@ -112,32 +108,6 @@ function save() {
 </template>
 
 <style lang="scss" scoped>
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-block-end: 16px;
-
-  label {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-muted);
-  }
-
-  input {
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-
-    &:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-  }
-}
-
 .roles {
   display: flex;
   flex-direction: column;

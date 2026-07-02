@@ -2,7 +2,7 @@
 // قائمة اختيار موحّدة (v-model) — عبر options أو slot لعناصر <option>
 withDefaults(
   defineProps<{
-    modelValue?: string | number
+    modelValue?: string | number | null
     options?: { value: string | number; label: string }[]
     disabled?: boolean
     invalid?: boolean

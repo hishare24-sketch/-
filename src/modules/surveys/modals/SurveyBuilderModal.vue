@@ -8,7 +8,7 @@ import { uid } from '@/helpers/id'
 import { today } from '@/helpers/date'
 import type { Survey, SurveyQuestion, SurveyQuestionKind } from '@/interfaces/models'
 import ModalShell from '@/components/shared/ModalShell.vue'
-import { BaseButton } from '@/components/base'
+import { BaseButton, BaseField, BaseInput, BaseSelect, BaseTextarea } from '@/components/base'
 
 const props = defineProps<{ survey: Survey | null }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -111,31 +111,26 @@ function save() {
     <!-- البناء -->
     <div v-else class="build">
       <!-- معلومات عامة -->
-      <div class="field">
-        <label>عنوان الاستبيان</label>
-        <input v-model="draft.title" type="text" placeholder="مثال: استبيان رضا عملاء" />
-      </div>
-      <div class="field">
-        <label>وصف (اختياري)</label>
-        <textarea v-model="draft.description" rows="2" placeholder="نبذة تظهر للمستبين"></textarea>
-      </div>
+      <BaseField label="عنوان الاستبيان">
+        <BaseInput v-model="draft.title" placeholder="مثال: استبيان رضا عملاء" />
+      </BaseField>
+      <BaseField label="وصف (اختياري)">
+        <BaseTextarea v-model="draft.description" :rows="2" placeholder="نبذة تظهر للمستبين" />
+      </BaseField>
       <div class="row">
-        <div class="field">
-          <label>المشروع</label>
-          <select v-model="draft.projectId">
+        <BaseField label="المشروع">
+          <BaseSelect v-model="draft.projectId">
             <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.icon }} {{ p.name }}</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>حد أقصى للردود (اختياري)</label>
-          <input v-model.number="draft.maxResponses" type="number" placeholder="∞" />
-        </div>
+          </BaseSelect>
+        </BaseField>
+        <BaseField label="حد أقصى للردود (اختياري)">
+          <BaseInput v-model.number="draft.maxResponses" type="number" placeholder="∞" />
+        </BaseField>
       </div>
       <div class="row">
-        <div class="field">
-          <label>تاريخ الإغلاق (اختياري)</label>
-          <input v-model="draft.closeDate" type="date" />
-        </div>
+        <BaseField label="تاريخ الإغلاق (اختياري)">
+          <BaseInput v-model="draft.closeDate" type="date" />
+        </BaseField>
         <label class="checkbox">
           <input v-model="draft.anonymous" type="checkbox" />
           استبيان مجهول الهوية
@@ -219,22 +214,8 @@ function save() {
 }
 
 .field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
   margin-block-end: 14px;
   flex: 1;
-
-  label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
-
-  input, select, textarea {
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 14px;
-    &:focus { outline: none; border-color: var(--primary); }
-  }
 }
 
 .row { display: flex; gap: 12px; flex-wrap: wrap; }
