@@ -12,15 +12,3 @@
   from = "/*"
   to = "/index.html"
   status = 200
-
-# ترويسات أمان (ج-3): CSP + nosniff + سياسة إحالة
-# المسموح: خطوط Google · مكتبتا xlsx/html2pdf من cdnjs (تحميل كسول) ·
-# صور data:/blob: (مرفقات ولوجو base64) · عمّال blob: (html2pdf).
-# لا frame-ancestors عمدًا: تضمين الاستبيان العام /s/:shareId بمواقع خارجية ميزة معلنة.
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
