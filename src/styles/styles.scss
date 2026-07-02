@@ -367,10 +367,13 @@ body {
     overflow: hidden;
   }
 
-  // المنطقة القابلة للتمرير الوحيدة داخل الشاشة
+  // المنطقة القابلة للتمرير الوحيدة داخل الشاشة — عموديًّا فقط.
+  // overflow-x:hidden يمنع سحب الصفحة يمين/يسار مهما تجاوز عنصرٌ العرض؛
+  // حاويات التمرير الأفقي المخصّصة (.table-wrap) تبقى مستقلّة وتعمل.
   .page-content {
     min-block-size: 0;
-    overscroll-behavior-y: contain;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
 
