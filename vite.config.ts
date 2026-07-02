@@ -40,4 +40,15 @@ export default defineConfig({
     host: true, // يتيح الوصول من أي جهاز/متصفح على نفس الشبكة عبر IP الجهاز
     port: Number(process.env.PORT) || 5173,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // فصل مكتبات Vue الثابتة عن كود التطبيق — تحديثات التطبيق لا تُبطل
+        // ذاكرة المتصفح المؤقتة للمكتبات التي لم تتغيّر
+        manualChunks: {
+          vendor: ['vue', 'vue-router', 'pinia', 'vue-i18n'],
+        },
+      },
+    },
+  },
 })
