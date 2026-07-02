@@ -22,14 +22,20 @@ async function doResetData() {
 const settingsStore = useSettingsStore()
 const { prefs, lists, help, themeMode, themeId, customTheme, hasCustomTheme, currentPlan, billing } = storeToRefs(settingsStore)
 
-// حقول الألوان الدقيقة
-const colorFields: { key: keyof CustomTheme; label: string; fallback: string }[] = [
-  { key: 'primary', label: 'اللون الأساسي', fallback: '#2563eb' },
-  { key: 'bg', label: 'لون الخلفية', fallback: themeMode.value === 'dark' ? '#0b0f17' : '#f8f9fb' },
-  { key: 'surface', label: 'لون البطاقات', fallback: themeMode.value === 'dark' ? '#161b26' : '#ffffff' },
-  { key: 'text', label: 'لون النصوص', fallback: themeMode.value === 'dark' ? '#f1f5f9' : '#111827' },
-  { key: 'border', label: 'لون الحدود', fallback: themeMode.value === 'dark' ? '#2a3346' : '#e5e7eb' },
-]
+// لوحة الثيم الحالي (حسب الوضع الفاتح/الداكن) — أساس القيم الاحتياطية
+const themeBase = computed(() => {
+  const t = THEMES.find((x) => x.id === themeId.value) ?? THEMES[0]
+  return themeMode.value === 'dark' ? t.dark : t.light
+})
+
+// حقول الألوان الدقيقة — القيم الاحتياطية من لوحة الثيم الحالي
+const colorFields = computed((): { key: keyof CustomTheme; label: string; fallback: string }[] => [
+  { key: 'primary', label: 'اللون الأساسي', fallback: themeBase.value.primary },
+  { key: 'bg', label: 'لون الخلفية', fallback: themeBase.value.bg },
+  { key: 'surface', label: 'لون البطاقات', fallback: themeBase.value.surface },
+  { key: 'text', label: 'لون النصوص', fallback: themeBase.value.text },
+  { key: 'border', label: 'لون الحدود', fallback: themeBase.value.border },
+])
 
 type Tab = 'prefs' | 'lists' | 'colors' | 'templates' | 'health' | 'help' | 'integrations' | 'subscription'
 const tab = ref<Tab>('prefs')
@@ -240,6 +246,29 @@ function resetAllHelp() {
                 </span>
               </button>
             </div>
+
+            <!-- لون الثيم الأساسي: قابل للتعديل + رجوع للون الأصلي -->
+            <div class="theme-primary">
+              <div class="theme-primary__info">
+                <span class="theme-primary__label">لون الثيم الأساسي</span>
+                <span v-if="customTheme.primary" class="theme-primary__badge">مُعدَّل</span>
+              </div>
+              <div class="theme-primary__controls">
+                <BaseButton
+                  v-if="customTheme.primary"
+                  size="sm"
+                  variant="ghost"
+                  @click="settingsStore.setCustomColor('primary', undefined)"
+                >
+                  ↺ الرجوع للون الأساسي
+                </BaseButton>
+                <input
+                  type="color"
+                  :value="customTheme.primary ?? themeBase.primary"
+                  @input="settingsStore.setCustomColor('primary', ($event.target as HTMLInputElement).value)"
+                />
+              </div>
+            </div>
           </div>
 
           <!-- الوضع الفاتح/الداكن -->
@@ -262,9 +291,9 @@ function resetAllHelp() {
                 v-for="p in THEME_PRESETS"
                 :key="p.id"
                 class="preset"
-                :class="{ 'is-active': (customTheme.primary ?? '#2563eb') === p.primary }"
-                :style="(customTheme.primary ?? '#2563eb') === p.primary ? { borderColor: p.primary, background: p.primary + '15' } : {}"
-                @click="settingsStore.setPreset(p.id === 'blue' ? undefined : p.primary)"
+                :class="{ 'is-active': (customTheme.primary ?? themeBase.primary) === p.primary }"
+                :style="(customTheme.primary ?? themeBase.primary) === p.primary ? { borderColor: p.primary, background: p.primary + '15' } : {}"
+                @click="settingsStore.setPreset(p.primary === themeBase.primary ? undefined : p.primary)"
               >
                 <span class="preset__dot" :style="{ background: `linear-gradient(135deg, ${p.swatch[0]}, ${p.swatch[1]})` }" />
                 {{ p.name }}
@@ -702,6 +731,57 @@ function resetAllHelp() {
   &__check {
     color: var(--primary);
     font-weight: 700;
+  }
+}
+
+// محرّر لون الثيم الأساسي
+.theme-primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-block-start: 14px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+
+  &__info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  &__badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--primary-soft);
+    padding: 2px 8px;
+    border-radius: 99px;
+  }
+
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    input[type='color'] {
+      inline-size: 44px;
+      block-size: 32px;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      cursor: pointer;
+    }
   }
 }
 
