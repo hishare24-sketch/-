@@ -320,10 +320,11 @@ select.base-control {
   cursor: pointer;
 }
 
-// منع التمرير الأفقي غير المقصود على الجوال
+// منع التمرير الأفقي غير المقصود + الاهتزاز المطاطي
 html,
 body {
   overflow-x: hidden;
+  overscroll-behavior: none;
 }
 
 // إبراز العنصر المستهدَف بعد التنقّل إليه من فحص الاتساق
@@ -347,6 +348,33 @@ body {
 //  يستخدم !important لتجاوز الأنماط المحلية (scoped) عند الحاجة
 // ═══════════════════════════════════════════
 @media (max-width: 768px) {
+  // ── قفل هيكل التطبيق: الصفحة ثابتة كتطبيق أصلي، والتمرير داخليّ فقط ──
+  // العناصر الثابتة (درج القائمة) لا يقصّها overflow على body، لذا نُثبّت الجذر
+  // بحيث لا تتحرك الشاشة يمين/يسار ولا تهتزّ عموديًا.
+  html,
+  body {
+    position: fixed;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: pan-y; // يسمح بالتمرير العمودي فقط، يمنع السحب الأفقي
+  }
+
+  .default-layout {
+    min-block-size: 100%;
+    block-size: 100%;
+    overflow: hidden;
+  }
+
+  // المنطقة القابلة للتمرير الوحيدة داخل الشاشة
+  .page-content {
+    min-block-size: 0;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
   // عناوين الصفحات أصغر
   h1 {
     font-size: 19px !important;
