@@ -94,6 +94,7 @@ export const DEFAULT_PREFS: UserPrefs = {
   statsScrollSeconds: 4,
   statsLayout: 'horizontal',
   density: 'comfortable',
+  listView: 'table',
 }
 
 export const TX_TYPES: { id: TxType; label: string; icon: string }[] = [

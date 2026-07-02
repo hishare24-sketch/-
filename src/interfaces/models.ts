@@ -390,6 +390,8 @@ export interface UserPrefs {
   statsScrollSeconds: number
   statsLayout: 'horizontal' | 'vertical'
   density: 'comfortable' | 'compact'
+  /** طريقة عرض القوائم الغنية بالبيانات (السجل المالي/المالية): جدول أو بطاقات */
+  listView: 'table' | 'cards'
 }
 
 // قوائم قابلة للتخصيص (من صفحة التخصيص)

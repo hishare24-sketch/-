@@ -8,6 +8,7 @@ import ModalShell from '@/components/shared/ModalShell.vue'
 import DonutChart from '@/components/charts/DonutChart.vue'
 import { useProjectsStore } from '@/stores/ProjectsStore'
 import { useFinanceStore } from '@/stores/FinanceStore'
+import { useSettingsStore } from '@/stores/SettingsStore'
 import { fmt, fmtNum } from '@/helpers/format'
 import { exportXLSX } from '@/helpers/export'
 import { useToast } from '@/composables/useToast'
@@ -19,7 +20,9 @@ const router = useRouter()
 const projectsStore = useProjectsStore()
 const financeStore = useFinanceStore()
 const toast = useToast()
+const settingsStore = useSettingsStore()
 const { projects, members } = storeToRefs(projectsStore)
+const { prefs } = storeToRefs(settingsStore)
 const { rows, projName, memName } = useLedgerRows()
 const { isFocused } = useFocusHighlight()
 
@@ -239,7 +242,7 @@ function exportExcel() {
     </div>
 
     <!-- عرض العمليات -->
-    <div v-if="view === 'log'" class="app-card table-card">
+    <div v-if="view === 'log' && prefs.listView === 'table'" class="app-card table-card">
       <div class="table-wrap">
         <table>
           <thead>
@@ -284,6 +287,42 @@ function exportExcel() {
           </tbody>
         </table>
       </div>
+    </div>
+
+    <!-- عرض البطاقات (بديل الجدول حسب إعداد «عرض البيانات») -->
+    <div v-else-if="view === 'log' && prefs.listView === 'cards'" class="dcards">
+      <p v-if="!filtered.length" class="dcards__empty">لا توجد عمليات مطابقة للفلترة.</p>
+      <button
+        v-for="r in filtered"
+        :key="r.id"
+        class="dcard"
+        :class="{ 'is-flagged': rowIssues(r), 'is-focused': isFocused(r.id) }"
+        :data-focus="r.id"
+        @click="detail = r"
+      >
+        <div class="dcard__row">
+          <span class="kind" :class="r.dir === 'in' ? 'is-in' : 'is-out'">
+            {{ r.dir === 'in' ? '↓' : '↑' }} {{ r.kind }}
+            <span v-if="rowIssues(r)" class="warn" title="تحتاج مراجعة">⚠️</span>
+          </span>
+          <span class="amount" :class="r.dir === 'in' ? 'is-in' : 'is-out'">
+            {{ r.dir === 'in' ? '+' : '−' }}{{ fmtNum(r.amount) }}
+          </span>
+        </div>
+        <div class="dcard__row dcard__meta">
+          <span>{{ projName(r.projectId) }}</span>
+          <span class="muted nowrap">{{ r.date }}</span>
+        </div>
+        <div class="dcard__row dcard__meta">
+          <span class="muted">{{ r.memberId ? memName(r.memberId) : r.source ?? '—' }}</span>
+          <span class="status" :class="`is-${r.status}`">{{ r.status }}</span>
+        </div>
+        <div class="dcard__row dcard__bal muted">
+          <span>قبل: {{ fmtNum(beforeOf(r)) }}</span>
+          <span>بعد: {{ fmtNum(afterOf(r)) }}</span>
+          <span class="mono">#{{ r.num }}</span>
+        </div>
+      </button>
     </div>
 
     <!-- عرض تحليل التدفقات -->
@@ -445,6 +484,55 @@ function exportExcel() {
 
 .table-card { padding: 0; overflow: hidden; }
 .table-wrap { overflow-x: auto; }
+
+// ── عرض البطاقات (بديل الجدول) ──
+.dcards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  &__empty {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+    padding: 24px;
+  }
+}
+
+.dcard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  inline-size: 100%;
+  text-align: start;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+
+  &:hover { border-color: var(--primary); box-shadow: var(--shadow); }
+  &.is-flagged { border-color: var(--error); background: var(--danger-bg); }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  &__meta { font-size: 13px; }
+
+  &__bal {
+    font-size: 12px;
+    gap: 12px;
+    justify-content: flex-start;
+    border-block-start: 1px dashed var(--border);
+    padding-block-start: 8px;
+  }
+}
 
 table {
   inline-size: 100%;

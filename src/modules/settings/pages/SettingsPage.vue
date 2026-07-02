@@ -167,6 +167,13 @@ function resetAllHelp() {
               <option value="compact">مدمجة</option>
             </select>
           </div>
+          <div class="toggle-row">
+            <span>عرض البيانات (السجل المالي والمالية)</span>
+            <select :value="prefs.listView" class="select" @change="settingsStore.setPref('listView', ($event.target as HTMLSelectElement).value as 'table' | 'cards')">
+              <option value="table">جدول</option>
+              <option value="cards">بطاقات</option>
+            </select>
+          </div>
         </div>
 
         <!-- إدارة البيانات -->

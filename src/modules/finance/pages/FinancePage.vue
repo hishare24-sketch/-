@@ -223,7 +223,7 @@ function clearFilters() {
         </BaseButton>
       </div>
 
-      <div class="table-wrap">
+      <div v-if="settingsStore.prefs.listView === 'table'" class="table-wrap">
         <table>
           <thead>
             <tr>
@@ -268,6 +268,46 @@ function clearFilters() {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- عرض البطاقات (بديل الجدول حسب إعداد «عرض البيانات») -->
+      <div v-else class="dcards">
+        <p v-if="!filtered.length" class="dcards__empty">لا توجد عمليات مطابقة.</p>
+        <div
+          v-for="t in filtered"
+          :key="t.id"
+          class="dcard"
+          :class="{ 'is-flagged': isFlagged(t) }"
+          role="button"
+          tabindex="0"
+          @click="openView(t)"
+          @keydown.enter="openView(t)"
+        >
+          <div class="dcard__row">
+            <span class="desc">
+              <span class="desc__badge" :class="`is-${t.type}`">
+                {{ t.type === 'income' ? '↑' : t.type === 'expense' ? '↓' : '↔' }}
+              </span>
+              <span class="desc__text">{{ t.description }}</span>
+            </span>
+            <span class="amount" :class="`is-${t.type}`">
+              {{ t.type === 'income' ? '+' : t.type === 'expense' ? '-' : t.transferDir === 'in' ? '+' : '-' }}{{ fmtNum(t.amount) }}
+            </span>
+          </div>
+          <div class="dcard__row dcard__meta">
+            <span class="chip">{{ t.category }}</span>
+            <span class="muted nowrap">{{ t.date }}</span>
+          </div>
+          <div v-if="t.source || isFlagged(t)" class="dcard__row dcard__meta">
+            <span class="muted">{{ t.source || '' }}</span>
+            <span v-if="isFlagged(t)" class="desc__flag">⚠️ تحتاج مراجعة</span>
+          </div>
+          <div class="dcard__actions">
+            <button class="icon-btn" title="استعراض" @click.stop="openView(t)">👁</button>
+            <button class="icon-btn" title="تعديل" @click.stop="openEdit(t)">✎</button>
+            <button class="icon-btn icon-btn--danger" title="حذف" @click.stop="onDelete(t)">🗑️</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -457,6 +497,55 @@ function clearFilters() {
 
 .table-wrap {
   overflow-x: auto;
+}
+
+// ── عرض البطاقات (بديل الجدول) ──
+.dcards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  &__empty {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+    padding: 24px;
+  }
+}
+
+.dcard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+
+  &:hover { border-color: var(--primary); box-shadow: var(--shadow); }
+  &.is-flagged { border-color: var(--error); background: var(--danger-bg); }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  &__meta { font-size: 13px; }
+
+  &__actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+    border-block-start: 1px dashed var(--border);
+    padding-block-start: 8px;
+  }
+
+  .desc { display: flex; align-items: center; gap: 8px; min-inline-size: 0; }
+  .desc__text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
 table {
