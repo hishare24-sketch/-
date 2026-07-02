@@ -146,7 +146,7 @@ async function onDelete(t: Tracking) {
             {{ badgeOf(t).l }}
           </span>
         </div>
-        <span class="track__name track__clickable" @click="openDetails(t)">
+        <span class="track__name track__clickable" role="button" tabindex="0" @click="openDetails(t)" @keydown.enter="openDetails(t)" @keydown.space.prevent="openDetails(t)">
           {{ t.name }}
           <span v-if="t.attachments?.length" class="track__clip" title="مرفقات">📎{{ t.attachments.length }}</span>
         </span>

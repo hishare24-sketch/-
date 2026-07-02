@@ -96,18 +96,18 @@ function submit() {
 
         <!-- تقييم -->
         <div v-else-if="q.kind === 'rating'" class="stars">
-          <button v-for="n in 5" :key="n" class="star" :class="{ 'is-on': Number(answers[q.id]) >= n }" @click="answers[q.id] = n">★</button>
+          <button v-for="n in 5" :key="n" class="star" :class="{ 'is-on': Number(answers[q.id]) >= n }" :aria-label="`تقييم ${n} من 5`" :aria-pressed="Number(answers[q.id]) >= n" @click="answers[q.id] = n">★</button>
         </div>
 
         <!-- NPS -->
-        <div v-else-if="q.kind === 'nps'" class="nps">
-          <button v-for="n in 11" :key="n - 1" class="nps__btn" :class="{ 'is-on': answers[q.id] === n - 1 }" @click="answers[q.id] = n - 1">{{ n - 1 }}</button>
+        <div v-else-if="q.kind === 'nps'" class="nps" role="group" aria-label="مقياس 0 إلى 10">
+          <button v-for="n in 11" :key="n - 1" class="nps__btn" :class="{ 'is-on': answers[q.id] === n - 1 }" :aria-pressed="answers[q.id] === n - 1" @click="answers[q.id] = n - 1">{{ n - 1 }}</button>
         </div>
 
         <!-- نعم/لا -->
         <div v-else-if="q.kind === 'yesno'" class="yesno">
-          <button class="yn" :class="{ 'is-on': answers[q.id] === 'نعم' }" @click="answers[q.id] = 'نعم'">نعم</button>
-          <button class="yn" :class="{ 'is-on': answers[q.id] === 'لا' }" @click="answers[q.id] = 'لا'">لا</button>
+          <button class="yn" :class="{ 'is-on': answers[q.id] === 'نعم' }" :aria-pressed="answers[q.id] === 'نعم'" @click="answers[q.id] = 'نعم'">نعم</button>
+          <button class="yn" :class="{ 'is-on': answers[q.id] === 'لا' }" :aria-pressed="answers[q.id] === 'لا'" @click="answers[q.id] = 'لا'">لا</button>
         </div>
 
         <!-- رقم -->

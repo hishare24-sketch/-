@@ -391,7 +391,7 @@ const memberSummary = computed(() => {
             <span class="member__avatar member__clickable" :style="{ background: roleOf(m).color + '20', color: roleOf(m).color }" @click="viewingMember = m">
               {{ m.name.charAt(0) }}
             </span>
-            <div class="member__info member__clickable" @click="viewingMember = m">
+            <div class="member__info member__clickable" role="button" tabindex="0" @click="viewingMember = m" @keydown.enter="viewingMember = m" @keydown.space.prevent="viewingMember = m">
               <span class="member__name">
                 {{ m.name }}
                 <span v-if="m.status === 'invited'" class="badge badge--invite">دعوة معلّقة</span>

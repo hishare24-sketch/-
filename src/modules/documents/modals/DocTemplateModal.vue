@@ -156,7 +156,7 @@ async function doExport() {
             <input v-model.number="it.qty" type="number" min="0" placeholder="كمية" class="item-row__num" />
             <input v-model.number="it.price" type="number" min="0" placeholder="السعر" class="item-row__num" />
             <span class="item-row__total">{{ fmtNum(Number(it.qty) * Number(it.price)) }}</span>
-            <button class="item-row__x" :disabled="quote.items.length === 1" @click="removeItem(i)">✕</button>
+            <button class="item-row__x" aria-label="حذف البند" :disabled="quote.items.length === 1" @click="removeItem(i)">✕</button>
           </div>
         </div>
 

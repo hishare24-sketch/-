@@ -57,12 +57,12 @@ function remove(id: string) {
         <span v-else class="attachment__icon">📎</span>
         <span class="attachment__name">{{ att.name }}</span>
         <span class="attachment__size">{{ att.size }}</span>
-        <button v-if="!readonly" class="attachment__remove" @click="remove(att.id)">✕</button>
+        <button v-if="!readonly" class="attachment__remove" :aria-label="`حذف المرفق ${att.name}`" @click="remove(att.id)">✕</button>
       </div>
     </div>
 
     <label v-if="!readonly" class="attachments__add">
-      <input type="file" multiple hidden @change="onFiles" />
+      <input type="file" multiple hidden aria-label="إضافة مرفقات" @change="onFiles" />
       ＋ إضافة مرفق
     </label>
   </div>

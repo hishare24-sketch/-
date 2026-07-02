@@ -24,7 +24,7 @@ const areaPath = computed(() => (path.value ? `${path.value} L ${props.width},${
 </script>
 
 <template>
-  <svg :viewBox="`0 0 ${width} ${height}`" :style="{ inlineSize: `${width}px`, blockSize: `${height}px` }" class="spark">
+  <svg :viewBox="`0 0 ${width} ${height}`" :style="{ inlineSize: `${width}px`, blockSize: `${height}px` }" class="spark" role="img" aria-label="مخطط مصغّر">
     <path :d="areaPath" :fill="color" opacity="0.12" />
     <path :d="path" fill="none" :stroke="color" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
   </svg>

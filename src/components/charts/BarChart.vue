@@ -35,7 +35,7 @@ function barH(v: number) {
 
 <template>
   <div class="bars">
-    <svg :viewBox="`0 0 ${W} ${height}`" preserveAspectRatio="none" class="bars__svg" :style="{ blockSize: `${height}px` }">
+    <svg :viewBox="`0 0 ${W} ${height}`" preserveAspectRatio="none" class="bars__svg" :style="{ blockSize: `${height}px` }" role="img" :aria-label="'رسم أعمدة: ' + labels.join('، ')">
       <!-- خطوط شبكية -->
       <line v-for="g in 3" :key="g" :x1="PAD.l" :x2="W - PAD.r" :y1="PAD.t + (innerH / 3) * g" :y2="PAD.t + (innerH / 3) * g" stroke="var(--border)" stroke-width="1" opacity="0.4" />
       <!-- الأعمدة -->

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useSettingsStore } from '@/stores/SettingsStore'
 import { BaseButton } from '@/components/base'
 
@@ -11,6 +11,20 @@ const entry = computed(() => settingsStore.help[props.section])
 const visible = computed(() => entry.value && entry.value.show && entry.value.body.trim())
 
 const open = ref(false)
+
+// إغلاق بمفتاح Esc أثناء فتح النافذة
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') open.value = false
+}
+
+watch(open, (val) => {
+  if (val) window.addEventListener('keydown', onKeydown)
+  else window.removeEventListener('keydown', onKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
+})
 </script>
 
 <template>
@@ -19,10 +33,10 @@ const open = ref(false)
 
     <Teleport to="body">
       <div v-if="open" class="help-overlay" @click.self="open = false">
-        <div class="help-pop app-card">
+        <div class="help-pop app-card" role="dialog" aria-modal="true" :aria-label="entry?.title">
           <div class="help-pop__head">
             <span class="help-pop__title">💡 {{ entry?.title }}</span>
-            <button class="help-pop__close" @click="open = false">✕</button>
+            <button class="help-pop__close" aria-label="إغلاق الشرح" @click="open = false">✕</button>
           </div>
           <p class="help-pop__body">{{ entry?.body }}</p>
           <BaseButton block @click="open = false">فهمت</BaseButton>

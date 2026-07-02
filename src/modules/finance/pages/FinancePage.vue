@@ -238,7 +238,7 @@ function clearFilters() {
             <tr v-if="!filtered.length">
               <td colspan="5" class="empty">لا توجد عمليات مطابقة.</td>
             </tr>
-            <tr v-for="t in filtered" :key="t.id" :class="{ 'is-flagged': isFlagged(t) }" class="clickable" @click="openView(t)">
+            <tr v-for="t in filtered" :key="t.id" :class="{ 'is-flagged': isFlagged(t) }" class="clickable" role="button" tabindex="0" @click="openView(t)" @keydown.enter="openView(t)" @keydown.space.prevent="openView(t)">
               <td>
                 <div class="desc">
                   <span class="desc__badge" :class="`is-${t.type}`">
@@ -282,6 +282,7 @@ function clearFilters() {
           tabindex="0"
           @click="openView(t)"
           @keydown.enter="openView(t)"
+          @keydown.space.prevent="openView(t)"
         >
           <div class="dcard__row">
             <span class="desc">

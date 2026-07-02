@@ -150,7 +150,7 @@ async function onDelete(r: Receivable) {
       <div v-if="!filtered.length" class="empty app-card">لا توجد ذمم مطابقة.</div>
       <div v-for="r in filtered" :key="r.id" class="rec app-card" :class="{ 'is-focused': isFocused(r.id) }" :data-focus="r.id">
         <span class="rec__kind" :class="r.kind">{{ r.kind === 'receivable' ? '📥' : '📤' }}</span>
-        <div class="rec__main" @click="viewing = r">
+        <div class="rec__main" role="button" tabindex="0" @click="viewing = r" @keydown.enter="viewing = r" @keydown.space.prevent="viewing = r">
           <span class="rec__party">
             {{ r.party }}
             <span v-if="r.attachments?.length" class="rec__clip" title="مرفقات">📎{{ r.attachments.length }}</span>

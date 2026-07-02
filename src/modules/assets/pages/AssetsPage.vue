@@ -146,7 +146,7 @@ async function onDelete(a: Asset) {
           </span>
         </div>
 
-        <span class="asset__name asset__clickable" @click="viewing = a">
+        <span class="asset__name asset__clickable" role="button" tabindex="0" @click="viewing = a" @keydown.enter="viewing = a" @keydown.space.prevent="viewing = a">
           {{ a.name }}
           <span v-if="a.attachments?.length" class="asset__clip" title="مرفقات">📎{{ a.attachments.length }}</span>
         </span>

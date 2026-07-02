@@ -35,7 +35,7 @@ const arcs = computed(() => {
 
 <template>
   <div class="donut" :class="{ 'donut--with-legend': legend }">
-    <svg :viewBox="`0 0 ${size} ${size}`" class="donut__svg" :style="{ maxInlineSize: `${size}px` }">
+    <svg :viewBox="`0 0 ${size} ${size}`" class="donut__svg" :style="{ maxInlineSize: `${size}px` }" role="img" :aria-label="'رسم دائري: ' + data.map((d) => d.label).join('، ')">
       <g :transform="`rotate(-90 ${size / 2} ${size / 2})`">
         <circle
           :cx="size / 2"

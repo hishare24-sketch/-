@@ -148,7 +148,7 @@ function saveToDocuments() {
                 type="text"
                 :placeholder="col"
               />
-              <button class="tbl__x" :disabled="tables[el.id].length === 1" @click="removeRow(el, ri)">✕</button>
+              <button class="tbl__x" aria-label="حذف الصف" :disabled="tables[el.id].length === 1" @click="removeRow(el, ri)">✕</button>
             </div>
           </div>
 

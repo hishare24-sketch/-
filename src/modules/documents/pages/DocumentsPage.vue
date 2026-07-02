@@ -162,7 +162,7 @@ async function onDelete(d: DocItem) {
 
     <div class="grid">
       <div v-if="!filtered.length" class="empty app-card">لا توجد مستندات مطابقة.</div>
-      <div v-for="d in filtered" :key="d.id" class="doc app-card" @click="openDoc(d)">
+      <div v-for="d in filtered" :key="d.id" class="doc app-card" role="button" tabindex="0" @click="openDoc(d)" @keydown.enter="openDoc(d)" @keydown.space.prevent="openDoc(d)">
         <div class="doc__top">
           <span class="doc__icon">{{ docIcon(d.type) }}</span>
           <span class="doc__badge" :class="{ 'is-read': d.aiRead }">

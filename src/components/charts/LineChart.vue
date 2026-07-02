@@ -42,7 +42,7 @@ const paths = computed(() =>
 
 <template>
   <div class="line">
-    <svg :viewBox="`0 0 ${W} ${height}`" preserveAspectRatio="none" class="line__svg" :style="{ blockSize: `${height}px` }">
+    <svg :viewBox="`0 0 ${W} ${height}`" preserveAspectRatio="none" class="line__svg" :style="{ blockSize: `${height}px` }" role="img" :aria-label="'رسم خطي: ' + series.map((s) => s.name).join('، ')">
       <line v-for="g in 3" :key="g" :x1="PAD.l" :x2="W - PAD.r" :y1="PAD.t + (innerH / 3) * g" :y2="PAD.t + (innerH / 3) * g" stroke="var(--border)" stroke-width="1" opacity="0.4" />
       <template v-for="(p, i) in paths" :key="i">
         <path v-if="area" :d="p.areaPath" :fill="p.color" opacity="0.12" />

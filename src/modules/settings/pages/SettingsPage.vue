@@ -208,7 +208,7 @@ function resetAllHelp() {
             <div class="chips">
               <span v-for="item in lists[lm.key]" :key="item" class="chip">
                 {{ item }}
-                <button class="chip__x" @click="settingsStore.removeListItem(lm.key, item)">✕</button>
+                <button class="chip__x" :aria-label="`إزالة ${item}`" @click="settingsStore.removeListItem(lm.key, item)">✕</button>
               </span>
             </div>
             <div class="add-row">
@@ -352,7 +352,7 @@ function resetAllHelp() {
               <div class="help-search">
                 <span>🔍</span>
                 <input v-model="helpSearch" type="text" placeholder="ابحث باسم الشاشة أو داخل نص الشرح..." />
-                <button v-if="helpSearch" class="help-search__x" @click="helpSearch = ''">✕</button>
+                <button v-if="helpSearch" class="help-search__x" aria-label="مسح البحث" @click="helpSearch = ''">✕</button>
               </div>
               <template v-if="!confirmingHelpReset">
                 <BaseButton variant="outlined" :disabled="!helpStats.customized" @click="confirmingHelpReset = true">

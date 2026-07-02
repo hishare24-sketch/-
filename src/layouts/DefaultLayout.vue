@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
@@ -43,6 +43,17 @@ function toggleNav() {
   if (window.innerWidth <= 768) mobileOpen.value = !mobileOpen.value
   else collapsed.value = !collapsed.value
 }
+
+// إغلاق الدرج/قائمة المستخدم بمفتاح Esc
+function onLayoutKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    if (mobileOpen.value) mobileOpen.value = false
+    if (userMenuOpen.value) userMenuOpen.value = false
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onLayoutKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onLayoutKeydown))
 
 const notificationsStore = useNotificationsStore()
 const { unreadCount } = storeToRefs(notificationsStore)

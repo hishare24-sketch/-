@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import { BaseButton } from '@/components/base'
 
 // نافذة تأكيد عامة (للحذف وغيره) — تُستدعى عبر ref
@@ -23,18 +23,32 @@ function close(ok: boolean) {
   resolver = null
 }
 
+// إغلاق بمفتاح Esc أثناء فتح النافذة
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') close(false)
+}
+
+watch(isOpen, (val) => {
+  if (val) window.addEventListener('keydown', onKeydown)
+  else window.removeEventListener('keydown', onKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
+})
+
 defineExpose({ open })
 </script>
 
 <template>
   <Teleport to="body">
     <div v-if="isOpen" class="cm-overlay" @click.self="close(false)">
-      <div class="cm-dialog app-card">
+      <div class="cm-dialog app-card" role="dialog" aria-modal="true" :aria-label="title">
         <h3 class="cm-title">{{ title }}</h3>
         <p class="cm-message">{{ message }}</p>
         <div class="cm-actions">
           <BaseButton variant="ghost" @click="close(false)">إلغاء</BaseButton>
-          <BaseButton variant="danger" @click="close(true)">تأكيد</BaseButton>
+          <BaseButton variant="danger" autofocus @click="close(true)">تأكيد</BaseButton>
         </div>
       </div>
     </div>

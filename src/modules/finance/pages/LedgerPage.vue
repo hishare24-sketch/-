@@ -263,7 +263,7 @@ function exportExcel() {
             <tr v-if="!filtered.length">
               <td colspan="10" class="empty">لا توجد عمليات مطابقة للفلترة.</td>
             </tr>
-            <tr v-for="r in filtered" :key="r.id" class="row" :class="{ 'is-flagged': rowIssues(r), 'is-focused': isFocused(r.id) }" :data-focus="r.id" @click="detail = r">
+            <tr v-for="r in filtered" :key="r.id" class="row" :class="{ 'is-flagged': rowIssues(r), 'is-focused': isFocused(r.id) }" :data-focus="r.id" role="button" tabindex="0" @click="detail = r" @keydown.enter="detail = r" @keydown.space.prevent="detail = r">
               <td class="mono muted">{{ r.num }}</td>
               <td>
                 <span class="kind" :class="r.dir === 'in' ? 'is-in' : 'is-out'">

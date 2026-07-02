@@ -125,7 +125,7 @@ const sourceLabel: Record<string, string> = { member: 'عضو', manual: 'يدو�
           <span class="resp__email">{{ r.email ?? '—' }}</span>
         </div>
         <span class="resp__source">{{ sourceLabel[r.source] }}</span>
-        <button class="resp__del" @click="surveysStore.removeRespondent(survey.id, r.id)">✕</button>
+        <button class="resp__del" aria-label="حذف المستجيب" @click="surveysStore.removeRespondent(survey.id, r.id)">✕</button>
       </div>
     </div>
 

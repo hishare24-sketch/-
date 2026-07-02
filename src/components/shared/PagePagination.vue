@@ -17,7 +17,7 @@ function go(p: number) {
 
 <template>
   <div v-if="lastPage > 1" class="pagination">
-    <button class="pagination__btn" :disabled="page <= 1" @click="go(page - 1)">‹</button>
+    <button class="pagination__btn" aria-label="الصفحة السابقة" :disabled="page <= 1" @click="go(page - 1)">‹</button>
     <button
       v-for="p in pages"
       :key="p"
@@ -27,7 +27,7 @@ function go(p: number) {
     >
       {{ p }}
     </button>
-    <button class="pagination__btn" :disabled="page >= lastPage" @click="go(page + 1)">›</button>
+    <button class="pagination__btn" aria-label="الصفحة التالية" :disabled="page >= lastPage" @click="go(page + 1)">›</button>
   </div>
 </template>
 

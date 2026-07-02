@@ -118,7 +118,7 @@ async function onDelete(r: RequestItem) {
     <div class="list">
       <div v-if="!filtered.length" class="empty app-card">لا توجد طلبات.</div>
       <div v-for="r in filtered" :key="r.id" class="req app-card" :class="{ 'is-focused': isFocused(r.id) }" :data-focus="r.id">
-        <div class="req__main" @click="viewing = r">
+        <div class="req__main" role="button" tabindex="0" @click="viewing = r" @keydown.enter="viewing = r" @keydown.space.prevent="viewing = r">
           <div class="req__title-row">
             <span class="req__title">{{ r.title }}</span>
             <span class="req__type">{{ REQUEST_TYPE_META[r.type]?.icon ?? '📋' }} {{ r.type }}</span>

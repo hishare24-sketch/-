@@ -160,7 +160,7 @@ function onPay(c: Commitment) {
     <div class="list">
       <div v-if="!filtered.length" class="empty app-card">لا توجد التزامات.</div>
       <div v-for="c in filtered" :key="c.id" class="cm app-card" :class="{ 'is-inactive': !c.active, 'is-focused': isFocused(c.id) }" :data-focus="c.id">
-        <div class="cm__main" @click="viewing = c">
+        <div class="cm__main" role="button" tabindex="0" @click="viewing = c" @keydown.enter="viewing = c" @keydown.space.prevent="viewing = c">
           <span class="cm__name">
             {{ c.name }}
             <span v-if="c.attachments?.length" class="cm__clip" title="مرفقات">📎{{ c.attachments.length }}</span>

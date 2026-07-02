@@ -148,9 +148,9 @@ function save() {
           <span class="qcard__num">{{ i + 1 }}</span>
           <input v-model="q.text" class="qcard__text" placeholder="نص السؤال" />
           <div class="qcard__move">
-            <button :disabled="i === 0" @click="moveQuestion(i, -1)">↑</button>
-            <button :disabled="i === draft.questions.length - 1" @click="moveQuestion(i, 1)">↓</button>
-            <button class="qcard__del" @click="removeQuestion(i)">🗑️</button>
+            <button aria-label="نقل السؤال لأعلى" :disabled="i === 0" @click="moveQuestion(i, -1)">↑</button>
+            <button aria-label="نقل السؤال لأسفل" :disabled="i === draft.questions.length - 1" @click="moveQuestion(i, 1)">↓</button>
+            <button class="qcard__del" aria-label="حذف السؤال" @click="removeQuestion(i)">🗑️</button>
           </div>
         </div>
 
@@ -168,7 +168,7 @@ function save() {
         <div v-if="q.options" class="options">
           <div v-for="(_, oi) in q.options" :key="oi" class="option">
             <input v-model="q.options[oi]" type="text" />
-            <button class="option__del" @click="removeOption(q, oi)">✕</button>
+            <button class="option__del" aria-label="حذف الخيار" @click="removeOption(q, oi)">✕</button>
           </div>
           <button class="option__add" @click="addOption(q)">＋ خيار</button>
         </div>

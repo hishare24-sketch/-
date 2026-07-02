@@ -188,7 +188,7 @@ function save() {
       <div v-if="issues" class="validate app-card">
         <div class="validate__head">
           <span>🔍 نتيجة التدقيق <span class="validate__tag">🧪 محاكاة</span></span>
-          <button class="validate__close" @click="issues = null">✕</button>
+          <button class="validate__close" aria-label="إغلاق نتائج التدقيق" @click="issues = null">✕</button>
         </div>
         <div v-for="(iss, i) in issues" :key="i" class="issue" :class="`is-${iss.level}`">
           <span class="issue__icon">{{ iss.level === 'ok' ? '✅' : iss.level === 'warning' ? '⚠️' : 'ℹ️' }}</span>
