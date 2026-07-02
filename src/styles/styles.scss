@@ -431,9 +431,12 @@ body {
     font-size: 16px !important;
   }
 
-  // التبويبات: تمرير أفقي بدل الالتفاف المزدحم
+  // التبويبات: تمرير أفقي بدل الالتفاف المزدحم.
+  // max-inline-size:100% يقيّد الشريط بعرض الحاوية (مهم لـ inline-flex الذي
+  // يتحجّم بمحتواه) فيتمرّر داخليًّا بدل أن يتجاوز الشاشة ويُحرّكها.
   .tabs {
     overflow-x: auto;
+    max-inline-size: 100%;
     flex-wrap: nowrap !important;
     -webkit-overflow-scrolling: touch;
 
